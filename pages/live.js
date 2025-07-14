@@ -1,0 +1,1 @@
+export default function Live() { return <div className="p-10 text-center"><h1>Live Stream Page</h1></div> }

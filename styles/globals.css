@@ -1,0 +1,31 @@
+@import "~slick-carousel/slick/slick.css";
+@import "~slick-carousel/slick/slick-theme.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global base styles */
+body {
+  background-color: #485765; /* custom dark background */
+  color: #f9fafb; /* light gray for better contrast */
+  font-family: 'Inter', sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Smooth transitions */
+a,
+button {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Link styles */
+a {
+  color: #e11d48; /* rose-600 */
+}
+
+a:hover {
+  color: #f43f5e; /* rose-500 for slightly brighter hover */
+}
