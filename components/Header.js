@@ -3,7 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
-import { UserCircle } from "lucide-react";
+import { UserCircle, LayoutDashboard } from "lucide-react";
 
 export default function Header() {
   const router = useRouter();
@@ -68,7 +68,7 @@ export default function Header() {
         </nav>
 
         {/* Right Icons */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-3">
           {/* Live Button */}
           <Link
             href="/gallery?tab=stream#livestream"
@@ -77,6 +77,16 @@ export default function Header() {
           >
             📻 Live
           </Link>
+
+          {user && (
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-1 px-3 py-2 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-medium transition"
+              title="Dashboard"
+            >
+              <LayoutDashboard size={18} /> Dashboard
+            </Link>
+          )}
 
           {/* Auth Icon */}
           <div className="relative">
