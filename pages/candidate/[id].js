@@ -91,90 +91,97 @@ export default function CandidateProfile() {
       </section>
 
       {/* Unified Voting & Gifting Section */}
-      <section ref={scrollRef} className="bg-gradient-to-br from-pink-50 to-rose-100 py-12 px-4">
-        <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-6 text-rose-600">Vote {candidate.name}</h2>
-          <div className="space-y-4">
-            <input
-              type="text"
-              placeholder="Your Name"
-              className="w-full px-4 py-3 rounded border border-gray-300 shadow-sm focus:ring-2 focus:ring-rose-500 bg-white"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="Email or Phone"
-              className="w-full px-4 py-3 rounded border border-gray-300 shadow-sm focus:ring-2 focus:ring-rose-500 bg-white"
-              value={form.contact}
-              onChange={(e) => setForm({ ...form, contact: e.target.value })}
-            />
-            <input
-              type="number"
-              placeholder="Number of Votes"
-              min={10}
-              className="w-full px-4 py-3 rounded border border-gray-300 shadow-sm focus:ring-2 focus:ring-rose-500 bg-white text-gray-900"
-              value={form.votes}
-              onChange={(e) => setForm({ ...form, votes: e.target.value })}
-            />
-            <button
-              className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 rounded-full shadow"
-              onClick={() => alert(`Voting ${form.votes} for ${candidate.name} by ${form.name}`)}
-            >
-              Submit Vote
-            </button>
+<section ref={scrollRef} className="bg-gradient-to-br from-pink-50 to-rose-100 py-12 px-4">
+  <div className="max-w-xl mx-auto text-center">
+    <h2 className="text-2xl font-bold mb-6 text-rose-600">Vote {candidate.name}</h2>
+    <div className="space-y-4">
+      <input
+        type="text"
+        placeholder="Your Name"
+        className="w-full px-4 py-3 rounded border border-gray-300 shadow-sm bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-rose-500"
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+      />
+      <input
+        type="text"
+        placeholder="Email or Phone"
+        className="w-full px-4 py-3 rounded border border-gray-300 shadow-sm bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-rose-500"
+        value={form.contact}
+        onChange={(e) => setForm({ ...form, contact: e.target.value })}
+      />
+      <input
+        type="number"
+        placeholder="Number of Votes"
+        min={10}
+        className="w-full px-4 py-3 rounded border border-gray-300 shadow-sm bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-rose-500"
+        value={form.votes}
+        onChange={(e) => setForm({ ...form, votes: e.target.value })}
+      />
 
-            <div className="grid grid-cols-2 gap-4 pt-6">
-              {["Star", "Crown", "Dragon", "Gold"].map((gift) => (
-                <button
-                  key={gift}
-                  onClick={() => setShowGiftModal(gift)}
-                  className={`font-semibold py-2 px-4 rounded shadow ${giftStyles[gift]}`}
-                >
-                  🎁 {gift}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
+      <button
+        className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 rounded-full shadow"
+        onClick={() => alert(`Voting ${form.votes} for ${candidate.name} by ${form.name}`)}
+      >
+        Submit Vote
+      </button>
+
+      <div className="grid grid-cols-2 gap-4 pt-6">
+        {["Star", "Crown", "Dragon", "Gold"].map((gift) => (
+          <button
+            key={gift}
+            onClick={() => setShowGiftModal(gift)}
+            className={`font-semibold py-2 px-4 rounded shadow ${giftStyles[gift]}`}
+          >
+            🎁 {gift}
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
 
       {/* Gift Modal */}
-      {showGiftModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl max-w-sm w-full shadow-lg">
-            <h3 className="text-xl font-bold mb-4 text-center">Send a {showGiftModal} to {candidate.name}</h3>
-            <input
-              type="text"
-              placeholder="Your Name"
-              className="w-full mb-3 px-4 py-2 rounded border border-gray-300 shadow-sm bg-white"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-            <input
-              type="text"
-              placeholder="Email or Phone"
-              className="w-full mb-3 px-4 py-2 rounded border border-gray-300 shadow-sm bg-white"
-              value={form.contact}
-              onChange={(e) => setForm({ ...form, contact: e.target.value })}
-            />
-            <div className="flex gap-4 mt-4">
-              <button
-                onClick={() => alert(`Gift: ${showGiftModal} to ${candidate.name} by ${form.name}`)}
-                className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold py-2 rounded shadow"
-              >
-                Send Gift
-              </button>
-              <button
-                onClick={() => setShowGiftModal(false)}
-                className="flex-1 border border-gray-300 text-gray-700 py-2 rounded shadow"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+{showGiftModal && (
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-xl max-w-sm w-full shadow-lg">
+      <h3 className="text-xl font-bold mb-4 text-center">
+        Send a {showGiftModal} to {candidate.name}
+      </h3>
+
+      <input
+        type="text"
+        placeholder="Your Name"
+        className="w-full mb-3 px-4 py-2 rounded border border-gray-300 shadow-sm bg-white text-gray-900 placeholder-gray-400"
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+      />
+
+      <input
+        type="text"
+        placeholder="Email or Phone"
+        className="w-full mb-3 px-4 py-2 rounded border border-gray-300 shadow-sm bg-white text-gray-900 placeholder-gray-400"
+        value={form.contact}
+        onChange={(e) => setForm({ ...form, contact: e.target.value })}
+      />
+
+      <div className="flex gap-4 mt-4">
+        <button
+          onClick={() => alert(`Gift: ${showGiftModal} to ${candidate.name} by ${form.name}`)}
+          className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold py-2 rounded shadow"
+        >
+          Send Gift
+        </button>
+        <button
+          onClick={() => setShowGiftModal(false)}
+          className="flex-1 border border-gray-300 text-gray-700 py-2 rounded shadow"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
       {/* Video */}
       <section className="bg-black py-8">
