@@ -1,8 +1,8 @@
 // pages/admin/candidates.js
 import { useEffect, useState } from "react";
-import { supabase } from "@/utils/supabaseClient";
-import AdminSidebar from "@/components/AdminSidebar";
-import AdminHeader from "@/components/AdminHeader";
+import { supabase } from "../utils/supabaseClient";
+import AdminSidebar from "../components/AdminSidebar";
+import AdminHeader from "../components/AdminHeader";
 import Image from "next/image";
 
 export default function AdminCandidates() {

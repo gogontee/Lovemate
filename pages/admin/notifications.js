@@ -1,8 +1,8 @@
 // pages/admin/notifications.js
 import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabaseClient";
-import AdminSidebar from "@/components/AdminSidebar";
-import AdminHeader from "@/components/AdminHeader";
+import AdminSidebar from "../components/AdminSidebar";
+import AdminHeader from "../components/AdminHeader";
 import { PlusCircle } from "lucide-react";
 
 export default function AdminNotifications() {
