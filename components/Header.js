@@ -41,7 +41,7 @@ export default function Header() {
         {/* Logo Only */}
         <Link href="/" className="flex items-center">
           <Image
-            src="/logo/love.png"
+            src="/logo/logo10.png"
             width={120}
             height={40}
             className="object-contain"

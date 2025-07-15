@@ -101,7 +101,7 @@ export default function Footer() {
           {/* Logo Placement */}
           <div className="flex justify-center sm:justify-start">
             <Image
-              src="/logo/love.png"
+              src="/logo/logo10.png"
               width={100}
               height={32}
               className="object-contain"
