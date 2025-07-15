@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/utils/supabaseClient";
-import AdminSidebar from "@/components/AdminSidebar";
-import AdminHeader from "@/components/AdminHeader";
-import withAdminAuth from "@/components/withAdminAuth";
+import { supabase } from "../../utils/supabaseClient";
+import AdminSidebar from "../../components/AdminSidebar";
+import AdminHeader from "../../components/AdminHeader";
+import withAdminAuth from "../../components/withAdminAuth";
 import Link from "next/link";
 
 function AdminCandidates() {
