@@ -1,6 +1,6 @@
 // pages/admin/settings.js
-import AdminSidebar from "@/components/AdminSidebar";
-import AdminHeader from "@/components/AdminHeader";
+import AdminSidebar from "../../components/AdminSidebar";
+import AdminHeader from "../../components/AdminHeader";
 import Head from "next/head";
 import { useState } from "react";
 
