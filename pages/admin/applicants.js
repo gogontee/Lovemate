@@ -1,10 +1,10 @@
 // pages/admin/applicants.js
 
 import { useEffect, useState } from "react";
-import { supabase } from "../../utils/supabaseClient";
-import AdminSidebar from "../../components/AdminSidebar";
-import AdminHeader from "../../components/AdminHeader";
-import withAdminAuth from "../../components/withAdminAuth";
+import { supabase } from "../../utils/supabaseClient.js";
+import AdminSidebar from "../../components/AdminSidebar.js";
+import AdminHeader from "../../components/AdminHeader.js";
+import withAdminAuth from "../../components/withAdminAuth.js";
 
 function AdminApplicants() {
   const [applicants, setApplicants] = useState([]);
