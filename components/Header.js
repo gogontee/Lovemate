@@ -42,7 +42,6 @@ export default function Header() {
         <Link href="/" className="flex items-center">
           <Image
             src="/logo/love.png"
-            alt="Lovemate Logo"
             width={120}
             height={40}
             className="object-contain"

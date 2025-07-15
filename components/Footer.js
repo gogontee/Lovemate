@@ -102,7 +102,6 @@ export default function Footer() {
           <div className="flex justify-center sm:justify-start">
             <Image
               src="/logo/love.png"
-              alt="Lovemate Logo"
               width={100}
               height={32}
               className="object-contain"
