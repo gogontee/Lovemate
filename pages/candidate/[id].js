@@ -1,62 +1,10 @@
-// pages/candidate/[id].js
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import { supabase } from "@/utils/supabaseClient";
-
-const router = useRouter();
-
-const handleVoteOrGift = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    alert("You must be logged in to vote or send gifts.");
-    router.push("/auth/login");
-    return;
-  }
-
-  // Proceed with vote/gift logic...
-};
-const handleVote = async (candidateId, voteCost = 100) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    router.push("/auth/login");
-    return;
-  }
-
-  const { data: summary } = await supabase
-    .from("wallet_summary")
-    .select("balance")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!summary || summary.balance < voteCost) {
-    alert("Insufficient balance.");
-    return;
-  }
-
-  // Deduct wallet
-  await supabase.from("wallets").insert([
-    {
-      user_id: user.id,
-      amount: -voteCost,
-      type: "vote",
-      status: "completed",
-    },
-  ]);
-
-  // Update vote count
-  await supabase.rpc("increment_vote", {
-    candidate_id_param: candidateId,
-    vote_count: 1,
-  });
-
-  alert("Vote submitted!");
-};
+import Image from "next/image";
 
 
 export default function CandidateProfile() {
@@ -64,33 +12,49 @@ export default function CandidateProfile() {
   const { id, section } = router.query;
   const scrollRef = useRef(null);
 
-  const candidate = candidates.find((c) => c.id.toString() === id);
-
+  const [candidate, setCandidate] = useState(null);
   const [form, setForm] = useState({ name: "", contact: "", votes: 1, gift: "" });
   const [showGiftModal, setShowGiftModal] = useState(false);
 
- useEffect(() => {
-  if (!id) return;
+  useEffect(() => {
+    if (!id) return;
 
-  const channel = supabase
-    .channel("realtime-candidate")
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "candidates",
-        filter: `id=eq.${id}`,
-      },
-      (payload) => {
-        setCandidate(payload.new);
-      }
-    )
-    .subscribe();
+    // Fetch candidate data once
+    supabase
+      .from("candidates")
+      .select("*")
+      .eq("id", id)
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Error fetching candidate:", error);
+          setCandidate(null);
+        } else {
+          setCandidate(data);
+        }
+      });
 
-  return () => supabase.removeChannel(channel);
-}, [id]);
+    // Subscribe to realtime updates for candidate
+    const channel = supabase
+      .channel("realtime-candidate")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "candidates",
+          filter: `id=eq.${id}`,
+        },
+        (payload) => {
+          setCandidate(payload.new);
+        }
+      )
+      .subscribe();
 
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
 
   useEffect(() => {
     if (section && scrollRef.current) {
@@ -101,12 +65,12 @@ export default function CandidateProfile() {
   if (!candidate) return <div className="text-center py-20">Loading...</div>;
 
   const giftValueMap = {
-  Star: 100000,
-  Crown: 300000,
-  Dragon: 500000,
-  Gold: 700000,
-  Love: 1000000,
-};
+    Star: 100000,
+    Crown: 300000,
+    Dragon: 500000,
+    Gold: 700000,
+    Love: 1000000,
+  };
 
 
   return (
@@ -119,11 +83,13 @@ export default function CandidateProfile() {
       {/* Hero Section */}
       <section className="relative h-[26rem] bg-black">
         <div className="absolute inset-0 overflow-hidden">
-          <img
-            src={candidate.imageUrl}
-            alt={candidate.name}
-            className="w-full h-full object-cover object-center opacity-80"
-          />
+          <Image
+  src={candidate.imageUrl}
+  alt={candidate.name}
+  layout="fill"
+  objectFit="cover"
+  className="opacity-80"
+/>
         </div>
         <div className="relative z-10 h-full flex flex-col justify-end p-8 bg-gradient-to-t from-black via-black/60 to-transparent text-white">
           <h1 className="text-4xl font-extrabold mb-2">{candidate.name}</h1>

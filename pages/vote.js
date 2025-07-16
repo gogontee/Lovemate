@@ -1,106 +1,119 @@
-// pages/vote.js
 import Head from "next/head";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SponsorCarousel from "../components/SponsorCarousel";
 import CandidateCard from "../components/CandidateCard";
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 
-const router = useRouter();
-
-const handleVoteOrGift = async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    alert("You must be logged in to vote or send gifts.");
-    router.push("/auth/login");
-    return;
-  }
-
-  // Proceed with vote/gift logic...
-};
-const handleVote = async (candidateId, voteCost = 100) => {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    router.push("/auth/login");
-    return;
-  }
-
-  const { data: summary } = await supabase
-    .from("wallet_summary")
-    .select("balance")
-    .eq("user_id", user.id)
-    .single();
-
-  if (!summary || summary.balance < voteCost) {
-    alert("Insufficient balance.");
-    return;
-  }
-
-  // Deduct wallet
-  await supabase.from("wallets").insert([
-    {
-      user_id: user.id,
-      amount: -voteCost,
-      type: "vote",
-      status: "completed",
-    },
-  ]);
-
-  // Update vote count
-  await supabase.rpc("increment_vote", {
-    candidate_id_param: candidateId,
-    vote_count: 1,
-  });
-
-  alert("Vote submitted!");
-};
-const [candidates, setCandidates] = useState([]);
-useEffect(() => {
-  const fetchCandidates = async () => {
-    const { data, error } = await supabase.from("candidates").select("*").order("id", { ascending: true });
-    if (!error) setCandidates(data);
-  };
-  fetchCandidates();
-}, []);
-
-useEffect(() => {
-  const channel = supabase
-    .channel("votes-realtime")
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "candidates",
-      },
-      (payload) => {
-        setCandidates((prev) =>
-          prev.map((c) =>
-            c.id === payload.new.id ? { ...c, votes: payload.new.votes } : c
-          )
-        );
-      }
-    )
-    .subscribe();
-
-  return () => supabase.removeChannel(channel);
-}, []);
-
-
 export default function VotePage() {
-  const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
 
+  // State for candidates and search term
+  const [candidates, setCandidates] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Fetch candidates once on mount
+  useEffect(() => {
+    const fetchCandidates = async () => {
+      const { data, error } = await supabase
+        .from("candidates")
+        .select("*")
+        .order("id", { ascending: true });
+      if (!error) setCandidates(data);
+      else console.error("Error fetching candidates:", error);
+    };
+    fetchCandidates();
+  }, []);
+
+  // Listen to realtime vote updates and update candidates state
+  useEffect(() => {
+    const channel = supabase
+      .channel("votes-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "candidates",
+        },
+        (payload) => {
+          setCandidates((prev) =>
+            prev.map((c) =>
+              c.id === payload.new.id ? { ...c, votes: payload.new.votes } : c
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Function to handle vote or gift navigation - requires user login
+  const handleVoteOrGift = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("You must be logged in to vote or send gifts.");
+      router.push("/auth/login");
+      return false;
+    }
+    return true;
+  };
+
+  // Vote handling function with wallet balance check & vote increment
+  const handleVote = async (candidateId, voteCost = 100) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push("/auth/login");
+      return;
+    }
+
+    const { data: summary } = await supabase
+      .from("wallet_summary")
+      .select("balance")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!summary || summary.balance < voteCost) {
+      alert("Insufficient balance.");
+      return;
+    }
+
+    // Deduct wallet balance
+    await supabase.from("wallets").insert([
+      {
+        user_id: user.id,
+        amount: -voteCost,
+        type: "vote",
+        status: "completed",
+      },
+    ]);
+
+    // Increment vote count via RPC
+    await supabase.rpc("increment_vote", {
+      candidate_id_param: candidateId,
+      vote_count: 1,
+    });
+
+    alert("Vote submitted!");
+  };
+
+  // Filter candidates by search term (case-insensitive)
   const filteredCandidates = candidates.filter((c) =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Navigate to candidate profile page
   const handleNavigate = (id) => {
     router.push(`/candidate/${id}`);
   };
@@ -109,7 +122,10 @@ export default function VotePage() {
     <>
       <Head>
         <title>Vote – Lovemate Show</title>
-        <meta name="description" content="Vote for your favorite Lovemate contestant." />
+        <meta
+          name="description"
+          content="Vote for your favorite Lovemate contestant."
+        />
       </Head>
 
       <Header />
@@ -152,14 +168,22 @@ export default function VotePage() {
 
       {/* Candidate Cards */}
       <section className="bg-gray-50 py-12 px-4">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">All Candidates</h2>
+        <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
+          All Candidates
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 max-w-6xl mx-auto">
           {filteredCandidates.map((candidate) => (
             <CandidateCard
               key={candidate.id}
               {...candidate}
-              onVote={() => handleNavigate(candidate.id)}
-              onGift={() => handleNavigate(candidate.id)}
+              onVote={async () => {
+                const loggedIn = await handleVoteOrGift();
+                if (loggedIn) handleVote(candidate.id);
+              }}
+              onGift={async () => {
+                const loggedIn = await handleVoteOrGift();
+                if (loggedIn) handleNavigate(candidate.id);
+              }}
               onView={() => handleNavigate(candidate.id)}
             />
           ))}
@@ -167,7 +191,9 @@ export default function VotePage() {
       </section>
 
       {/* Sponsors Section */}
-      <SponsorCarousel sponsors={["/sponsors/logo1.png", "/sponsors/logo2.png", "/sponsors/logo3.png"]} />
+      <SponsorCarousel
+        sponsors={["/sponsors/logo1.png", "/sponsors/logo2.png", "/sponsors/logo3.png"]}
+      />
 
       <Footer />
     </>
