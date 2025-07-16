@@ -14,7 +14,7 @@ export default function Register() {
       <Header />
 
       {/* Hero Section */}
-<section className="bg-[url('https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/hero/hero6.jpg')] bg-cover bg-center bg-no-repeat py-20 px-4 text-white">
+<section className="bg-[url('https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero6.jpg')] bg-cover bg-center bg-no-repeat py-20 px-4 text-white">
   <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 items-center">
     {/* Left Side: Text Content */}
     <div className="md:pr-8">

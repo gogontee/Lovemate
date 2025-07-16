@@ -2,7 +2,7 @@ const news = [
   {
     id: "dont-stare-at-love",
     title: "Dont Stare At Love!",
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/news/news2.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/news/news2.jpg",
     summary:
       "In the Lovemate Mansion, love isn't for the sidelines. It's bold, wild, and waiting to be claimed. Don’t just watch — dive in. Here, desires aren’t whispered, they’re lived out loud. So stop staring. Start playing. Love rewards the daring.",
     content:
@@ -13,7 +13,7 @@ const news = [
   {
     id: "how-do-you-win-him-over",
     title: "How Do You Win Him Over?",
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/news/news1.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/news/news1.jpg",
     summary:
       "While others chase shadows, you seem to have the magic touch. What's your secret — charm, chaos, or just pure vibes? In the Lovemate Mansion, winning hearts isn’t luck — it’s strategy.",
     content:
@@ -24,7 +24,7 @@ const news = [
   {
     id: "gold-diggers-may-emerge-winner",
     title: "Gold Diggers May Emerge Winner!",
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/news/news6.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/news/news6.jpg",
     summary:
       "In the Lovemate Mansion, love plays no favorites. The heart wants what it wants — even if it’s wrapped in gold. Sometimes the most unexpected players spark the deepest bonds.",
     content:
@@ -35,7 +35,7 @@ const news = [
   {
     id: "would-you-find-love-in-360-hours",
     title: "Would You Find Love In 360 Hours?",
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/news/news3.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/news/news3.jpg",
     summary:
       "Fifteen days. That’s all you get in the Lovemate Mansion to turn sparks into wildfire. No second chances, no rewinds — just 360 hours to find real connection.",
     content:
@@ -46,7 +46,7 @@ const news = [
   {
     id: "heart-will-break-but-love-is-certain",
     title: "Heart Will Break, But Love Is Certain",
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/news/news4.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/news/news4.jpg",
     summary:
       "The Lovemate Mansion isn’t for the faint-hearted. Tears will fall, bonds will shatter — but those who fight and feel deeply might just find the real thing.",
     content:
@@ -57,7 +57,7 @@ const news = [
   {
     id: "in-this-game-tread-with-caution",
     title: "In This Game, Tread With Caution!",
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/news/news5.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/news/news5.jpg",
     summary:
       "In the Lovemate Mansion, sparks fly fast — but do they last? Every smile hides a motive, every kiss could be a strategy.",
     content:

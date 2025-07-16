@@ -26,7 +26,7 @@ export default function NewsPage() {
       {/* Hero Section */}
 <section
   className="relative h-[300px] bg-cover bg-center bg-no-repeat"
-  style={{ backgroundImage: "url('https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/hero/hero5.jpg')" }}
+  style={{ backgroundImage: "url('https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero5.jpg')" }}
 >
   {/* Gradient overlay */}
   <div className="absolute inset-0 bg-gradient-to-br from-rose-100 via-white/80 to-pink-50" />
