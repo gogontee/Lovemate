@@ -17,12 +17,14 @@ export default function SignUp() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError("");
+    setMessage("");
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
@@ -50,7 +52,10 @@ export default function SignUp() {
         .update({ phone_number: form.phone })
         .eq("id", data.user.id);
 
-      router.push("/auth/login");
+      setMessage("✅ Verification email sent! Please check your inbox.");
+      setTimeout(() => {
+        router.push("/auth/login");
+      }, 3000); // Delay before redirect
     }
 
     setLoading(false);
@@ -115,16 +120,23 @@ export default function SignUp() {
             <button
               type="button"
               className="absolute inset-y-0 right-3 flex items-center text-gray-600"
-              onClick={() =>
-                setShowConfirmPassword(!showConfirmPassword)
-              }
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               tabIndex={-1}
             >
               {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-600 bg-red-100 p-2 rounded">
+              {error}
+            </p>
+          )}
+          {message && (
+            <p className="text-sm text-green-600 bg-green-100 p-2 rounded">
+              {message}
+            </p>
+          )}
 
           <button
             type="submit"
