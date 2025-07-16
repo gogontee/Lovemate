@@ -4,7 +4,6 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SponsorCarousel from "../components/SponsorCarousel";
 import CandidateCard from "../components/CandidateCard";
-import { useState } from "react";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
