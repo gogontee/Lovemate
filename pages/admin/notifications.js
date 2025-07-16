@@ -1,8 +1,8 @@
 // pages/admin/notifications.js
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabaseClient";
-import AdminHeader from "@/components/admin/AdminHeader";
-import AdminSidebar from "@/components/admin/AdminSidebar";
+import AdminHeader from "@/components/AdminHeader";
+import AdminSidebar from "@/components/AdminSidebar";
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState([]);

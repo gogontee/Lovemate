@@ -1,6 +1,6 @@
 // components/AdminHeader.js
 import { useEffect, useState } from "react";
-import { supabase } from "../utils/supabaseClient";
+import { supabase } from "@/utils/supabaseClient";
 import { Bell, LogOut } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/router";
