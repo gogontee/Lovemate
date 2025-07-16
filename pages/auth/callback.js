@@ -1,31 +1,24 @@
 // pages/auth/callback.js
-
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import { supabase } from "../../utils/supabaseClient";
+import { supabase } from "@/utils/supabaseClient";
 
 export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
-    const redirectAfterLogin = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+    const handleRedirect = async () => {
+      const { error } = await supabase.auth.getSession();
 
-      if (session) {
-        router.push("/dashboard");
+      if (!error) {
+        router.push("/dashboard"); // or wherever you want to send them
       } else {
         router.push("/auth/login");
       }
     };
 
-    redirectAfterLogin();
+    handleRedirect();
   }, [router]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center text-gray-600">
-      Redirecting, please wait...
-    </div>
-  );
+  return <p className="p-6 text-center">Verifying...</p>;
 }
