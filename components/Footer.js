@@ -95,7 +95,7 @@ export default function Footer() {
           <p className="text-sm text-gray-600 mb-4">📞 +234 815 309 3402</p>
 
           <div className="flex justify-center sm:justify-start">
-            <Image src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/logo/logo10.png" width={100} height={32} className="object-contain" />
+            <Image src= "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/logo/logo10.png" width={100} height={32} className="object-contain" />
           </div>
         </div>
       </div>

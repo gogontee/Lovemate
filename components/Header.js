@@ -53,7 +53,7 @@ export default function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <Image
-            src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/asset/public/logo/logo10.png"
+            src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/logo/logo10.png"
             width={120}
             height={40}
             className="object-contain"
