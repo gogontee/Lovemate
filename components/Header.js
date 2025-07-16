@@ -3,12 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabaseClient";
-import {
-  UserCircle,
-  LayoutDashboard,
-  Menu,
-  X,
-} from "lucide-react";
+import { UserCircle, LayoutDashboard, Menu, X } from "lucide-react";
 
 export default function Header() {
   const router = useRouter();
@@ -33,12 +28,31 @@ export default function Header() {
       setUser(user);
     };
     getUser();
+
+    // Listen for auth changes so header updates dynamically
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      listener?.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     router.push("/");
+  };
+
+  const handleDashboardClick = (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert("Please log in to access your dashboard.");
+      router.push("/auth/login");
+      return;
+    }
+    router.push("/dashboard");
   };
 
   return (
@@ -83,15 +97,14 @@ export default function Header() {
             📻 Live
           </Link>
 
-          {/* Dashboard Link */}
-          {user && (
-            <Link
-              href="/dashboard"
-              className="hidden md:flex items-center gap-1 px-3 py-2 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-medium transition"
-            >
-              <LayoutDashboard size={18} /> Dashboard
-            </Link>
-          )}
+          {/* Dashboard Link (always visible) */}
+          <button
+            onClick={handleDashboardClick}
+            className="hidden md:flex items-center gap-1 px-3 py-2 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-medium transition"
+            type="button"
+          >
+            <LayoutDashboard size={18} /> Dashboard
+          </button>
 
           {/* Login/Logout */}
           <div className="hidden md:flex">
@@ -136,15 +149,22 @@ export default function Header() {
             </Link>
           ))}
 
-          {user && (
-            <Link
-              href="/dashboard"
-              className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
-              onClick={() => setMenuOpen(false)}
-            >
-              Dashboard
-            </Link>
-          )}
+          {/* Dashboard link always visible on mobile too */}
+          <button
+            onClick={() => {
+              setMenuOpen(false);
+              if (!user) {
+                alert("Please log in to access your dashboard.");
+                router.push("/auth/login");
+                return;
+              }
+              router.push("/dashboard");
+            }}
+            className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
+            type="button"
+          >
+            Dashboard
+          </button>
 
           {user ? (
             <button
