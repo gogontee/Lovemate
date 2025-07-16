@@ -81,14 +81,14 @@ function AdminSettings() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Vote End</label>
+                <label className="block text-sm font-medium text-gray-800">Vote End</label>
                 <input
-                  type="datetime-local"
-                  name="vote_end"
-                  value={settings.vote_end?.slice(0, 16) || ""}
-                  onChange={handleChange}
-                  className="mt-1 w-full border px-3 py-2 rounded"
-                />
+  type="datetime-local"
+  name="vote_start"
+  value={settings.vote_start?.slice(0, 16) || ""}
+  onChange={handleChange}
+  className="mt-1 w-full border border-gray-300 text-gray-800 bg-white px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+/>
               </div>
 
               <div>
@@ -96,30 +96,33 @@ function AdminSettings() {
                   Registration Status
                 </label>
                 <div className="mt-2 flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    name="registration_open"
-                    checked={settings.registration_open}
-                    onChange={handleChange}
-                  />
-                  <span>{settings.registration_open ? "Open" : "Closed"}</span>
-                </div>
+  <input
+    type="checkbox"
+    name="registration_open"
+    checked={settings.registration_open}
+    onChange={handleChange}
+    className="accent-rose-600 w-4 h-4"
+  />
+  <span className="text-gray-800 text-sm">
+    {settings.registration_open ? "Open" : "Closed"}
+  </span>
+</div>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Current Stage</label>
                 <select
-                  name="current_stage"
-                  value={settings.current_stage}
-                  onChange={handleChange}
-                  className="mt-1 w-full border px-3 py-2 rounded"
-                >
-                  <option value="">-- Select --</option>
-                  <option value="Audition">Audition</option>
-                  <option value="Top 100">Top 100</option>
-                  <option value="Top 20">Top 20</option>
-                  <option value="Finale">Finale</option>
-                </select>
+  name="current_stage"
+  value={settings.current_stage}
+  onChange={handleChange}
+  className="mt-1 w-full border border-gray-300 text-gray-800 bg-white px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-rose-500"
+>
+  <option value="">-- Select --</option>
+  <option value="Audition">Audition</option>
+  <option value="Top 100">Top 100</option>
+  <option value="Top 20">Top 20</option>
+  <option value="Finale">Finale</option>
+</select>
               </div>
 
               <div>
@@ -136,12 +139,12 @@ function AdminSettings() {
 
               <div className="md:col-span-2 mt-6">
                 <button
-                  onClick={saveSettings}
-                  disabled={saving}
-                  className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded shadow"
-                >
-                  {saving ? "Saving..." : "Save Settings"}
-                </button>
+  onClick={saveSettings}
+  disabled={saving}
+  className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded shadow transition duration-200 focus:ring-2 focus:ring-rose-400"
+>
+  {saving ? "Saving..." : "Save Settings"}
+</button>
               </div>
             </div>
           )}

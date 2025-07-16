@@ -80,35 +80,37 @@ function AdminCandidates() {
 
           {/* Filters */}
           <div className="flex gap-4 mb-6">
-            <select
-              name="gender"
-              onChange={handleFilterChange}
-              className="border px-3 py-2 rounded text-sm"
-            >
-              <option value="">All Genders</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-            <select
-              name="status"
-              onChange={handleFilterChange}
-              className="border px-3 py-2 rounded text-sm"
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <select
-              name="stage"
-              onChange={handleFilterChange}
-              className="border px-3 py-2 rounded text-sm"
-            >
-              <option value="">All Stages</option>
-              <option value="Top 100">Top 100</option>
-              <option value="Top 20">Top 20</option>
-              <option value="Finalist">Finalist</option>
-            </select>
-          </div>
+  <select
+    name="gender"
+    onChange={handleFilterChange}
+    className="border px-3 py-2 rounded text-sm bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400"
+  >
+    <option value="">All Genders</option>
+    <option value="male">Male</option>
+    <option value="female">Female</option>
+  </select>
+
+  <select
+    name="status"
+    onChange={handleFilterChange}
+    className="border px-3 py-2 rounded text-sm bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400"
+  >
+    <option value="">All Status</option>
+    <option value="active">Active</option>
+    <option value="inactive">Inactive</option>
+  </select>
+
+  <select
+    name="stage"
+    onChange={handleFilterChange}
+    className="border px-3 py-2 rounded text-sm bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400"
+  >
+    <option value="">All Stages</option>
+    <option value="Top 100">Top 100</option>
+    <option value="Top 20">Top 20</option>
+    <option value="Finalist">Finalist</option>
+  </select>
+</div>
 
           {/* Table */}
           {loading ? (

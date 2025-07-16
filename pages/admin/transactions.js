@@ -85,25 +85,25 @@ function AdminTransactions() {
               />
 
               <select
-                name="type"
-                className="border rounded-md px-3 py-2 text-sm"
-                onChange={handleFilterChange}
-              >
-                <option value="">All Types</option>
-                <option value="vote">Vote</option>
-                <option value="gift">Gift</option>
-                <option value="funding">Funding</option>
-              </select>
+  name="type"
+  className="border border-gray-300 text-gray-800 bg-white rounded-md px-3 py-2 text-sm focus:ring-rose-500 focus:border-rose-500"
+  onChange={handleFilterChange}
+>
+  <option value="">All Types</option>
+  <option value="vote">Vote</option>
+  <option value="gift">Gift</option>
+  <option value="funding">Funding</option>
+</select>
 
               <select
-                name="status"
-                className="border rounded-md px-3 py-2 text-sm"
-                onChange={handleFilterChange}
-              >
-                <option value="">All Status</option>
-                <option value="completed">Completed</option>
-                <option value="pending">Pending</option>
-              </select>
+  name="status"
+  className="border border-gray-300 text-gray-800 bg-white rounded-md px-3 py-2 text-sm focus:ring-rose-500 focus:border-rose-500"
+  onChange={handleFilterChange}
+>
+  <option value="">All Status</option>
+  <option value="completed">Completed</option>
+  <option value="pending">Pending</option>
+</select>
             </div>
           </div>
 
@@ -113,7 +113,7 @@ function AdminTransactions() {
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white shadow rounded-lg">
                 <thead>
-                  <tr className="bg-rose-50 text-left text-sm font-semibold text-gray-700">
+                  <tr className="bg-rose-100 text-left text-sm font-semibold text-gray-800">
                     <th className="px-4 py-3">User</th>
                     <th className="px-4 py-3">Email</th>
                     <th className="px-4 py-3">Amount (₦)</th>

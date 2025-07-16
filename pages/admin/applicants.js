@@ -67,7 +67,7 @@ function AdminApplicants() {
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white shadow rounded-lg">
                 <thead>
-                  <tr className="bg-rose-50 text-left text-sm font-semibold text-gray-700">
+                  <tr className="bg-rose-100 text-left text-sm font-semibold text-gray-800">
                     <th className="px-4 py-3">Photo</th>
                     <th className="px-4 py-3">Full Name</th>
                     <th className="px-4 py-3">Email</th>
@@ -92,20 +92,20 @@ function AdminApplicants() {
                       <td className="px-4 py-3">
                         {new Date(applicant.created_at).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3 space-x-2">
-                        <button
-                          onClick={() => promoteToCandidate(applicant.id)}
-                          className="bg-green-100 text-green-700 px-3 py-1 rounded hover:bg-green-200"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => rejectApplicant(applicant.id)}
-                          className="bg-red-100 text-red-700 px-3 py-1 rounded hover:bg-red-200"
-                        >
-                          Reject
-                        </button>
-                      </td>
+                      <td className="px-4 py-3 space-x-2 flex flex-col sm:flex-row gap-2">
+  <button
+    onClick={() => promoteToCandidate(applicant.id)}
+    className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm font-medium"
+  >
+    Approve
+  </button>
+  <button
+    onClick={() => rejectApplicant(applicant.id)}
+    className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700 text-sm font-medium"
+  >
+    Reject
+  </button>
+</td>
                     </tr>
                   ))}
 

@@ -16,14 +16,31 @@ export default function Dashboard() {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (data?.user) {
-        setUser(data.user);
-      } else {
-        router.push("/auth/login");
-      }
-      setLoading(false);
-    };
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    router.push("/auth/login");
+    return;
+  }
+
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("id, email, photo")
+    .eq("id", user.id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching profile:", error.message);
+  } else {
+    setUser(profile);
+    if (profile.photo) setAvatarUrl(profile.photo);
+  }
+
+  setLoading(false);
+};
+
     getUser();
   }, [router]);
 
@@ -36,6 +53,13 @@ export default function Dashboard() {
   const file = event.target.files[0];
   if (!file || !user) return;
 
+  // 🔒 Enforce 5MB limit for users
+  const maxSize = 5 * 1024 * 1024; // 5MB
+  if (file.size > maxSize) {
+    alert("Image is too large. Please upload a file less than 5MB.");
+    return;
+  }
+
   const fileExt = file.name.split(".").pop();
   const filePath = `avatars/${user.id}.${fileExt}`;
 
@@ -43,17 +67,29 @@ export default function Dashboard() {
     .from("avatars")
     .upload(filePath, file, { upsert: true });
 
-  if (!uploadError) {
-    const { publicUrl } = supabase.storage
-      .from("avatars")
-      .getPublicUrl(filePath);
-
-    setAvatarUrl(publicUrl);
-  } else {
+  if (uploadError) {
     console.error("Upload error:", uploadError.message);
+    return;
+  }
+
+  const { data: publicUrlData } = supabase.storage
+    .from("avatars")
+    .getPublicUrl(filePath);
+
+  const publicUrl = publicUrlData.publicUrl;
+
+  // 💾 Save the public URL to the user's profile
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ photo: publicUrl })
+    .eq("id", user.id);
+
+  if (updateError) {
+    console.error("Failed to update profile:", updateError.message);
+  } else {
+    setAvatarUrl(publicUrl); // ✅ update image preview
   }
 };
-
 
   if (loading) return <div className="text-center p-20">Loading...</div>;
   if (!user) return null;
@@ -68,11 +104,11 @@ export default function Dashboard() {
             <div className="flex items-center gap-4">
               <div className="relative w-16 h-16">
                 <Image
-                  src={avatarUrl}
-                  alt="Profile"
-                  fill
-                  className="rounded-full border object-cover"
-                />
+  src={avatarUrl}
+  alt="Profile"
+  fill
+  className="rounded-full border object-cover"
+/>
                 <input
                   type="file"
                   accept="image/*"

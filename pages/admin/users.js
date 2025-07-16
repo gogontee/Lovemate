@@ -40,12 +40,12 @@ function AdminUsers() {
         <AdminHeader />
 
         <main className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Manage Users</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-gray-800">Manage Users</h2>
             <input
               type="text"
               placeholder="Search users..."
-              className="px-4 py-2 border rounded-md w-64"
+              className="px-4 py-2 border border-gray-300 rounded-md w-64 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white shadow-sm"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -54,7 +54,7 @@ function AdminUsers() {
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white shadow rounded-lg">
               <thead>
-                <tr className="bg-rose-50 text-left text-sm font-semibold text-gray-700">
+                <tr className="bg-rose-100 text-left text-sm font-semibold text-gray-700">
                   <th className="px-4 py-3">Full Name</th>
                   <th className="px-4 py-3">Email</th>
                   <th className="px-4 py-3">Role</th>
@@ -63,10 +63,13 @@ function AdminUsers() {
               </thead>
               <tbody>
                 {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-b hover:bg-rose-50 text-sm">
+                  <tr
+                    key={user.id}
+                    className="border-b hover:bg-rose-50 text-sm text-gray-800"
+                  >
                     <td className="px-4 py-3">{user.full_name || "—"}</td>
                     <td className="px-4 py-3">{user.email}</td>
-                    <td className="px-4 py-3 capitalize text-rose-600 font-medium">
+                    <td className="px-4 py-3 capitalize text-rose-600 font-semibold">
                       {user.role}
                     </td>
                     <td className="px-4 py-3">
