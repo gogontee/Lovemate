@@ -8,12 +8,12 @@ import SponsorCarousel from "../components/SponsorCarousel";
 import Image from "next/image";
 
 const photos = [
-  "/gallery/photo1.jpg",
-  "/gallery/photo2.jpg",
-  "/gallery/photo3.jpg",
-  "/gallery/photo4.jpg",
-  "/gallery/photo5.jpg",
-  "/gallery/photo6.jpg",
+  "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/maingallery/photo1.jpg",
+  "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/maingallery/photo2.jpg",
+  "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/maingallery/photo3.jpg",
+  "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/maingallery/photo4.jpg",
+  "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/maingallery/photo5.jpg",
+  "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/maingallery/photo6.jpg",
 ];
 
 const videos = [

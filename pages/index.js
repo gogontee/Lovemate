@@ -17,31 +17,31 @@ import { useRouter } from "next/router";
 
 const heroSlides = [
   {
-    image: "/hero/hero10.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/hero/hero10.jpg",
     title: "Search for the",
     highlight: "Universal Love Idol",
     subtitle: "Has Begun.",
   },
   {
-    image: "/hero/hero6.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/hero/hero6.jpg",
     title: "Love Meets Fame",
     highlight: "One Stage, 24 Hearts",
     subtitle: "Only One Crown.",
   },
   {
-    image: "/hero/hero7.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/hero/hero7.jpg",
     title: "Will You Watch or Win?",
     highlight: "Your Journey Begins",
     subtitle: "Right Here.",
   },
   {
-    image: "/hero/hero8.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/hero/hero8.jpg",
     title: "Do You Breath Love?",
     highlight: "Your Journey Begins",
     subtitle: "Right Here.",
   },
   {
-    image: "/hero/hero9.jpg",
+    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/hero/hero9.jpg",
     title: "Hottest Matchmaking Showdown",
     highlight: "Is Coming To Your Screen",
     subtitle: "Right Here.",
@@ -135,9 +135,9 @@ export default function Home() {
 
   // Sponsors logos
   const sponsors = [
-    "/sponsors/logo1.png",
-    "/sponsors/logo2.png",
-    "/sponsors/logo3.png",
+    "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/sponsors/logo1.png",
+    "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/sponsors/logo2.png",
+    "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/sponsors/logo3.png",
   ];
 
   // Top Fans data

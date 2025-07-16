@@ -20,7 +20,7 @@ export default function About() {
       {/* Hero Section */}
 <section
   className="relative bg-cover bg-center h-[400px] text-white"
-  style={{ backgroundImage: "url('/images/abouthero.png')" }}
+  style={{ backgroundImage: "url('https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/hero/hero6.jpg')" }}
 >
   {/* Optional dark gradient overlay for better contrast */}
   <div className="absolute inset-0 bg-black/40"></div>

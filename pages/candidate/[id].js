@@ -63,6 +63,43 @@ export default function CandidateProfile() {
   }, [id, section]);
 
   if (!candidate) return <div className="text-center py-20">Loading...</div>;
+  const handleVote = async (candidateId, voteCost = 100) => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    router.push("/auth/login");
+    return;
+  }
+
+  const { data: summary } = await supabase
+    .from("wallet_summary")
+    .select("balance")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!summary || summary.balance < voteCost) {
+    alert("Insufficient balance.");
+    return;
+  }
+
+  // Deduct wallet
+  await supabase.from("wallets").insert([
+    {
+      user_id: user.id,
+      amount: -voteCost,
+      type: "vote",
+      status: "completed",
+    },
+  ]);
+
+  // Update vote count
+  await supabase.rpc("increment_vote", {
+    candidate_id_param: candidateId,
+    vote_count: voteCost / 100, // assuming ₦100 per vote
+  });
+
+  alert("Vote submitted!");
+};
+
 
   const giftValueMap = {
     Star: 100000,
@@ -71,6 +108,13 @@ export default function CandidateProfile() {
     Gold: 700000,
     Love: 1000000,
   };
+  const giftStyles = {
+  Star: "bg-orange-200 text-orange-800 hover:bg-orange-300",
+  Crown: "bg-green-200 text-green-800 hover:bg-green-300",
+  Dragon: "bg-blue-200 text-blue-800 hover:bg-blue-300",
+  Gold: "bg-pink-200 text-pink-800 hover:bg-pink-300",
+  Love: "bg-red-200 text-red-800 hover:bg-red-300",
+};
 
 
   return (
@@ -127,19 +171,20 @@ export default function CandidateProfile() {
       </section>
 
       {/* Gallery */}
-      <section className="bg-white py-12 px-6 max-w-6xl mx-auto">
-        <h2 className="text-2xl font-bold mb-6">Gallery</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {candidate.gallery.map((img, i) => (
-            <img
-              key={i}
-              src={`/candidates/gallery/${img}`}
-              alt={`Gallery ${i + 1}`}
-              className="rounded-xl shadow hover:scale-105 transition"
-            />
-          ))}
-        </div>
-      </section>
+<section className="bg-white py-12 px-6 max-w-6xl mx-auto">
+  <h2 className="text-2xl font-bold mb-6">Gallery</h2>
+  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    {Array.isArray(candidate.gallery) &&
+      candidate.gallery.map((img, i) => (
+        <img
+          key={i}
+          src={`/candidates/gallery/${img}`}
+          alt={`Gallery ${i + 1}`}
+          className="rounded-xl shadow hover:scale-105 transition"
+        />
+      ))}
+  </div>
+</section>
 
       {/* Unified Voting & Gifting Section */}
 <section ref={scrollRef} className="bg-gradient-to-br from-pink-50 to-rose-100 py-12 px-4">
@@ -161,13 +206,19 @@ export default function CandidateProfile() {
         onChange={(e) => setForm({ ...form, contact: e.target.value })}
       />
       <input
-        type="number"
-        placeholder="Number of Votes"
-        min={10}
-        className="w-full px-4 py-3 rounded border border-gray-300 shadow-sm bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-rose-500"
-        value={form.votes}
-        onChange={(e) => setForm({ ...form, votes: e.target.value })}
-      />
+  type="number"
+  placeholder="Number of Votes"
+  min={1}
+  className="w-full px-4 py-3 rounded border border-gray-300 shadow-sm bg-white text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-rose-500"
+  value={form.votes}
+  onChange={(e) => setForm({ ...form, votes: e.target.value })}
+/>
+
+{/* Live Total Cost */}
+<p className="text-sm text-gray-600 mt-1">
+  💰 Total Cost: ₦{parseInt(form.votes || 0) * 100}
+</p>
+
 
       <button
   className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 rounded-full shadow"
@@ -177,16 +228,20 @@ export default function CandidateProfile() {
 </button>
 
       <div className="grid grid-cols-2 gap-4 pt-6">
-        {["Star", "Crown", "Dragon", "Gold"].map((gift) => (
-          <button
-            key={gift}
-            onClick={() => setShowGiftModal(gift)}
-            className={`font-semibold py-2 px-4 rounded shadow ${giftStyles[gift]}`}
-          >
-            🎁 {gift}
-          </button>
-        ))}
-      </div>
+  {Object.keys(giftValueMap).map((gift) => (
+    <div key={gift} className="text-center">
+      <button
+        onClick={() => setShowGiftModal(gift)}
+        className={`w-full font-semibold py-2 px-4 rounded shadow ${giftStyles[gift]}`}
+      >
+        🎁 {gift}
+      </button>
+      <p className="text-sm text-gray-600 mt-1">
+        ₦{giftValueMap[gift].toLocaleString()}
+      </p>
+    </div>
+  ))}
+</div>
     </div>
   </div>
 </section>

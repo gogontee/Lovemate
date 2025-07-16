@@ -28,14 +28,16 @@ export default function Header() {
       setUser(user);
     };
     getUser();
+  }, []);
 
-    // Listen for auth changes so header updates dynamically
+  // ✅ Fix: Auth listener to update user state on login/logout
+  useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
     return () => {
-      listener?.unsubscribe();
+      listener?.subscription?.unsubscribe(); // ✅ Correct cleanup
     };
   }, []);
 
@@ -45,23 +47,13 @@ export default function Header() {
     router.push("/");
   };
 
-  const handleDashboardClick = (e) => {
-    e.preventDefault();
-    if (!user) {
-      alert("Please log in to access your dashboard.");
-      router.push("/auth/login");
-      return;
-    }
-    router.push("/dashboard");
-  };
-
   return (
     <header className="bg-rose-50 shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-4">
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <Image
-            src="/logo/logo10.png"
+            src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/logo/logo10.png"
             width={120}
             height={40}
             className="object-contain"
@@ -97,14 +89,15 @@ export default function Header() {
             📻 Live
           </Link>
 
-          {/* Dashboard Link (always visible) */}
-          <button
-            onClick={handleDashboardClick}
-            className="hidden md:flex items-center gap-1 px-3 py-2 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-medium transition"
-            type="button"
-          >
-            <LayoutDashboard size={18} /> Dashboard
-          </button>
+          {/* Dashboard Link */}
+          {user && (
+            <Link
+              href="/dashboard"
+              className="hidden md:flex items-center gap-1 px-3 py-2 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-medium transition"
+            >
+              <LayoutDashboard size={18} /> Dashboard
+            </Link>
+          )}
 
           {/* Login/Logout */}
           <div className="hidden md:flex">
@@ -149,22 +142,15 @@ export default function Header() {
             </Link>
           ))}
 
-          {/* Dashboard link always visible on mobile too */}
-          <button
-            onClick={() => {
-              setMenuOpen(false);
-              if (!user) {
-                alert("Please log in to access your dashboard.");
-                router.push("/auth/login");
-                return;
-              }
-              router.push("/dashboard");
-            }}
-            className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
-            type="button"
-          >
-            Dashboard
-          </button>
+          {user && (
+            <Link
+              href="/dashboard"
+              className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
+              onClick={() => setMenuOpen(false)}
+            >
+              Dashboard
+            </Link>
+          )}
 
           {user ? (
             <button
