@@ -18,7 +18,7 @@ const candidates = [
     votes: 0,
     imageUrl: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/rita.jpg",
     bio: "Rita is a compassionate soul with a deep sense of loyalty. She brings grace and kindness to the mansion.",
-    gallery: ["https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/rita1.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/rita2.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/asset/public/gallery/rita3.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/rita4.jpg"],
+    gallery: ["https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/rita1.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/rita2.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/asset/public/asset/gallery/rita3.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/rita4.jpg"],
     video: "https://www.youtube.com/embed/C-dWkLFEEw0?loop=1&playlist=C-dWkLFEEw0",
   },
   {
@@ -48,7 +48,7 @@ const candidates = [
     votes: 0,
     imageUrl: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/tobi.jpg",
     bio: "Tobi is determined and passionate, with a vision to win hearts and the title of Love Idol.",
-    gallery: ["https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/tobi1.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/tobi2.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/gallery/tobi3.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/gallery/tobi4.jpg"],
+    gallery: ["https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/tobi1.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/tobi2.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/tobi3.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/tobi4.jpg"],
     video: "https://www.youtube.com/embed/JfDes65L3Zg?loop=1&playlist=JfDes65L3Zg",
   },
   {
@@ -68,7 +68,7 @@ const candidates = [
     votes: 0,
     imageUrl: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/david.jpg",
     bio: "David is the calm in the storm. Thoughtful and articulate, he’s out to prove that love is intentional.",
-    gallery: ["https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/david1.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/david2.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/david3.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/asset/public/gallery/david4.jpg"],
+    gallery: ["https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/david1.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/david2.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/gallery/david3.jpg", "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/esset/gallery/david4.jpg"],
     video: "https://www.youtube.com/embed/JfDes65L3Zg?loop=1&playlist=JfDes65L3Zg",
   },
   {

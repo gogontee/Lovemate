@@ -10,7 +10,7 @@ import Image from "next/image";
 const photos = [
   "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/maingallery/photo1.jpg",
   "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/maingallery/photo2.jpg",
-  "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public.asset/maingallery/photo3.jpg",
+  "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/maingallery/photo3.jpg",
   "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/maingallery/photo4.jpg",
   "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/maingallery/photo5.jpg",
   "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/maingallery/photo6.jpg",
