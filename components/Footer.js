@@ -6,8 +6,34 @@ import {
   Youtube,
   Music,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/utils/supabaseClient";
+import Link from "next/link";
 
 export default function Footer() {
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      if (!error && data?.role === "admin") {
+        setIsAdmin(true);
+      }
+    };
+
+    checkAdmin();
+  }, []);
+
   return (
     <footer className="bg-gradient-to-t from-rose-100 via-white to-white text-gray-700 pt-12 pb-6 px-4 border-t border-rose-200">
       <div className="max-w-7xl mx-auto grid gap-10 sm:grid-cols-3 text-center sm:text-left">
@@ -48,49 +74,19 @@ export default function Footer() {
         <div>
           <h4 className="text-lg font-semibold text-gray-800 mb-3">Follow & Contact</h4>
           <div className="flex justify-center sm:justify-start gap-4 mb-4">
-            <a
-              href="https://instagram.com/lovemateshow"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram"
-              className="text-gray-600 hover:text-rose-600 transition"
-            >
+            <a href="https://instagram.com/lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-gray-600 hover:text-rose-600 transition">
               <Instagram size={20} />
             </a>
-            <a
-              href="https://twitter.com/lovemateshow"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Twitter"
-              className="text-gray-600 hover:text-rose-600 transition"
-            >
+            <a href="https://twitter.com/lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="text-gray-600 hover:text-rose-600 transition">
               <Twitter size={20} />
             </a>
-            <a
-              href="https://facebook.com/lovemateshow"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook"
-              className="text-gray-600 hover:text-rose-600 transition"
-            >
+            <a href="https://facebook.com/lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-gray-600 hover:text-rose-600 transition">
               <Facebook size={20} />
             </a>
-            <a
-              href="https://tiktok.com/@lovemateshow"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="TikTok"
-              className="text-gray-600 hover:text-rose-600 transition"
-            >
+            <a href="https://tiktok.com/@lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="text-gray-600 hover:text-rose-600 transition">
               <Music size={20} />
             </a>
-            <a
-              href="https://youtube.com/@lovemateshow"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="YouTube"
-              className="text-gray-600 hover:text-rose-600 transition"
-            >
+            <a href="https://youtube.com/@lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-gray-600 hover:text-rose-600 transition">
               <Youtube size={20} />
             </a>
           </div>
@@ -98,14 +94,8 @@ export default function Footer() {
           <p className="text-sm text-gray-600">📧 lovemateshow@gmail.com</p>
           <p className="text-sm text-gray-600 mb-4">📞 +234 815 309 3402</p>
 
-          {/* Logo Placement */}
           <div className="flex justify-center sm:justify-start">
-            <Image
-              src="/logo/logo10.png"
-              width={100}
-              height={32}
-              className="object-contain"
-            />
+            <Image src="/logo/logo10.png" width={100} height={32} className="object-contain" />
           </div>
         </div>
       </div>
@@ -113,6 +103,17 @@ export default function Footer() {
       <div className="mt-10 text-center text-xs text-gray-500">
         &copy; {new Date().getFullYear()} Lovemate Show. All rights reserved.
       </div>
+
+      {isAdmin && (
+        <div className="mt-4 text-center">
+          <Link
+            href="/admin"
+            className="inline-block text-xs bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white px-4 py-2 rounded transition"
+          >
+            Admin Dashboard
+          </Link>
+        </div>
+      )}
     </footer>
   );
 }

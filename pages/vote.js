@@ -6,7 +6,93 @@ import SponsorCarousel from "../components/SponsorCarousel";
 import CandidateCard from "../components/CandidateCard";
 import { useState } from "react";
 import { useRouter } from "next/router";
-import candidates from "../data/candidates";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import { supabase } from "@/utils/supabaseClient";
+
+const router = useRouter();
+
+const handleVoteOrGift = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    alert("You must be logged in to vote or send gifts.");
+    router.push("/auth/login");
+    return;
+  }
+
+  // Proceed with vote/gift logic...
+};
+const handleVote = async (candidateId, voteCost = 100) => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    router.push("/auth/login");
+    return;
+  }
+
+  const { data: summary } = await supabase
+    .from("wallet_summary")
+    .select("balance")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!summary || summary.balance < voteCost) {
+    alert("Insufficient balance.");
+    return;
+  }
+
+  // Deduct wallet
+  await supabase.from("wallets").insert([
+    {
+      user_id: user.id,
+      amount: -voteCost,
+      type: "vote",
+      status: "completed",
+    },
+  ]);
+
+  // Update vote count
+  await supabase.rpc("increment_vote", {
+    candidate_id_param: candidateId,
+    vote_count: 1,
+  });
+
+  alert("Vote submitted!");
+};
+const [candidates, setCandidates] = useState([]);
+useEffect(() => {
+  const fetchCandidates = async () => {
+    const { data, error } = await supabase.from("candidates").select("*").order("id", { ascending: true });
+    if (!error) setCandidates(data);
+  };
+  fetchCandidates();
+}, []);
+
+useEffect(() => {
+  const channel = supabase
+    .channel("votes-realtime")
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "candidates",
+      },
+      (payload) => {
+        setCandidates((prev) =>
+          prev.map((c) =>
+            c.id === payload.new.id ? { ...c, votes: payload.new.votes } : c
+          )
+        );
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, []);
+
 
 export default function VotePage() {
   const [searchTerm, setSearchTerm] = useState("");

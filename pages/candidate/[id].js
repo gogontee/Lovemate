@@ -1,10 +1,63 @@
 // pages/candidate/[id].js
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-import candidates from "../../data/candidates";
-import { useEffect, useRef, useState } from "react";
+import { supabase } from "@/utils/supabaseClient";
+
+const router = useRouter();
+
+const handleVoteOrGift = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    alert("You must be logged in to vote or send gifts.");
+    router.push("/auth/login");
+    return;
+  }
+
+  // Proceed with vote/gift logic...
+};
+const handleVote = async (candidateId, voteCost = 100) => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    router.push("/auth/login");
+    return;
+  }
+
+  const { data: summary } = await supabase
+    .from("wallet_summary")
+    .select("balance")
+    .eq("user_id", user.id)
+    .single();
+
+  if (!summary || summary.balance < voteCost) {
+    alert("Insufficient balance.");
+    return;
+  }
+
+  // Deduct wallet
+  await supabase.from("wallets").insert([
+    {
+      user_id: user.id,
+      amount: -voteCost,
+      type: "vote",
+      status: "completed",
+    },
+  ]);
+
+  // Update vote count
+  await supabase.rpc("increment_vote", {
+    candidate_id_param: candidateId,
+    vote_count: 1,
+  });
+
+  alert("Vote submitted!");
+};
+
 
 export default function CandidateProfile() {
   const router = useRouter();
@@ -16,6 +69,29 @@ export default function CandidateProfile() {
   const [form, setForm] = useState({ name: "", contact: "", votes: 1, gift: "" });
   const [showGiftModal, setShowGiftModal] = useState(false);
 
+ useEffect(() => {
+  if (!id) return;
+
+  const channel = supabase
+    .channel("realtime-candidate")
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "candidates",
+        filter: `id=eq.${id}`,
+      },
+      (payload) => {
+        setCandidate(payload.new);
+      }
+    )
+    .subscribe();
+
+  return () => supabase.removeChannel(channel);
+}, [id]);
+
+
   useEffect(() => {
     if (section && scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: "smooth" });
@@ -24,12 +100,14 @@ export default function CandidateProfile() {
 
   if (!candidate) return <div className="text-center py-20">Loading...</div>;
 
-  const giftStyles = {
-    Star: "bg-orange-200 text-orange-800 hover:bg-orange-300",
-    Crown: "bg-green-200 text-green-800 hover:bg-green-300",
-    Dragon: "bg-blue-200 text-blue-800 hover:bg-blue-300",
-    Gold: "bg-pink-200 text-pink-800 hover:bg-pink-300",
-  };
+  const giftValueMap = {
+  Star: 100000,
+  Crown: 300000,
+  Dragon: 500000,
+  Gold: 700000,
+  Love: 1000000,
+};
+
 
   return (
     <>
@@ -54,20 +132,27 @@ export default function CandidateProfile() {
       </section>
 
       {/* Stats */}
-      <section className="bg-white py-8 flex justify-center gap-10 text-center">
-        <div>
-          <p className="text-3xl font-bold text-rose-600">{candidate.votes}</p>
-          <p className="text-sm text-gray-600">Votes</p>
-        </div>
-        <div>
-          <p className="text-3xl font-bold text-rose-600">1023</p>
-          <p className="text-sm text-gray-600">Views</p>
-        </div>
-        <div>
-          <p className="text-3xl font-bold text-rose-600">12</p>
-          <p className="text-sm text-gray-600">Gifts</p>
-        </div>
-      </section>
+<section className="bg-white py-8 flex justify-center gap-10 text-center">
+  <div>
+    <p className="text-3xl font-bold text-rose-600">
+      {candidate?.votes ?? 0}
+    </p>
+    <p className="text-sm text-gray-600">Votes</p>
+  </div>
+  <div>
+    <p className="text-3xl font-bold text-rose-600">
+      {candidate?.views ?? 0}
+    </p>
+    <p className="text-sm text-gray-600">Views</p>
+  </div>
+  <div>
+    <p className="text-3xl font-bold text-rose-600">
+      {candidate?.gifts ?? 0}
+    </p>
+    <p className="text-sm text-gray-600">Gifts</p>
+  </div>
+</section>
+
 
       {/* Bio */}
       <section className="bg-rose-100 py-10 px-6 max-w-4xl mx-auto">
@@ -119,11 +204,11 @@ export default function CandidateProfile() {
       />
 
       <button
-        className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 rounded-full shadow"
-        onClick={() => alert(`Voting ${form.votes} for ${candidate.name} by ${form.name}`)}
-      >
-        Submit Vote
-      </button>
+  className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 rounded-full shadow"
+  onClick={() => handleVote(candidate.id, parseInt(form.votes || 0))}
+>
+  Submit Vote
+</button>
 
       <div className="grid grid-cols-2 gap-4 pt-6">
         {["Star", "Crown", "Dragon", "Gold"].map((gift) => (
@@ -167,11 +252,56 @@ export default function CandidateProfile() {
 
       <div className="flex gap-4 mt-4">
         <button
-          onClick={() => alert(`Gift: ${showGiftModal} to ${candidate.name} by ${form.name}`)}
-          className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold py-2 rounded shadow"
-        >
-          Send Gift
-        </button>
+  onClick={async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("You must be logged in to send a gift.");
+      router.push("/auth/login");
+      return;
+    }
+
+    const giftAmount = giftValueMap[showGiftModal];
+
+    if (!giftAmount) {
+      alert("Invalid gift type.");
+      return;
+    }
+
+    const { data: summary } = await supabase
+      .from("wallet_summary")
+      .select("balance")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!summary || summary.balance < giftAmount) {
+      alert("Insufficient balance.");
+      return;
+    }
+
+    await supabase.from("wallets").insert([
+      {
+        user_id: user.id,
+        amount: -giftAmount,
+        type: "gift",
+        status: "completed",
+        candidate_id: candidate.id,
+        metadata: { gift: showGiftModal },
+      },
+    ]);
+
+    await supabase.rpc("increment_vote", {
+      candidate_id_param: candidate.id,
+      vote_count: giftAmount,
+    });
+
+    alert(`${showGiftModal} sent successfully to ${candidate.name}! 🎁`);
+    setShowGiftModal(false);
+  }}
+  className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 font-semibold py-2 rounded shadow"
+>
+  Send Gift
+</button>
         <button
           onClick={() => setShowGiftModal(false)}
           className="flex-1 border border-gray-300 text-gray-700 py-2 rounded shadow"

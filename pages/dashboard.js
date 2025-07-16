@@ -7,42 +7,98 @@ import { UserCircle, Wallet, Settings, LogOut, Star, Bell } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
+
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState("/placeholder-profile.png");
+  const [walletBalance, setWalletBalance] = useState(0);
   const fileInputRef = useRef(null);
   const router = useRouter();
 
+  
   useEffect(() => {
     const getUser = async () => {
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  data: { user: authUser },
+} = await supabase.auth.getUser();
 
-  if (!user) {
-    router.push("/auth/login");
-    return;
-  }
+if (!authUser) {
+  router.push("/auth/login");
+  return;
+}
 
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("id, email, photo")
-    .eq("id", user.id)
-    .single();
+const { data: profile, error } = await supabase
+  .from("profiles")
+  .select("id, email, photo")
+  .eq("id", authUser.id)
+  .single();
 
-  if (error) {
-    console.error("Error fetching profile:", error.message);
-  } else {
-    setUser(profile);
-    if (profile.photo) setAvatarUrl(profile.photo);
-  }
+if (error) {
+  console.error("Error fetching profile:", error.message);
+} else {
+  setUser(profile);
+  if (profile.photo) setAvatarUrl(profile.photo);
+}
 
-  setLoading(false);
+setLoading(false);
+
 };
 
     getUser();
   }, [router]);
+  useEffect(() => {
+  const fetchWalletBalance = async () => {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from("wallet_summary")
+      .select("balance")
+      .eq("user_id", user.id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching wallet balance:", error.message);
+    } else {
+      setWalletBalance(data.balance || 0);
+    }
+  };
+
+  fetchWalletBalance();
+}, [user]);
+useEffect(() => {
+  if (!user?.id) return;
+
+  const channel = supabase
+    .channel("realtime-wallets")
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "wallets",
+        filter: `user_id=eq.${user.id}`,
+      },
+      async () => {
+        // Re-fetch updated balance on wallet change
+        const { data, error } = await supabase
+          .from("wallet_summary")
+          .select("balance")
+          .eq("user_id", user.id)
+          .single();
+
+        if (!error) {
+          setWalletBalance(data.balance || 0);
+        }
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel); // Clean up on unmount
+  };
+}, [user]);
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -88,6 +144,34 @@ export default function Dashboard() {
     console.error("Failed to update profile:", updateError.message);
   } else {
     setAvatarUrl(publicUrl); // ✅ update image preview
+  }
+};
+const handleFundWallet = async () => {
+  const amount = prompt("Enter amount to fund (₦)");
+
+  if (!amount || isNaN(amount)) {
+    alert("Please enter a valid amount");
+    return;
+  }
+
+  const res = await fetch("/api/fund-wallet", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount,
+      email: user.email,
+      user_id: user.id,
+    }),
+  });
+
+  const data = await res.json();
+
+  if (data?.url) {
+    window.location.href = data.url; // Redirect to Paystack
+  } else {
+    alert("Failed to initialize payment.");
   }
 };
 
@@ -143,13 +227,16 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500">Wallet Balance</p>
-                  <h3 className="text-2xl font-bold text-gray-800">₦0.00</h3>
+                  <h3 className="text-2xl font-bold text-gray-800">₦{walletBalance.toLocaleString()}</h3>
                 </div>
                 <Wallet className="text-rose-600" />
               </div>
-              <button className="mt-4 w-full bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white py-2 rounded">
-                Fund Wallet
-              </button>
+              <button
+  onClick={handleFundWallet}
+  className="mt-4 w-full bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white py-2 rounded"
+>
+  Fund Wallet
+</button>
             </div>
 
             {/* Rank Progress */}
