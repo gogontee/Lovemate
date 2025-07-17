@@ -16,23 +16,24 @@ export default function CandidateProfile() {
   const [form, setForm] = useState({ name: "", contact: "", votes: 1, gift: "" });
   const [showGiftModal, setShowGiftModal] = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
+ useEffect(() => {
+  if (!id) return;
 
-    // Fetch candidate data once
-    supabase
-      .from("candidates")
-      .select("*")
-      .eq("id", id)
-      .single()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Error fetching candidate:", error);
-          setCandidate(null);
-        } else {
-          setCandidate(data);
-        }
-      });
+  supabase
+    .from("candidates")
+    .select("*")
+    .eq("id", id)
+    .single()
+    .then(({ data, error }) => {
+      if (error) {
+        console.error("Error fetching candidate:", error);
+        setCandidate(null);
+      } else {
+        console.log("Fetched candidate:", data); // 🔍 Add this
+        setCandidate(data);
+      }
+    });
+
 
     // Subscribe to realtime updates for candidate
     const channel = supabase

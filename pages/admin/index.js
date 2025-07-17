@@ -3,7 +3,18 @@ import { supabase } from "@/utils/supabaseClient";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import withAdminAuth from "@/components/withAdminAuth";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
 
 const COLORS = ["#e11d48", "#fbbf24"];
 
@@ -15,130 +26,122 @@ function AdminDashboard() {
     votesPerDay: [],
     genderDistribution: [],
   });
+  const [topVoters, setTopVoters] = useState([]);
+  const [votesPerCandidate, setVotesPerCandidate] = useState([]);
+  const [dailyRevenue, setDailyRevenue] = useState([]);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
-  // users
-  const { count: userCount } = await supabase
-    .from("profiles")
-    .select("*", { count: "exact", head: true });
+      // users
+      const { count: userCount } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
 
-  // vote transactions
-  const { data: voteTx } = await supabase
-    .from("transactions")
-    .select("amount, type, user_id, created_at, candidate_id")
-    .eq("type", "vote");
+      // vote transactions
+      const { data: voteTx, error: voteError } = await supabase
+        .from("transactions")
+        .select("amount, type, user_id, created_at, candidate_id")
+        .eq("type", "vote");
 
-  // total revenue
-  const { data: allTx } = await supabase
-    .from("transactions")
-    .select("amount, created_at");
+      if (voteError || !voteTx) {
+        setNotFound(true);
+        return;
+      }
 
-  // candidates
-  const { data: candidates } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .eq("role", "candidate");
+      // total revenue
+      const { data: allTx } = await supabase
+        .from("transactions")
+        .select("amount, created_at");
 
-  // top voters
-  const voteCountByUser = {};
-  voteTx.forEach((tx) => {
-    if (tx.user_id) {
-      voteCountByUser[tx.user_id] = (voteCountByUser[tx.user_id] || 0) + 1;
-    }
-  });
+      // candidates
+      const { data: candidates, error: candidateError } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("role", "candidate");
 
-  const sortedTopVoters = Object.entries(voteCountByUser)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([user_id, count]) => ({ user_id, votes: count }));
+      if (candidateError || !candidates || candidates.length === 0) {
+        setNotFound(true);
+        return;
+      }
 
-  // fetch voter names
-  const { data: votersData } = await supabase
-    .from("profiles")
-    .select("id, full_name, email")
-    .in("id", sortedTopVoters.map((v) => v.user_id));
+      // top voters
+      const voteCountByUser = {};
+      voteTx.forEach((tx) => {
+        if (tx.user_id) {
+          voteCountByUser[tx.user_id] = (voteCountByUser[tx.user_id] || 0) + 1;
+        }
+      });
 
-  const topVoterProfiles = sortedTopVoters.map((v) => {
-    const profile = votersData.find((u) => u.id === v.user_id);
-    return { ...profile, votes: v.votes };
-  });
+      const sortedTopVoters = Object.entries(voteCountByUser)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([user_id, count]) => ({ user_id, votes: count }));
 
-  // votes per candidate
-  const candidateVotes = {};
-  voteTx.forEach((tx) => {
-    const cid = tx.candidate_id;
-    if (cid) {
-      candidateVotes[cid] = (candidateVotes[cid] || 0) + 1;
-    }
-  });
+      const { data: votersData } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", sortedTopVoters.map((v) => v.user_id));
 
-  const votesPerCandidate = candidates.map((c) => ({
-    name: c.full_name,
-    votes: candidateVotes[c.id] || 0,
-  }));
+      const topVoterProfiles = sortedTopVoters.map((v) => {
+        const profile = votersData.find((u) => u.id === v.user_id);
+        return { ...profile, votes: v.votes };
+      });
 
-  // revenue per day
-  const revenueByDay = {};
-  allTx.forEach((tx) => {
-    const date = new Date(tx.created_at).toLocaleDateString();
-    revenueByDay[date] = (revenueByDay[date] || 0) + tx.amount;
-  });
+      // votes per candidate
+      const candidateVotes = {};
+      voteTx.forEach((tx) => {
+        const cid = tx.candidate_id;
+        if (cid) {
+          candidateVotes[cid] = (candidateVotes[cid] || 0) + 1;
+        }
+      });
 
-  const dailyRevenue = Object.entries(revenueByDay).map(([date, amount]) => ({
-    date,
-    amount,
-  }));
+      const votesPerCandidate = candidates.map((c) => ({
+        name: c.full_name,
+        votes: candidateVotes[c.id] || 0,
+      }));
 
-  setStats({
-    users: userCount || 0,
-    votes: voteTx.length,
-    revenue: allTx.reduce((sum, t) => sum + t.amount, 0),
-    votesPerDay: [], // keep if you still want to chart it separately
-    genderDistribution: [],
-  });
-  setTopVoters(topVoterProfiles);
-  <div className="bg-white p-6 rounded shadow">
-  <h4 className="text-lg font-semibold mb-4">Top Voters</h4>
-  <ul className="space-y-2 text-sm">
-    {topVoters.map((voter) => (
-      <li key={voter.id} className="flex justify-between">
-        <span>{voter.full_name || voter.email}</span>
-        <span className="font-bold text-rose-600">{voter.votes} votes</span>
-      </li>
-    ))}
-  </ul>
-</div>
+      // revenue per day
+      const revenueByDay = {};
+      allTx.forEach((tx) => {
+        const date = new Date(tx.created_at).toLocaleDateString();
+        revenueByDay[date] = (revenueByDay[date] || 0) + tx.amount;
+      });
 
-  setVotesPerCandidate(votesPerCandidate);
-  <div className="bg-white p-6 rounded shadow">
-  <h4 className="text-lg font-semibold mb-4">Votes Per Candidate</h4>
-  <ResponsiveContainer width="100%" height={300}>
-    <LineChart data={votesPerCandidate}>
-      <XAxis dataKey="name" />
-      <YAxis />
-      <Tooltip />
-      <Line type="monotone" dataKey="votes" stroke="#e11d48" />
-    </LineChart>
-  </ResponsiveContainer>
-</div>
+      const dailyRevenue = Object.entries(revenueByDay).map(([date, amount]) => ({
+        date,
+        amount,
+      }));
 
-  setDailyRevenue(dailyRevenue);
-  <div className="bg-white p-6 rounded shadow">
-  <h4 className="text-lg font-semibold mb-4">Daily Revenue (₦)</h4>
-  <ResponsiveContainer width="100%" height={300}>
-    <LineChart data={dailyRevenue}>
-      <XAxis dataKey="date" />
-      <YAxis />
-      <Tooltip />
-      <Line type="monotone" dataKey="amount" stroke="#10b981" />
-    </LineChart>
-  </ResponsiveContainer>
-</div>
-};
+      setStats({
+        users: userCount || 0,
+        votes: voteTx.length,
+        revenue: allTx.reduce((sum, t) => sum + t.amount, 0),
+        votesPerDay: [],
+        genderDistribution: [],
+      });
+
+      setTopVoters(topVoterProfiles);
+      setVotesPerCandidate(votesPerCandidate);
+      setDailyRevenue(dailyRevenue);
+    };
 
     fetchStats();
   }, []);
+
+  // Handle 404 scenario
+  if (notFound) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 text-center">
+        <div>
+          <h1 className="text-6xl font-bold text-rose-600">404</h1>
+          <p className="text-lg text-gray-600 mt-2">Oops! Data not found.</p>
+          <p className="text-sm text-gray-400">Please check your database or try again later.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -167,20 +170,46 @@ function AdminDashboard() {
             </div>
           </div>
 
-          {/* Line Chart - Votes per Day */}
+          {/* Top Voters */}
           <div className="bg-white p-6 rounded shadow">
-            <h4 className="text-lg font-semibold mb-4">Votes Per Day</h4>
+            <h4 className="text-lg font-semibold mb-4">Top Voters</h4>
+            <ul className="space-y-2 text-sm">
+              {topVoters.map((voter) => (
+                <li key={voter.id} className="flex justify-between">
+                  <span>{voter.full_name || voter.email}</span>
+                  <span className="font-bold text-rose-600">{voter.votes} votes</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Votes Per Candidate */}
+          <div className="bg-white p-6 rounded shadow">
+            <h4 className="text-lg font-semibold mb-4">Votes Per Candidate</h4>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={stats.votesPerDay}>
-                <XAxis dataKey="date" />
+              <LineChart data={votesPerCandidate}>
+                <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Line type="monotone" dataKey="count" stroke="#e11d48" />
+                <Line type="monotone" dataKey="votes" stroke="#e11d48" />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Pie Chart - Gender Distribution */}
+          {/* Daily Revenue */}
+          <div className="bg-white p-6 rounded shadow">
+            <h4 className="text-lg font-semibold mb-4">Daily Revenue (₦)</h4>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={dailyRevenue}>
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="amount" stroke="#10b981" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Gender Distribution */}
           <div className="bg-white p-6 rounded shadow">
             <h4 className="text-lg font-semibold mb-4">Candidates by Gender</h4>
             <ResponsiveContainer width="100%" height={300}>

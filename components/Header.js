@@ -1,14 +1,17 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "../utils/supabaseClient";
-import { UserCircle, LayoutDashboard, Menu, X } from "lucide-react";
+import { Menu, X, UserCircle } from "lucide-react";
 
 export default function Header() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef();
 
   const navLinks = [
     { name: "Home", path: "/" },
@@ -23,29 +26,47 @@ export default function Header() {
   useEffect(() => {
     const getUser = async () => {
       const {
-        data: { user },
+        data: { user: currentUser },
       } = await supabase.auth.getUser();
-      setUser(user);
+      setUser(currentUser);
+
+      if (currentUser) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("photo")
+          .eq("id", currentUser.id)
+          .single();
+        if (data?.photo) setAvatarUrl(data.photo);
+      }
     };
+
     getUser();
   }, []);
 
-  // ✅ Fix: Auth listener to update user state on login/logout
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      setUser(session?.user || null);
     });
-
-    return () => {
-      listener?.subscription?.unsubscribe(); // ✅ Correct cleanup
-    };
+    return () => listener?.subscription?.unsubscribe();
   }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     router.push("/");
+    setDropdownOpen(false);
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header className="bg-rose-50 shadow-md sticky top-0 z-50">
@@ -80,8 +101,8 @@ export default function Header() {
         </nav>
 
         {/* Right Side */}
-        <div className="flex items-center space-x-3">
-          {/* Live Button */}
+        <div className="flex items-center space-x-3 relative">
+          {/* Live */}
           <Link
             href="/gallery?tab=stream#livestream"
             className="px-4 py-2 rounded-md bg-rose-100 text-rose-700 hover:bg-primary hover:text-white font-semibold transition text-sm"
@@ -89,34 +110,49 @@ export default function Header() {
             📻 Live
           </Link>
 
-          {/* Dashboard Link */}
-          {user && (
+          {/* Auth Area */}
+          {user ? (
+            <div className="relative" ref={dropdownRef}>
+              <button onClick={() => setDropdownOpen(!dropdownOpen)} className="hidden md:flex">
+                {avatarUrl ? (
+                  <Image
+                    src={avatarUrl}
+                    alt="Profile"
+                    width={36}
+                    height={36}
+                    className="rounded-full border object-cover"
+                  />
+                ) : (
+                  <UserCircle size={32} className="text-rose-700" />
+                )}
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-2 w-40 bg-white rounded shadow-md z-50 text-sm">
+                  <Link
+                    href="/dashboard"
+                    onClick={() => setDropdownOpen(false)}
+                    className="block px-4 py-2 hover:bg-rose-50 text-gray-700"
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 hover:bg-rose-50 text-gray-700"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
             <Link
-              href="/dashboard"
-              className="hidden md:flex items-center gap-1 px-3 py-2 rounded-md bg-rose-600 text-white hover:bg-rose-700 font-medium transition"
+              href="/auth/login"
+              className="hidden md:flex items-center gap-1 px-3 py-2 rounded-md bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white font-medium transition"
             >
-              <LayoutDashboard size={18} /> Dashboard
+              <UserCircle size={20} /> Login
             </Link>
           )}
-
-          {/* Login/Logout */}
-          <div className="hidden md:flex">
-            {user ? (
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-1 px-3 py-2 rounded-md bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white font-medium transition"
-              >
-                <UserCircle size={20} /> Logout
-              </button>
-            ) : (
-              <Link
-                href="/auth/login"
-                className="flex items-center gap-1 px-3 py-2 rounded-md bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white font-medium transition"
-              >
-                <UserCircle size={20} /> Login
-              </Link>
-            )}
-          </div>
 
           {/* Hamburger for Mobile */}
           <button
@@ -128,7 +164,7 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Mobile Nav Dropdown */}
+      {/* Mobile Menu */}
       {menuOpen && (
         <div className="md:hidden bg-white shadow px-4 py-4 space-y-3">
           {navLinks.map((link) => (
@@ -142,31 +178,30 @@ export default function Header() {
             </Link>
           ))}
 
-          {user && (
-            <Link
-              href="/dashboard"
-              className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
-              onClick={() => setMenuOpen(false)}
-            >
-              Dashboard
-            </Link>
-          )}
-
           {user ? (
-            <button
-              onClick={() => {
-                handleLogout();
-                setMenuOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
-            >
-              Logout
-            </button>
+            <>
+              <Link
+                href="/dashboard"
+                onClick={() => setMenuOpen(false)}
+                className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
+              >
+                Dashboard
+              </Link>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setMenuOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
+              >
+                Logout
+              </button>
+            </>
           ) : (
             <Link
               href="/auth/login"
-              className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
               onClick={() => setMenuOpen(false)}
+              className="block px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-rose-100"
             >
               Login
             </Link>

@@ -1,14 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { supabase } from "@/utils/supabaseClient";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 import SponsorCarousel from "../../components/SponsorCarousel";
 import NewsCard from "../../components/NewsCard";
 import VideoCarousel from "../../components/VideoCarousel";
-import news from "../../data/news"; // ✅ Use this source only
 
 const videos = [
- {
+  {
     url: "https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE",
   },
   {
@@ -17,29 +18,51 @@ const videos = [
   {
     url: "https://www.youtube.com/embed/JfDes65L3Zg?loop=1&playlist=JfDes65L3Zg",
   },
-  ];
+];
+
 export default function NewsPage() {
+  const [newsItems, setNewsItems] = useState([]);
+
+  useEffect(() => {
+    const fetchNews = async () => {
+      const { data, error } = await supabase
+        .from("news")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching news:", error.message);
+      } else {
+        setNewsItems(data);
+      }
+    };
+
+    fetchNews();
+  }, []);
+
   return (
     <>
       <Header />
 
       {/* Hero Section */}
-<section
-  className="relative h-[300px] bg-cover bg-center bg-no-repeat"
-  style={{ backgroundImage: "url('https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero5.jpg')" }}
->
-  {/* Gradient overlay */}
-  <div className="absolute inset-0 bg-gradient-to-br from-rose-100 via-white/80 to-pink-50" />
+      <section
+        className="relative h-[300px] bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage:
+            "url('https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero5.jpg')",
+        }}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-rose-100 via-white/80 to-pink-50" />
 
-  <div className="relative z-10 max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
-    <div className="max-w-xl">
-      <h1 className="text-4xl font-extrabold text-rose-600 leading-tight mb-2">
-        Stay Updated with the Latest From Lovemate
-      </h1>
-      <p className="text-gray-700 text-lg">
-        All the drama, passion, and moments you don’t want to miss.
-      </p>
-    </div>
+        <div className="relative z-10 max-w-7xl mx-auto px-4 h-full flex items-center justify-between">
+          <div className="max-w-xl">
+            <h1 className="text-4xl font-extrabold text-rose-600 leading-tight mb-2">
+              Stay Updated with the Latest From Lovemate
+            </h1>
+            <p className="text-gray-700 text-lg">
+              All the drama, passion, and moments you don’t want to miss.
+            </p>
+          </div>
           <div className="hidden md:block w-64 h-64 relative">
             <img
               src="/news/herorr.png"
@@ -49,7 +72,6 @@ export default function NewsPage() {
           </div>
         </div>
 
-        {/* Scrolling Ticker */}
         <div className="overflow-hidden bg-black text-white py-2">
           <div className="whitespace-nowrap animate-marquee text-sm font-medium">
             🗞️ Alex just crossed 3,000 votes! | Mira trending in Kenya 🇰🇪 | Voting ends soon – Cast your vote now! | Stream today’s drama Alex just crossed 3,000 votes! | Mira trending in Kenya 🇰🇪 | Voting ends soon – Cast your vote now! | Stream today’s drama🎥
@@ -63,14 +85,14 @@ export default function NewsPage() {
           Latest News
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {news.map((item, index) => (
+          {newsItems.map((item) => (
             <NewsCard
-              key={index}
+              key={item.id}
               image={item.image}
               title={item.title}
               summary={item.summary}
               views={item.views}
-              link={`/news/${item.id}`} // uses ID from your data/news.js
+              link={`/news/${item.id}`}
             />
           ))}
         </div>
@@ -82,7 +104,13 @@ export default function NewsPage() {
       {/* Sponsors */}
       <section className="bg-gray-50 py-10 px-4">
         <div className="max-w-6xl mx-auto">
-          <SponsorCarousel sponsors={["/sponsors/logo1.png", "/sponsors/logo2.png", "/sponsors/logo3.png"]} />
+          <SponsorCarousel
+            sponsors={[
+              "/sponsors/logo1.png",
+              "/sponsors/logo2.png",
+              "/sponsors/logo3.png",
+            ]}
+          />
         </div>
       </section>
 

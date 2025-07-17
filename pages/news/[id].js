@@ -6,25 +6,56 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
-import news from "../../data/news";
 import Link from "next/link";
 import Image from "next/image";
+import { supabase } from "@/utils/supabaseClient";
 
 export default function NewsDetails() {
   const router = useRouter();
   const { id } = router.query;
   const [article, setArticle] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => {
     if (id) {
-      const found = news.find((n) => n.id === id);
-      setArticle(found);
+      fetchArticle(id);
     }
   }, [id]);
 
-  if (!article) return <div className="text-center py-20">Loading...</div>;
+  const fetchArticle = async (id) => {
+    // Fetch the main article
+    const { data, error } = await supabase
+      .from("news")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-  const suggestions = news.filter((item) => item.id !== id).slice(0, 3);
+    if (data) {
+      setArticle(data);
+
+      // Increment views count
+      await supabase
+        .from("news")
+        .update({ views: data.views + 1 })
+        .eq("id", id);
+
+      // Fetch other articles for suggestion
+      const { data: allNews } = await supabase
+        .from("news")
+        .select("*")
+        .neq("id", id)
+        .order("date", { ascending: false })
+        .limit(3);
+
+      if (allNews) setSuggestions(allNews);
+    }
+
+    if (error) {
+      console.error("Error loading article:", error);
+    }
+  };
+
+  if (!article) return <div className="text-center py-20">Loading...</div>;
 
   return (
     <>
@@ -66,14 +97,14 @@ export default function NewsDetails() {
         </div>
       </motion.section>
 
-      {/* Suggested News with staggered animation */}
+      {/* Suggested News */}
       <motion.section
         className="bg-rose-50 py-12 px-4"
         initial="hidden"
         animate="visible"
         variants={{
           hidden: { opacity: 0 },
-          visible: { opacity: 1, transition: { staggerChildren: 0.2 } }
+          visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
         }}
       >
         <div className="max-w-6xl mx-auto">
@@ -85,7 +116,10 @@ export default function NewsDetails() {
               <motion.div
                 key={item.id}
                 className="bg-white rounded-xl shadow hover:shadow-md overflow-hidden"
-                variants={{ hidden: { y: 20, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
+                variants={{
+                  hidden: { y: 20, opacity: 0 },
+                  visible: { y: 0, opacity: 1 },
+                }}
                 whileHover={{ scale: 1.03 }}
               >
                 <Link href={`/news/${item.id}`}>
