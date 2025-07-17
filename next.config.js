@@ -1,5 +1,11 @@
 module.exports = {
   images: {
-    domains: ['pztuwangpzlzrihblnta.supabase.co'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pztuwangpzlzrihblnta.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
   },
 };

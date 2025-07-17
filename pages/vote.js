@@ -20,10 +20,18 @@ export default function VotePage() {
         .order("id", { ascending: true });
 
       if (!error) {
+        const fallbackImage = "/fallback.jpg";
+
         const updated = data.map((item) => ({
           ...item,
-          image: `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/${item.image}`,
+          image_url:
+            item.image_url && item.image_url.startsWith("http")
+              ? item.image_url
+              : item.image_url
+              ? `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${item.image_url}`
+              : fallbackImage,
         }));
+
         setCandidates(updated);
       } else {
         console.error("Error fetching candidates:", error);
@@ -167,32 +175,25 @@ export default function VotePage() {
           All Candidates
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6 max-w-6xl mx-auto">
-          {filteredCandidates.map((item) => {
-            const imageUrl = item.image; // Already updated in fetch
-            return (
-              <CandidateCard
-                key={item.id}
-                id={item.id}
-                name={item.name}
-                image={imageUrl}
-                totalVotes={item.total_votes}
-                onVote={async () => {
-                  const loggedIn = await handleVoteOrGift();
-                  if (loggedIn) handleVote(item.id);
-                }}
-              />
-            );
-          })}
+          {filteredCandidates.map((item) => (
+            <CandidateCard
+              key={item.id}
+              id={item.id}
+              name={item.name}
+              imageUrl={item.image_url}
+              totalVotes={item.total_votes}
+              onVote={async () => {
+                const loggedIn = await handleVoteOrGift();
+                if (loggedIn) handleVote(item.id);
+              }}
+            />
+          ))}
         </div>
       </section>
 
       {/* Sponsors */}
       <SponsorCarousel
-        sponsors={[
-          "/sponsors/logo1.png",
-          "/sponsors/logo2.png",
-          "/sponsors/logo3.png",
-        ]}
+        sponsors={["/sponsors/logo1.png", "/sponsors/logo2.png", "/sponsors/logo3.png"]}
       />
 
       <Footer />

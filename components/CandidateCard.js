@@ -4,11 +4,17 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 
-export default function CandidateCard({ id, name, country, votes: initialVotes, imageUrl }) {
+export default function CandidateCard({
+  id,
+  name,
+  country,
+  votes: initialVotes,
+  image_Url,
+}) {
   const [votes, setVotes] = useState(initialVotes);
   const router = useRouter();
 
-  // Subscribe to real-time vote updates
+  // Real-time vote updates
   useEffect(() => {
     const channel = supabase
       .channel("candidate-votes")
@@ -75,7 +81,7 @@ export default function CandidateCard({ id, name, country, votes: initialVotes, 
       {/* Candidate Image */}
       <div className="w-full aspect-square relative overflow-hidden rounded-xl border-2 border-rose-500">
         <img
-          src={imageUrl}
+          src={image_Url}
           alt={name}
           className="object-cover w-full h-full rounded-xl"
         />

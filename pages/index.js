@@ -5,89 +5,39 @@ import StatsSection from "../components/StatsSection";
 import VideoCarousel from "../components/VideoCarousel";
 import SponsorCarousel from "../components/SponsorCarousel";
 import TopFansCarousel from "../components/TopFansCarousel";
-import CandidateCard from "../components/CandidateCard";
-import NewsCard from "../components/NewsCard";
-import candidates from "../data/candidates";
-import news from "../data/news";
+import CandidateCard from "@/components/CandidateCard";
+import NewsCard from "@/components/NewsCard";
 import { motion } from "framer-motion";
 import Slider from "react-slick";
-import { supabase } from "@/utils/supabaseClient";
-import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-
-const heroSlides = [
-  {
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero10.jpg",
-    title: "Search for the",
-    highlight: "Universal Love Idol",
-    subtitle: "Has Begun.",
-  },
-  {
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero6.jpg",
-    title: "Love Meets Fame",
-    highlight: "One Stage, 24 Hearts",
-    subtitle: "Only One Crown.",
-  },
-  {
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero7.jpg",
-    title: "Will You Watch or Win?",
-    highlight: "Your Journey Begins",
-    subtitle: "Right Here.",
-  },
-  {
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero8.jpg",
-    title: "Do You Breath Love?",
-    highlight: "Your Journey Begins",
-    subtitle: "Right Here.",
-  },
-  {
-    image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero9.jpg",
-    title: "Hottest Matchmaking Showdown",
-    highlight: "Is Coming To Your Screen",
-    subtitle: "Right Here.",
-  },
-];
-
-const sliderSettings = {
-  dots: true,
-  infinite: true,
-  speed: 800,
-  slidesToShow: 1,
-  slidesToScroll: 1,
-  autoplay: true,
-  autoplaySpeed: 6000,
-  pauseOnHover: true,
-  arrows: false,
-};
+import { useState, useEffect } from "react";
+import { supabase } from "@/utils/supabaseClient";
 
 export default function Home() {
   const router = useRouter();
+  const [candidates, setCandidates] = useState([]);
+  const [news, setNews] = useState([]);
 
-  // State to hold candidates if you want to dynamically fetch later
-  // For now using static import from ../data/candidates
-  const [candidateList, setCandidateList] = useState(candidates);
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: candidatesData } = await supabase.from("candidates").select("*");
+      const { data: newsData } = await supabase
+        .from("news")
+        .select("*")
+        .order("date", { ascending: false });
 
-  // Handle vote or gift - user must be logged in
-  const handleVoteOrGift = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      setCandidates(candidatesData || []);
+      setNews(newsData || []);
+    };
+
+    fetchData();
+  }, []);
+
+  const handleVote = async (candidateId, voteCost = 100) => {
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       alert("You must be logged in to vote or send gifts.");
-      router.push("/auth/login");
-      return false;
-    }
-    return true;
-  };
-
-  // Handle voting logic with wallet deduction & RPC increment_vote call
-  const handleVote = async (candidateId, voteCost = 100) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
       router.push("/auth/login");
       return;
     }
@@ -103,14 +53,12 @@ export default function Home() {
       return;
     }
 
-    await supabase.from("wallets").insert([
-      {
-        user_id: user.id,
-        amount: -voteCost,
-        type: "vote",
-        status: "completed",
-      },
-    ]);
+    await supabase.from("wallets").insert([{
+      user_id: user.id,
+      amount: -voteCost,
+      type: "vote",
+      status: "completed",
+    }]);
 
     await supabase.rpc("increment_vote", {
       candidate_id_param: candidateId,
@@ -120,36 +68,65 @@ export default function Home() {
     alert("Vote submitted!");
   };
 
-  // Example videos for VideoCarousel
-  const videos = [
+  const heroSlides = [
     {
-      url: "https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE",
+      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero10.jpg",
+      title: "Search for the",
+      highlight: "Universal Love Idol",
+      subtitle: "Has Begun.",
     },
     {
-      url: "https://www.youtube.com/embed/C-dWkLFEEw0?loop=1&playlist=C-dWkLFEEw0",
+      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero6.jpg",
+      title: "Love Meets Fame",
+      highlight: "One Stage, 24 Hearts",
+      subtitle: "Only One Crown.",
     },
     {
-      url: "https://www.youtube.com/embed/JfDes65L3Zg?loop=1&playlist=JfDes65L3Zg",
+      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero7.jpg",
+      title: "Will You Watch or Win?",
+      highlight: "Your Journey Begins",
+      subtitle: "Right Here.",
+    },
+    {
+      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero8.jpg",
+      title: "Do You Breath Love?",
+      highlight: "Your Journey Begins",
+      subtitle: "Right Here.",
+    },
+    {
+      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero9.jpg",
+      title: "Hottest Matchmaking Showdown",
+      highlight: "Is Coming To Your Screen",
+      subtitle: "Right Here.",
     },
   ];
 
-  // Sponsors logos
+  const sliderSettings = {
+    dots: true,
+    infinite: true,
+    speed: 800,
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    autoplay: true,
+    autoplaySpeed: 6000,
+    pauseOnHover: true,
+    arrows: false,
+  };
+
   const sponsors = [
     "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/sponsors/logo1.png",
     "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/sponsors/logo2.png",
     "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/sponsors/logo3.png",
   ];
 
-  // Top Fans data
   const topFans = [
     { name: "Amara", votes: 1200 },
     { name: "Jake", votes: 1050 },
     { name: "Lola", votes: 980 },
   ];
 
-  // Select top 4 candidates by votes from candidateList
-  const topCandidates = [...candidateList]
-    .sort((a, b) => b.votes - a.votes)
+  const topCandidates = [...candidates]
+    .sort((a, b) => b.total_votes - a.total_votes)
     .slice(0, 4);
 
   return (
@@ -164,13 +141,13 @@ export default function Home() {
 
       <Header />
 
-      {/* Hero Banner */}
+      {/* Hero */}
       <section className="relative">
         <Slider {...sliderSettings}>
           {heroSlides.map((slide, index) => (
             <div key={index}>
               <div
-                className="relative bg-cover bg-center bg-no-repeat h-[400px]"
+                className="relative bg-cover bg-center h-[400px]"
                 style={{ backgroundImage: `url('${slide.image}')` }}
               >
                 <div className="absolute inset-0 bg-rose/40"></div>
@@ -192,7 +169,6 @@ export default function Home() {
                       Register Now
                     </a>
                   </div>
-                  <div></div>
                 </div>
               </div>
             </div>
@@ -202,38 +178,15 @@ export default function Home() {
 
       <StatsSection />
 
-      {/* CTA Section */}
-      <section className="bg-rose-50 py-20 px-4 text-center">
-        <h2 className="text-3xl sm:text-4xl font-bold text-primary mb-4">
-          Get Love, Get Fame, Get The Money Bag.
-        </h2>
-        <p className="text-gray-800 max-w-xl mx-auto mb-8">
-          Do you have what it takes to be the next Universal Love Idol? Register
-          now and begin your journey to stardom and romance!
-        </p>
-        <a
-          href="/register"
-          className="inline-block bg-primary hover:bg-primaryDark text-white font-semibold px-8 py-3 rounded-full shadow-lg transition-all"
-        >
-          Register Now
-        </a>
-      </section>
-
-      <VideoCarousel videos={videos} />
-
-      <SponsorCarousel sponsors={sponsors} />
-
       <section className="bg-rose-100 py-20 px-4">
         <h2 className="text-2xl font-bold text-center text-rose-600 mb-6">
           Top Candidates
         </h2>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 max-w-6xl mx-auto">
           {topCandidates.map((c) => (
             <CandidateCard key={c.id} {...c} />
           ))}
         </div>
-
         <div className="mt-8 text-center">
           <a
             href="/vote"
@@ -244,9 +197,16 @@ export default function Home() {
         </div>
       </section>
 
+      <VideoCarousel videos={[
+        { url: "https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE" },
+        { url: "https://www.youtube.com/embed/C-dWkLFEEw0?loop=1&playlist=C-dWkLFEEw0" },
+        { url: "https://www.youtube.com/embed/JfDes65L3Zg?loop=1&playlist=JfDes65L3Zg" },
+      ]} />
+
+      <SponsorCarousel sponsors={sponsors} />
       <TopFansCarousel fans={topFans} />
 
-      {/* News Section with Animation */}
+      {/* Latest News */}
       <section className="bg-rose-50 py-20 px-4">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
           Latest News
