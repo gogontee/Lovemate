@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 
-export default function CandidateCard({ id, name, country, votes: initialVotes, image_Url }) {
+export default function CandidateCard({ id, name, country, votes: initialVotes, imageUrl }) {
   const [votes, setVotes] = useState(initialVotes);
   const router = useRouter();
 
@@ -78,7 +78,7 @@ export default function CandidateCard({ id, name, country, votes: initialVotes, 
       {/* Candidate Image */}
       <div className="w-full aspect-square relative overflow-hidden rounded-xl border-2 border-rose-500">
         <Image
-          src={image_Url}
+          src={imageUrl}
           alt={name}
           fill
           className="object-cover transition-transform duration-300 hover:scale-105"
