@@ -129,7 +129,7 @@ export default function CandidateProfile() {
       <section className="relative h-[26rem] bg-black">
         <div className="absolute inset-0 overflow-hidden">
           <Image
-  src={candidate.imageUrl}
+  src={candidate.image_Url}
   alt={candidate.name}
   layout="fill"
   objectFit="cover"
