@@ -1,6 +1,5 @@
 // components/CandidateCard.js
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
@@ -9,7 +8,7 @@ export default function CandidateCard({ id, name, country, votes: initialVotes, 
   const [votes, setVotes] = useState(initialVotes);
   const router = useRouter();
 
-  // Subscribe to live vote updates
+  // Subscribe to real-time vote updates
   useEffect(() => {
     const channel = supabase
       .channel("candidate-votes")
@@ -54,7 +53,6 @@ export default function CandidateCard({ id, name, country, votes: initialVotes, 
       return;
     }
 
-    // Deduct vote cost from wallet
     await supabase.from("wallets").insert([
       {
         user_id: user.id,
@@ -64,7 +62,6 @@ export default function CandidateCard({ id, name, country, votes: initialVotes, 
       },
     ]);
 
-    // Update vote count via RPC
     await supabase.rpc("increment_vote", {
       candidate_id_param: id,
       vote_count: 1,
@@ -77,11 +74,10 @@ export default function CandidateCard({ id, name, country, votes: initialVotes, 
     <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden text-center p-4 border border-gray-100">
       {/* Candidate Image */}
       <div className="w-full aspect-square relative overflow-hidden rounded-xl border-2 border-rose-500">
-        <Image
+        <img
           src={imageUrl}
           alt={name}
-          fill
-          className="object-cover transition-transform duration-300 hover:scale-105"
+          className="object-cover w-full h-full rounded-xl"
         />
       </div>
 

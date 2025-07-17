@@ -9,25 +9,30 @@ import { supabase } from "@/utils/supabaseClient";
 
 export default function VotePage() {
   const router = useRouter();
-
-  // State for candidates and search term
   const [candidates, setCandidates] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Fetch candidates once on mount
   useEffect(() => {
     const fetchCandidates = async () => {
       const { data, error } = await supabase
         .from("candidates")
         .select("*")
         .order("id", { ascending: true });
-      if (!error) setCandidates(data);
-      else console.error("Error fetching candidates:", error);
+
+      if (!error) {
+        const updated = data.map((item) => ({
+          ...item,
+          image: `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/${item.image}`,
+        }));
+        setCandidates(updated);
+      } else {
+        console.error("Error fetching candidates:", error);
+      }
     };
+
     fetchCandidates();
   }, []);
 
-  // Listen to realtime vote updates and update candidates state
   useEffect(() => {
     const channel = supabase
       .channel("votes-realtime")
@@ -53,7 +58,6 @@ export default function VotePage() {
     };
   }, []);
 
-  // Function to handle vote or gift navigation - requires user login
   const handleVoteOrGift = async () => {
     const {
       data: { user },
@@ -67,7 +71,6 @@ export default function VotePage() {
     return true;
   };
 
-  // Vote handling function with wallet balance check & vote increment
   const handleVote = async (candidateId, voteCost = 100) => {
     const {
       data: { user },
@@ -89,7 +92,6 @@ export default function VotePage() {
       return;
     }
 
-    // Deduct wallet balance
     await supabase.from("wallets").insert([
       {
         user_id: user.id,
@@ -99,7 +101,6 @@ export default function VotePage() {
       },
     ]);
 
-    // Increment vote count via RPC
     await supabase.rpc("increment_vote", {
       candidate_id_param: candidateId,
       vote_count: 1,
@@ -108,15 +109,9 @@ export default function VotePage() {
     alert("Vote submitted!");
   };
 
-  // Filter candidates by search term (case-insensitive)
   const filteredCandidates = candidates.filter((c) =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Navigate to candidate profile page
-  const handleNavigate = (id) => {
-    router.push(`/candidate/${id}`);
-  };
 
   return (
     <>
@@ -171,28 +166,33 @@ export default function VotePage() {
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
           All Candidates
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 max-w-6xl mx-auto">
-          {filteredCandidates.map((candidate) => (
-            <CandidateCard
-              key={candidate.id}
-              {...candidate}
-              onVote={async () => {
-                const loggedIn = await handleVoteOrGift();
-                if (loggedIn) handleVote(candidate.id);
-              }}
-              onGift={async () => {
-                const loggedIn = await handleVoteOrGift();
-                if (loggedIn) handleNavigate(candidate.id);
-              }}
-              onView={() => handleNavigate(candidate.id)}
-            />
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6 max-w-6xl mx-auto">
+          {filteredCandidates.map((item) => {
+            const imageUrl = item.image; // Already updated in fetch
+            return (
+              <CandidateCard
+                key={item.id}
+                id={item.id}
+                name={item.name}
+                image={imageUrl}
+                totalVotes={item.total_votes}
+                onVote={async () => {
+                  const loggedIn = await handleVoteOrGift();
+                  if (loggedIn) handleVote(item.id);
+                }}
+              />
+            );
+          })}
         </div>
       </section>
 
-      {/* Sponsors Section */}
+      {/* Sponsors */}
       <SponsorCarousel
-        sponsors={["/sponsors/logo1.png", "/sponsors/logo2.png", "/sponsors/logo3.png"]}
+        sponsors={[
+          "/sponsors/logo1.png",
+          "/sponsors/logo2.png",
+          "/sponsors/logo3.png",
+        ]}
       />
 
       <Footer />

@@ -86,15 +86,16 @@ export default function NewsPage() {
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {newsItems.map((item) => (
-            <NewsCard
-              key={item.id}
-              image={item.image}
-              title={item.title}
-              summary={item.summary}
-              views={item.views}
-              link={`/news/${item.id}`}
-            />
-          ))}
+  <NewsCard
+    key={item.id}
+    image={item.image_url}  // ✅ use image_url from Supabase
+    title={item.title}
+    summary={item.summary}
+    views={item.views}
+    link={`/news/${item.id}`}
+  />
+))}
+
         </div>
       </section>
 

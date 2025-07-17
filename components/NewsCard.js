@@ -6,7 +6,7 @@ export default function NewsCard({ image, title, summary, views, link }) {
     <div className="bg-white rounded-xl shadow hover:shadow-lg transition overflow-hidden">
       <div className="relative w-full h-48">
         <Image
-          src={image || "/fallback.jpg"}
+          src={image}
           alt={title}
           fill
           className="object-cover"
