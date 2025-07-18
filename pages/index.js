@@ -178,7 +178,7 @@ export default function Home() {
 
       <StatsSection />
 
-      <section className="bg-rose-100 py-20 px-4">
+      <section className="bg-rose-100 py-19 px-4">
   <h2 className="text-2xl font-bold text-center text-rose-600 mb-6">
     Top Candidates
   </h2>
@@ -199,7 +199,7 @@ export default function Home() {
   <div className="mt-8 text-center">
     <a
       href="/vote"
-      className="inline-block bg-rose-600 hover:bg-rose-700 text-white font-semibold px-6 py-3 rounded-full shadow transition"
+      className="inline-block bg-rose-600 hover:bg-rose-700 text-white font-semibold px-3 py-6 rounded-full shadow transition"
     >
       Discover More
     </a>
