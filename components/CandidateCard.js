@@ -9,7 +9,7 @@ export default function CandidateCard({
   name,
   country,
   votes: initialVotes,
-  image_Url,
+  imageUrl,
 }) {
   const [votes, setVotes] = useState(initialVotes);
   const router = useRouter();
@@ -81,7 +81,7 @@ export default function CandidateCard({
       {/* Candidate Image */}
       <div className="w-full aspect-square relative overflow-hidden rounded-xl border-2 border-rose-500">
         <img
-          src={image_Url}
+          src={imageUrl}
           alt={name}
           className="object-cover w-full h-full rounded-xl"
         />

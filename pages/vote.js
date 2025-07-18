@@ -7,24 +7,26 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 
+const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
+
 export default function VotePage() {
-  const router = useRouter();
   const [candidates, setCandidates] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredCandidates, setFilteredCandidates] = useState([]);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const fetchCandidates = async () => {
       const { data, error } = await supabase
         .from("candidates")
         .select("*")
-        .order("id", { ascending: true });
+        .order("votes", { ascending: false });
 
-      if (!error) {
-        const fallbackImage = "/fallback.jpg";
-
+      if (error) {
+        console.error("Error fetching candidates:", error);
+      } else {
         const updated = data.map((item) => ({
           ...item,
-          image_url:
+          imageUrl:
             item.image_url && item.image_url.startsWith("http")
               ? item.image_url
               : item.image_url
@@ -33,8 +35,7 @@ export default function VotePage() {
         }));
 
         setCandidates(updated);
-      } else {
-        console.error("Error fetching candidates:", error);
+        setFilteredCandidates(updated);
       }
     };
 
@@ -117,9 +118,13 @@ export default function VotePage() {
     alert("Vote submitted!");
   };
 
-  const filteredCandidates = candidates.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+  const filtered = candidates.filter((candidate) =>
+    candidate.name.toLowerCase().includes(search.toLowerCase())
   );
+  setFilteredCandidates(filtered);
+}, [search, candidates]);
+
 
   return (
     <>
@@ -160,12 +165,13 @@ export default function VotePage() {
       <section className="py-8 px-4 bg-white">
         <div className="max-w-4xl mx-auto">
           <input
-            type="text"
-            placeholder="Search for a candidate..."
-            className="w-full px-6 py-3 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+  type="text"
+  placeholder="Search for a candidate..."
+  className="w-full px-6 py-3 border border-gray-300 rounded-full shadow-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+/>
+
         </div>
       </section>
 
@@ -174,18 +180,15 @@ export default function VotePage() {
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
           All Candidates
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6 max-w-6xl mx-auto">
-          {filteredCandidates.map((item) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {filteredCandidates.map((candidate) => (
             <CandidateCard
-              key={item.id}
-              id={item.id}
-              name={item.name}
-              imageUrl={item.image_url}
-              totalVotes={item.total_votes}
-              onVote={async () => {
-                const loggedIn = await handleVoteOrGift();
-                if (loggedIn) handleVote(item.id);
-              }}
+              key={candidate.id}
+              id={candidate.id}
+              name={candidate.name}
+              country={candidate.country}
+              votes={candidate.votes}
+              imageUrl={candidate.imageUrl} // ✅ correct prop
             />
           ))}
         </div>

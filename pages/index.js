@@ -179,23 +179,34 @@ export default function Home() {
       <StatsSection />
 
       <section className="bg-rose-100 py-20 px-4">
-        <h2 className="text-2xl font-bold text-center text-rose-600 mb-6">
-          Top Candidates
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 max-w-6xl mx-auto">
-          {topCandidates.map((c) => (
-            <CandidateCard key={c.id} {...c} />
-          ))}
-        </div>
-        <div className="mt-8 text-center">
-          <a
-            href="/vote"
-            className="inline-block bg-rose-600 hover:bg-rose-700 text-white font-semibold px-6 py-3 rounded-full shadow transition"
-          >
-            Discover More
-          </a>
-        </div>
-      </section>
+  <h2 className="text-2xl font-bold text-center text-rose-600 mb-6">
+    Top Candidates
+  </h2>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    {topCandidates.map((candidate) => (
+  <CandidateCard
+    key={candidate.id}
+    id={candidate.id}
+    name={candidate.name}
+    imageUrl={candidate.image_url}
+    votes={candidate.total_votes}
+  />
+))}
+
+  </div>
+
+  <div className="mt-8 text-center">
+    <a
+      href="/vote"
+      className="inline-block bg-rose-600 hover:bg-rose-700 text-white font-semibold px-6 py-3 rounded-full shadow transition"
+    >
+      Discover More
+    </a>
+  </div>
+</section>
+
+
 
       <VideoCarousel videos={[
         { url: "https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE" },
