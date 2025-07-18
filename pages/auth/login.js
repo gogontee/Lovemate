@@ -1,4 +1,3 @@
-// pages/auth/login.js
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabaseClient";
@@ -10,20 +9,44 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+  e.preventDefault();
+  setLoading(true);
+  setError("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: form.email,
-      password: form.password,
-    });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: form.email,
+    password: form.password,
+  });
 
-    if (error) setError(error.message);
-    else router.push("/"); // Redirect to home or dashboard
-
+  if (error) {
+    setError(error.message);
     setLoading(false);
-  };
+    return;
+  }
+
+  // Now fetch user profile to get their role
+  const { data: profile, error: profileError } = await supabase
+    .from("profile")
+    .select("role")
+    .eq("email", form.email)
+    .single();
+
+  if (profileError) {
+    setError("Login succeeded but failed to retrieve user role.");
+    setLoading(false);
+    return;
+  }
+
+  // Redirect based on role
+  if (profile.role === "admin") {
+    router.push("/admin");
+  } else {
+    router.push("/dashboard"); // or homepage
+  }
+
+  setLoading(false);
+};
+
 
   return (
     <section className="min-h-screen bg-rose-50 flex items-center justify-center px-4">
@@ -36,6 +59,7 @@ export default function Login() {
             className="w-full p-3 border rounded text-black"
             value={form.email}
             onChange={(e) => setForm({ ...form, email: e.target.value })}
+            required
           />
           <input
             type="password"
@@ -43,6 +67,7 @@ export default function Login() {
             className="w-full p-3 border rounded text-black"
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
+            required
           />
           {error && <p className="text-sm text-red-500">{error}</p>}
           <button
@@ -52,20 +77,21 @@ export default function Login() {
           >
             {loading ? "Logging in..." : "Log In"}
           </button>
+
           <p className="text-sm text-center mt-4 text-gray-700">
-  Don&apos;t have an account?{" "}
-  <a
-    href="/auth/signup"
-    className="text-rose-600 font-semibold hover:underline"
-  >
-    Sign up
-  </a>
-</p>
-<p className="text-sm text-center text-gray-600 mt-2">
-  <a href="/auth/reset" className="hover:underline">
-    Forgot password?
-  </a>
-</p>
+            Don&apos;t have an account?{" "}
+            <a
+              href="/auth/signup"
+              className="text-rose-600 font-semibold hover:underline"
+            >
+              Sign up
+            </a>
+          </p>
+          <p className="text-sm text-center text-gray-600 mt-2">
+            <a href="/auth/reset" className="hover:underline">
+              Forgot password?
+            </a>
+          </p>
         </form>
       </div>
     </section>

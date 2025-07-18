@@ -1,77 +1,84 @@
-// pages/auth/signup.js
 import { useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../utils/supabaseClient";
 import { Eye, EyeOff } from "lucide-react";
-import PhoneInput from "react-phone-number-input";
-import "react-phone-number-input/style.css";
 
 export default function SignUp() {
   const router = useRouter();
   const [form, setForm] = useState({
-    email: "",
-    phone: "",
+    fullName: "",
+    contact: "", // can be email or phone
     password: "",
     confirmPassword: "",
+    photo: null,
   });
 
-  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const isEmail = (value) => /\S+@\S+\.\S+/.test(value);
 
   const handleSignUp = async (e) => {
-  e.preventDefault();
-  setError("");
-  setMessage("");
+    e.preventDefault();
+    setError("");
 
-  if (form.password !== form.confirmPassword) {
-    setError("Passwords do not match.");
-    return;
-  }
-
-  if (!form.phone) {
-    setError("Please enter a valid phone number.");
-    return;
-  }
-
-  setLoading(true);
-
-  const { data, error } = await supabase.auth.signUp({
-  email,
-  password,
-  options: {
-    emailRedirectTo: 'https://lovemate-zeta.vercel.app/auth/callback'
-  }
-});
-
-  if (error) {
-    setError(error.message);
-  } else {
-    if (data?.user) {
-      await supabase.from("profiles").insert([
-  {
-    id: data.user.id,
-    email: form.email,
-    phone_number: form.phone,
-    role: "fan",
-    photo_url: null, // or a default avatar URL
-  },
-]);
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
     }
 
-    setMessage("✅ Verification email sent! Please check your inbox.");
-    setTimeout(() => {
-      router.push("/auth/login");
-    }, 3000);
-  }
+    if (!form.contact) {
+      setError("Please enter a valid email or phone number.");
+      return;
+    }
 
-  setLoading(false);
-};
-  
+    setLoading(true);
+
+    const signupPayload = isEmail(form.contact)
+      ? { email: form.contact, password: form.password }
+      : { phone: form.contact, password: form.password };
+
+    const { data, error: signUpError } = await supabase.auth.signUp(signupPayload);
+
+    if (signUpError) {
+      setError(signUpError.message);
+      setLoading(false);
+      return;
+    }
+
+    let photo_url = null;
+
+    if (form.photo) {
+      const fileExt = form.photo.name.split(".").pop();
+      const filePath = `avatars/${data.user.id}.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, form.photo);
+
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage
+          .from("avatars")
+          .getPublicUrl(filePath);
+        photo_url = urlData.publicUrl;
+      }
+    }
+
+    await supabase.from("profiles").insert([
+      {
+        id: data.user.id,
+        email: isEmail(form.contact) ? form.contact : null,
+        phone_number: !isEmail(form.contact) ? form.contact : null,
+        full_name: form.fullName,
+        role: "fan",
+        photo_url: photo_url,
+      },
+    ]);
+
+    setLoading(false);
+    router.push("/auth/login");
+  };
 
   return (
     <section className="min-h-screen bg-rose-50 flex items-center justify-center px-4">
@@ -82,21 +89,29 @@ export default function SignUp() {
 
         <form onSubmit={handleSignUp} className="space-y-4">
           <input
-            type="email"
-            placeholder="Email Address"
+            type="text"
+            placeholder="Full Name"
             className="w-full p-3 border rounded text-black"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            value={form.fullName}
+            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
             required
           />
 
-          <PhoneInput
-            placeholder="Phone Number"
-            defaultCountry="NG"
-            value={form.phone}
-            onChange={(phone) => setForm({ ...form, phone })}
-            className="w-full border rounded text-black px-3 py-2"
+          <input
+            type="text"
+            placeholder="Email or Phone Number"
+            className="w-full p-3 border rounded text-black"
+            value={form.contact}
+            onChange={(e) => setForm({ ...form, contact: e.target.value })}
             required
+          />
+
+          {/* Profile Picture */}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setForm({ ...form, photo: e.target.files[0] })}
+            className="w-full p-2 border rounded text-black"
           />
 
           <div className="relative">
@@ -142,11 +157,6 @@ export default function SignUp() {
           {error && (
             <p className="text-sm text-red-600 bg-red-100 p-2 rounded">
               {error}
-            </p>
-          )}
-          {message && (
-            <p className="text-sm text-green-600 bg-green-100 p-2 rounded">
-              {message}
             </p>
           )}
 

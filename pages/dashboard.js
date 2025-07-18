@@ -24,21 +24,15 @@ export default function Dashboard() {
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError) {
-        console.error("Auth error:", authError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!authUser) {
-        console.warn("No authenticated user found.");
-        setLoading(false);
+      if (authError || !authUser) {
+        console.error("Auth error or no user:", authError?.message);
+        router.push("/auth/login");
         return;
       }
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("id, email, photo_url")
+        .select("id, email, photo_url, full_name")
         .eq("id", authUser.id)
         .single();
 
@@ -65,10 +59,8 @@ export default function Dashboard() {
         .eq("user_id", user.id)
         .single();
 
-      if (error) {
-        console.error("Error fetching wallet balance:", error.message);
-      } else {
-        setWalletBalance(data.balance || 0);
+      if (!error) {
+        setWalletBalance(data?.balance || 0);
       }
     };
 
@@ -96,7 +88,7 @@ export default function Dashboard() {
             .single();
 
           if (!error) {
-            setWalletBalance(data.balance || 0);
+            setWalletBalance(data?.balance || 0);
           }
         }
       )
@@ -145,9 +137,7 @@ export default function Dashboard() {
       .update({ photo_url: publicUrl })
       .eq("id", user.id);
 
-    if (updateError) {
-      console.error("Failed to update profile:", updateError.message);
-    } else {
+    if (!updateError) {
       setAvatarUrl(publicUrl);
     }
   };
@@ -162,14 +152,8 @@ export default function Dashboard() {
 
     const res = await fetch("/api/fund-wallet", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        amount,
-        email: user.email,
-        user_id: user.id,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount, email: user.email, user_id: user.id }),
     });
 
     const data = await res.json();
@@ -212,7 +196,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">Welcome back</h2>
-                <p className="text-sm text-gray-600">{user.email}</p>
+                <p className="text-sm text-gray-600">{user.full_name || user.email}</p>
               </div>
             </div>
             <button
