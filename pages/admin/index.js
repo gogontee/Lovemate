@@ -38,16 +38,34 @@ function AdminDashboard() {
         .from("profiles")
         .select("*", { count: "exact", head: true });
 
+        const [loading, setLoading] = useState(true);
+
+useEffect(() => {
+  const fetchStats = async () => {
+    try {
+      // all your logic here...
+    } catch (err) {
+      console.error("Unexpected error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchStats();
+}, []);
+
+
       // vote transactions
       const { data: voteTx, error: voteError } = await supabase
         .from("transactions")
         .select("amount, type, user_id, created_at, candidate_id")
         .eq("type", "vote");
 
-      if (voteError || !voteTx) {
-        setNotFound(true);
-        return;
-      }
+      if (voteError) {
+  console.error("Error fetching vote transactions:", voteError.message);
+  setNotFound(true);
+  return;
+}
 
       // total revenue
       const { data: allTx } = await supabase
@@ -60,10 +78,15 @@ function AdminDashboard() {
         .select("id, full_name")
         .eq("role", "candidate");
 
-      if (candidateError || !candidates || candidates.length === 0) {
-        setNotFound(true);
-        return;
-      }
+      if (candidateError) {
+  console.error("Error fetching candidates:", candidateError.message);
+  setNotFound(true);
+  return;
+}
+
+if (!candidates || candidates.length === 0) {
+  console.warn("No candidates found yet.");
+}
 
       // top voters
       const voteCountByUser = {};

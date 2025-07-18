@@ -17,33 +17,52 @@ export default function Dashboard() {
   const router = useRouter();
 
   
-  useEffect(() => {
-    const getUser = async () => {
-  const {
-  data: { user: authUser },
-} = await supabase.auth.getUser();
+ useEffect(() => {
+  const fetchData = async () => {
+    setLoading(true);
 
-if (!authUser) {
-  router.push("/auth/login");
-  return;
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) {
+      console.error("Auth error:", authError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!authUser) {
+      console.warn("No authenticated user found.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("id, email, photo, role")
+      .eq("id", authUser.id)
+      .single();
+
+    if (profileError) {
+      console.error("Error fetching profile:", profileError.message);
+    } else {
+      console.log("✅ Profile fetched:", profile);
+      setUser(profile);
+      if (profile.photo) setAvatarUrl(profile.photo);
+    }
+    if (!user && !loading) {
+  return (
+    <div className="text-center text-red-600 mt-10">
+      Profile not found. Please contact support.
+    </div>
+  );
 }
 
-const { data: profile, error } = await supabase
-  .from("profiles")
-  .select("id, email, photo")
-  .eq("id", authUser.id)
-  .single();
+    setLoading(false);
+  };
 
-if (error) {
-  console.error("Error fetching profile:", error.message);
-} else {
-  setUser(profile);
-  if (profile.photo) setAvatarUrl(profile.photo);
-}
-
-setLoading(false);
-
-};
+  fetchData();
 
     getUser();
   }, [router]);

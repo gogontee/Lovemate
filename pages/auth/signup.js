@@ -24,56 +24,49 @@ export default function SignUp() {
 
 
   const handleSignUp = async (e) => {
-    e.preventDefault();
-    setError("");
-    setMessage("");
-    const { data: existingUser } = await supabase
-  .from('users')
-  .select('id')
-  .eq('email', form.email)
-  .single();
+  e.preventDefault();
+  setError("");
+  setMessage("");
 
-if (existingUser) {
-  setError("An account with this email already exists.");
+  if (form.password !== form.confirmPassword) {
+    setError("Passwords do not match.");
+    return;
+  }
+
+  if (!form.phone) {
+    setError("Please enter a valid phone number.");
+    return;
+  }
+
+  setLoading(true);
+
+  const { data, error } = await supabase.auth.signUp({
+    email: form.email,
+    password: form.password,
+  });
+
+  if (error) {
+    setError(error.message);
+  } else {
+    if (data?.user) {
+      await supabase.from("profiles").insert([
+        {
+          id: data.user.id,
+          email: form.email,
+          phone_number: form.phone,
+          role: "fan",
+        },
+      ]);
+    }
+
+    setMessage("✅ Verification email sent! Please check your inbox.");
+    setTimeout(() => {
+      router.push("/auth/login");
+    }, 3000);
+  }
+
   setLoading(false);
-  return;
-}
-
-
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    if (!form.phone) {
-      setError("Please enter a valid phone number.");
-      return;
-    }
-
-    setLoading(true);
-
-    const { data, error } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      // Save phone number in the profile
-      await supabase
-        .from("profiles")
-        .update({ phone_number: form.phone })
-        .eq("id", data.user.id);
-
-      setMessage("✅ Verification email sent! Please check your inbox.");
-      setTimeout(() => {
-        router.push("/auth/login");
-      }, 3000); // Delay before redirect
-    }
-
-    setLoading(false);
-  };
+};
   
 
   return (
