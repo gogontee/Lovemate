@@ -15,16 +15,30 @@ export default function SignUp() {
     confirmPassword: "",
   });
 
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError("");
     setMessage("");
+    const { data: existingUser } = await supabase
+  .from('users')
+  .select('id')
+  .eq('email', form.email)
+  .single();
+
+if (existingUser) {
+  setError("An account with this email already exists.");
+  setLoading(false);
+  return;
+}
+
 
     if (form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
@@ -60,6 +74,7 @@ export default function SignUp() {
 
     setLoading(false);
   };
+  
 
   return (
     <section className="min-h-screen bg-rose-50 flex items-center justify-center px-4">
