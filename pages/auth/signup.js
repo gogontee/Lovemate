@@ -41,22 +41,26 @@ export default function SignUp() {
   setLoading(true);
 
   const { data, error } = await supabase.auth.signUp({
-    email: form.email,
-    password: form.password,
-  });
+  email,
+  password,
+  options: {
+    emailRedirectTo: 'https://lovemate-zeta.vercel.app/auth/callback'
+  }
+});
 
   if (error) {
     setError(error.message);
   } else {
     if (data?.user) {
       await supabase.from("profiles").insert([
-        {
-          id: data.user.id,
-          email: form.email,
-          phone_number: form.phone,
-          role: "fan",
-        },
-      ]);
+  {
+    id: data.user.id,
+    email: form.email,
+    phone_number: form.phone,
+    role: "fan",
+    photo_url: null, // or a default avatar URL
+  },
+]);
     }
 
     setMessage("✅ Verification email sent! Please check your inbox.");
