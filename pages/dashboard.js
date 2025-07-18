@@ -7,7 +7,6 @@ import { UserCircle, Wallet, Settings, LogOut, Star, Bell } from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
-
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -16,108 +15,97 @@ export default function Dashboard() {
   const fileInputRef = useRef(null);
   const router = useRouter();
 
-  
- useEffect(() => {
-  const fetchData = async () => {
-    setLoading(true);
-
-    const {
-      data: { user: authUser },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError) {
-      console.error("Auth error:", authError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (!authUser) {
-      console.warn("No authenticated user found.");
-      setLoading(false);
-      return;
-    }
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("id, email, photo, role")
-      .eq("id", authUser.id)
-      .single();
-
-    if (profileError) {
-      console.error("Error fetching profile:", profileError.message);
-    } else {
-      console.log("✅ Profile fetched:", profile);
-      setUser(profile);
-      if (profile.photo) setAvatarUrl(profile.photo);
-    }
-    if (!user && !loading) {
-  return (
-    <div className="text-center text-red-600 mt-10">
-      Profile not found. Please contact support.
-    </div>
-  );
-}
-
-    setLoading(false);
-  };
-
-  fetchData();
-
-    getUser();
-  }, [router]);
   useEffect(() => {
-  const fetchWalletBalance = async () => {
+    const fetchData = async () => {
+      setLoading(true);
+
+      const {
+        data: { user: authUser },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        console.error("Auth error:", authError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!authUser) {
+        console.warn("No authenticated user found.");
+        setLoading(false);
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("id, email, photo_url")
+        .eq("id", authUser.id)
+        .single();
+
+      if (profileError) {
+        console.error("Error fetching profile:", profileError.message);
+      } else {
+        setUser(profile);
+        if (profile.photo_url) setAvatarUrl(profile.photo_url);
+      }
+
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [router]);
+
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      if (!user?.id) return;
+
+      const { data, error } = await supabase
+        .from("wallet_summary")
+        .select("balance")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Error fetching wallet balance:", error.message);
+      } else {
+        setWalletBalance(data.balance || 0);
+      }
+    };
+
+    fetchWalletBalance();
+  }, [user]);
+
+  useEffect(() => {
     if (!user?.id) return;
 
-    const { data, error } = await supabase
-      .from("wallet_summary")
-      .select("balance")
-      .eq("user_id", user.id)
-      .single();
+    const channel = supabase
+      .channel("realtime-wallets")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "wallets",
+          filter: `user_id=eq.${user.id}`,
+        },
+        async () => {
+          const { data, error } = await supabase
+            .from("wallet_summary")
+            .select("balance")
+            .eq("user_id", user.id)
+            .single();
 
-    if (error) {
-      console.error("Error fetching wallet balance:", error.message);
-    } else {
-      setWalletBalance(data.balance || 0);
-    }
-  };
-
-  fetchWalletBalance();
-}, [user]);
-useEffect(() => {
-  if (!user?.id) return;
-
-  const channel = supabase
-    .channel("realtime-wallets")
-    .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "wallets",
-        filter: `user_id=eq.${user.id}`,
-      },
-      async () => {
-        // Re-fetch updated balance on wallet change
-        const { data, error } = await supabase
-          .from("wallet_summary")
-          .select("balance")
-          .eq("user_id", user.id)
-          .single();
-
-        if (!error) {
-          setWalletBalance(data.balance || 0);
+          if (!error) {
+            setWalletBalance(data.balance || 0);
+          }
         }
-      }
-    )
-    .subscribe();
+      )
+      .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel); // Clean up on unmount
-  };
-}, [user]);
-
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -125,74 +113,73 @@ useEffect(() => {
   };
 
   const handleUpload = async (event) => {
-  const file = event.target.files[0];
-  if (!file || !user) return;
+    const file = event.target.files[0];
+    if (!file || !user) return;
 
-  // 🔒 Enforce 5MB limit for users
-  const maxSize = 5 * 1024 * 1024; // 5MB
-  if (file.size > maxSize) {
-    alert("Image is too large. Please upload a file less than 5MB.");
-    return;
-  }
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert("Image is too large. Please upload a file less than 5MB.");
+      return;
+    }
 
-  const fileExt = file.name.split(".").pop();
-  const filePath = `avatars/${user.id}.${fileExt}`;
+    const fileExt = file.name.split(".").pop();
+    const filePath = `avatars/${user.id}.${fileExt}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(filePath, file, { upsert: true });
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file, { upsert: true });
 
-  if (uploadError) {
-    console.error("Upload error:", uploadError.message);
-    return;
-  }
+    if (uploadError) {
+      console.error("Upload error:", uploadError.message);
+      return;
+    }
 
-  const { data: publicUrlData } = supabase.storage
-    .from("avatars")
-    .getPublicUrl(filePath);
+    const { data: publicUrlData } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
 
-  const publicUrl = publicUrlData.publicUrl;
+    const publicUrl = publicUrlData.publicUrl;
 
-  // 💾 Save the public URL to the user's profile
-  const { error: updateError } = await supabase
-    .from("profiles")
-    .update({ photo: publicUrl })
-    .eq("id", user.id);
+    const { error: updateError } = await supabase
+      .from("profiles")
+      .update({ photo_url: publicUrl })
+      .eq("id", user.id);
 
-  if (updateError) {
-    console.error("Failed to update profile:", updateError.message);
-  } else {
-    setAvatarUrl(publicUrl); // ✅ update image preview
-  }
-};
-const handleFundWallet = async () => {
-  const amount = prompt("Enter amount to fund (₦)");
+    if (updateError) {
+      console.error("Failed to update profile:", updateError.message);
+    } else {
+      setAvatarUrl(publicUrl);
+    }
+  };
 
-  if (!amount || isNaN(amount)) {
-    alert("Please enter a valid amount");
-    return;
-  }
+  const handleFundWallet = async () => {
+    const amount = prompt("Enter amount to fund (₦)");
 
-  const res = await fetch("/api/fund-wallet", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      amount,
-      email: user.email,
-      user_id: user.id,
-    }),
-  });
+    if (!amount || isNaN(amount)) {
+      alert("Please enter a valid amount");
+      return;
+    }
 
-  const data = await res.json();
+    const res = await fetch("/api/fund-wallet", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        amount,
+        email: user.email,
+        user_id: user.id,
+      }),
+    });
 
-  if (data?.url) {
-    window.location.href = data.url; // Redirect to Paystack
-  } else {
-    alert("Failed to initialize payment.");
-  }
-};
+    const data = await res.json();
+
+    if (data?.url) {
+      window.location.href = data.url;
+    } else {
+      alert("Failed to initialize payment.");
+    }
+  };
 
   if (loading) return <div className="text-center p-20">Loading...</div>;
   if (!user) return null;
@@ -202,16 +189,15 @@ const handleFundWallet = async () => {
       <Header />
       <section className="min-h-screen bg-rose-50 p-6">
         <div className="max-w-6xl mx-auto">
-          {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
               <div className="relative w-16 h-16">
                 <Image
-  src={avatarUrl}
-  alt="Profile"
-  fill
-  className="rounded-full border object-cover"
-/>
+                  src={avatarUrl}
+                  alt="Profile"
+                  fill
+                  className="rounded-full border object-cover"
+                />
                 <input
                   type="file"
                   accept="image/*"
@@ -222,9 +208,7 @@ const handleFundWallet = async () => {
                 <button
                   className="absolute bottom-0 right-0 p-1 bg-white rounded-full shadow"
                   onClick={() => fileInputRef.current.click()}
-                >
-                  📷
-                </button>
+                >📷</button>
               </div>
               <div>
                 <h2 className="text-xl font-bold text-gray-800">Welcome back</h2>
@@ -239,9 +223,7 @@ const handleFundWallet = async () => {
             </button>
           </div>
 
-          {/* Main Grid */}
           <div className="grid md:grid-cols-3 gap-6">
-            {/* Wallet */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -251,14 +233,13 @@ const handleFundWallet = async () => {
                 <Wallet className="text-rose-600" />
               </div>
               <button
-  onClick={handleFundWallet}
-  className="mt-4 w-full bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white py-2 rounded"
->
-  Fund Wallet
-</button>
+                onClick={handleFundWallet}
+                className="mt-4 w-full bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white py-2 rounded"
+              >
+                Fund Wallet
+              </button>
             </div>
 
-            {/* Rank Progress */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm text-gray-500">Current Rank</p>
@@ -271,7 +252,6 @@ const handleFundWallet = async () => {
               <p className="text-xs text-gray-500 mt-1">Spend more to rank up</p>
             </div>
 
-            {/* Settings */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm text-gray-700">Settings</p>
@@ -285,9 +265,7 @@ const handleFundWallet = async () => {
             </div>
           </div>
 
-          {/* History & Activity */}
           <div className="grid md:grid-cols-2 gap-6 mt-8">
-            {/* Transactions */}
             <div className="bg-white rounded-lg shadow p-6">
               <h3 className="text-lg font-bold mb-4 text-gray-800">Transaction History</h3>
               <ul className="text-sm text-gray-600 space-y-2">
@@ -297,7 +275,6 @@ const handleFundWallet = async () => {
               </ul>
             </div>
 
-            {/* Notifications */}
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-bold text-gray-800">Notifications</h3>
