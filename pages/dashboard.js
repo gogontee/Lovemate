@@ -284,12 +284,6 @@ const handlePayNow = async () => {
               </p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-rose-600 text-white rounded hover:bg-rose-700"
-          >
-            <LogOut size={18} /> Logout
-          </button>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">

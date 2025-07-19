@@ -1,5 +1,3 @@
-// pages/admin/users.js
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabaseClient";
 import AdminHeader from "@/components/AdminHeader";
@@ -11,27 +9,42 @@ function AdminUsers() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, role, created_at")
-        .order("created_at", { ascending: false });
+  const fetchUsers = async () => {
+  const { data, error } = await supabase
+    .from("profile")
+    .select("id, full_name, email, role, phone, photo_url, created_at")
+    .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching users:", error);
-      } else {
-        setUsers(data);
-      }
-    };
+  if (error) {
+    console.error("Error fetching users:", error);
+    return;
+  }
 
-    fetchUsers();
-  }, []);
+  setUsers(data); // just use the data directly
+};
+
+
+  fetchUsers();
+}, []);
 
   const filteredUsers = users.filter(
     (user) =>
       user.full_name?.toLowerCase().includes(search.toLowerCase()) ||
       user.email?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const promoteToRole = async (userId, newRole) => {
+    const { error } = await supabase
+      .from("profile")
+      .update({ role: newRole })
+      .eq("id", userId);
+
+    if (error) {
+      console.error("Failed to update role:", error.message);
+    } else {
+      console.log(`User role updated to ${newRole}`);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -55,8 +68,10 @@ function AdminUsers() {
             <table className="min-w-full bg-white shadow rounded-lg">
               <thead>
                 <tr className="bg-rose-100 text-left text-sm font-semibold text-gray-700">
+                  <th className="px-4 py-3">Photo</th>
                   <th className="px-4 py-3">Full Name</th>
                   <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Phone</th>
                   <th className="px-4 py-3">Role</th>
                   <th className="px-4 py-3">Joined</th>
                 </tr>
@@ -67,20 +82,50 @@ function AdminUsers() {
                     key={user.id}
                     className="border-b hover:bg-rose-50 text-sm text-gray-800"
                   >
-                    <td className="px-4 py-3">{user.full_name || "—"}</td>
-                    <td className="px-4 py-3">{user.email}</td>
-                    <td className="px-4 py-3 capitalize text-rose-600 font-semibold">
-                      {user.role}
-                    </td>
                     <td className="px-4 py-3">
-                      {new Date(user.created_at).toLocaleDateString()}
+                      <img
+  src={user.photo_url || "https://via.placeholder.com/40?text=👤"}
+  alt={user.full_name}
+  className="w-10 h-10 rounded-full object-cover"
+/>
+
+                    </td>
+
+                    <td className="px-4 py-3">{user.full_name || "—"}</td>
+                    <td className="px-4 py-3">{user.email || "—"}</td>
+                    <td className="px-4 py-3">{user.phone_number || "—"}</td>
+
+                    <td className="px-4 py-3">
+                      <select
+                        value={user.role}
+                        onChange={async (e) => {
+                          const newRole = e.target.value;
+                          await promoteToRole(user.id, newRole);
+                          setUsers((prevUsers) =>
+                            prevUsers.map((u) =>
+                              u.id === user.id ? { ...u, role: newRole } : u
+                            )
+                          );
+                        }}
+                        className="border rounded-md px-2 py-1 text-sm text-rose-600 font-semibold bg-white shadow-sm focus:outline-none"
+                      >
+                        <option value="fan">Fan</option>
+                        <option value="candidate">Candidate</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      {user.created_at
+                        ? new Date(user.created_at).toLocaleDateString("en-GB")
+                        : "—"}
                     </td>
                   </tr>
                 ))}
 
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan="4" className="px-4 py-6 text-center text-gray-500">
+                    <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
                       No users found.
                     </td>
                   </tr>

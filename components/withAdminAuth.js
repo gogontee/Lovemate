@@ -11,23 +11,30 @@ export default function withAdminAuth(Component) {
 
     useEffect(() => {
       const checkSession = async () => {
-        const { data, error } = await supabase.auth.getUser();
+        const {
+          data: { user },
+          error,
+        } = await supabase.auth.getUser();
 
-        if (error || !data?.user) {
+        if (error || !user) {
           router.push("/auth/login");
           return;
         }
 
-        // Fetch role from Supabase user metadata or profiles table
-        const { user } = data;
-
-        const { data: profile } = await supabase
-          .from("profiles") // adjust table name if different
+        // Fetch user role from profile table using email
+        const { data: profile, error: profileError } = await supabase
+          .from("profile") // ✅ Your actual table name
           .select("role")
-          .eq("id", user.id)
+          .eq("email", user.email) // ✅ Lookup by email
           .single();
 
-        if (profile?.role === "admin") {
+        if (profileError || !profile) {
+          console.error("Profile not found or error:", profileError);
+          router.push("/auth/login");
+          return;
+        }
+
+        if (profile.role === "admin") {
           setAuthorized(true);
         } else {
           router.push("/auth/login");
@@ -40,7 +47,7 @@ export default function withAdminAuth(Component) {
     }, []);
 
     if (loading) {
-      return <div className="p-10 text-center">Checking authorization...</div>;
+      return <div className="p-10 text-center">Checking admin access...</div>;
     }
 
     if (!authorized) return null;
