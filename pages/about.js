@@ -94,6 +94,18 @@ export default function About() {
                 Register Now
               </a>
             </div>
+            <div className="p-6 bg-rose-50 rounded-xl shadow">
+              <h3 className="text-2xl font-semibold text-primary mb-2">Find True Love Near You</h3>
+              <p className="text-gray-700 mb-4">
+                Whether you're miles away or just around the corner, love is waiting. Our new feature will connect hearts in local cities – because real romance could be just a heartbeat away.
+              </p>
+              <button
+                onClick={() => alert("💘 Coming Soon: Find Love Near You!")}
+                className="inline-block text-white bg-primary px-5 py-3 rounded-md font-medium hover:bg-primaryDark transition"
+              >
+                Find Love
+              </button>
+            </div>
 
             <div className="p-6 bg-rose-50 rounded-xl shadow">
               <h3 className="text-2xl font-semibold text-primary mb-2">Become a Sponsor</h3>
@@ -107,6 +119,7 @@ export default function About() {
           </div>
         </div>
       </section>
+                  
 
       <Footer />
     </>

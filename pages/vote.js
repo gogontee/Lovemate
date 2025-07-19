@@ -139,44 +139,44 @@ export default function VotePage() {
       <Header />
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-rose-100 via-white to-pink-50 py-20 px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-rose-600 mb-4">
-            Ready to Vote for Your Favorite Lovemate?
-          </h1>
-          <p className="text-lg text-gray-700 mb-4">
-            Show your support. Cast your vote. Make your voice count.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-gray-700 text-sm sm:text-base">
-            <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
-              Start Date: <strong>Aug 1, 2025</strong>
-            </div>
-            <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
-              End Date: <strong>Aug 15, 2025</strong>
-            </div>
-            <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
-              ⏳ Voting closes in: <strong>10d 5h 20m</strong>
-            </div>
+      <section className="bg-gradient-to-br from-rose-100 via-white to-pink-50 pt-20 pb-17 px-4 text-center">
+  <div className="max-w-4xl mx-auto">
+    <h1 className="text-4xl sm:text-5xl font-extrabold text-rose-600 mb-4">
+      Ready to Vote for Your Favorite Lovemate?
+    </h1>
+    <p className="text-lg text-gray-700 mb-4">
+      Scroll down and show your support. Cast your votes, send gifts and make your voice count.
+    </p>
+    <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-gray-700 text-sm sm:text-base">
+      <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
+        Start Date: <strong>Aug 1, 2025</strong>
+      </div>
+      <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
+        End Date: <strong>Aug 15, 2025</strong>
+      </div>
+      <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
+        ⏳ Voting closes in: <strong>10d 5h 20m</strong>
+      </div>
           </div>
         </div>
-      </section>
+      <section 
+      
+      className="py-4 px-2 bg-white">
+  <div className="max-w-xs mx-auto"> {/* reduced max width */}
+    <input
+      type="text"
+      placeholder="Search..."
+      className="w-full px-3 py-2 border border-gray-300 rounded-full shadow-sm text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-400"
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    />
+  </div>
+</section>
 
-      {/* Search Bar */}
-      <section className="py-8 px-4 bg-white">
-        <div className="max-w-4xl mx-auto">
-          <input
-  type="text"
-  placeholder="Search for a candidate..."
-  className="w-full px-6 py-3 border border-gray-300 rounded-full shadow-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-primary"
-  value={search}
-  onChange={(e) => setSearch(e.target.value)}
-/>
-
-        </div>
       </section>
 
       {/* Candidate Cards */}
-      <section className="bg-gray-50 py-12 px-4">
+      <section className="bg-gray-50 py-1 px-4">
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
           All Candidates
         </h2>
