@@ -7,7 +7,7 @@ export default function SignUp() {
   const router = useRouter();
   const [form, setForm] = useState({
     fullName: "",
-    contact: "", // can be email or phone
+    contact: "", // Email or phone
     password: "",
     confirmPassword: "",
     photo: null,
@@ -40,7 +40,7 @@ export default function SignUp() {
       ? { email: form.contact, password: form.password }
       : { phone: form.contact, password: form.password };
 
-    const { data, error: signUpError } = await supabase.auth.signUp(signupPayload);
+    const { error: signUpError } = await supabase.auth.signUp(signupPayload);
 
     if (signUpError) {
       setError(signUpError.message);
@@ -48,34 +48,93 @@ export default function SignUp() {
       return;
     }
 
+    const {
+      data: userData,
+      error: userFetchError,
+    } = await supabase.auth.getUser();
+
+    if (userFetchError || !userData?.user?.id) {
+      setError("Could not get user after sign up.");
+      setLoading(false);
+      return;
+    }
+
+    const userId = userData.user.id;
+
     let photo_url = null;
 
     if (form.photo) {
       const fileExt = form.photo.name.split(".").pop();
-      const filePath = `avatars/${data.user.id}.${fileExt}`;
+      const filePath = `${userId}.${fileExt}`;
+
       const { error: uploadError } = await supabase.storage
         .from("avatars")
-        .upload(filePath, form.photo);
+        .upload(filePath, form.photo, {
+          upsert: true,
+          contentType: form.photo.type,
+        });
 
-      if (!uploadError) {
-        const { data: urlData } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(filePath);
-        photo_url = urlData.publicUrl;
+      if (uploadError) {
+        console.error("Photo upload error:", uploadError.message);
+        setError("Failed to upload profile photo.");
+        setLoading(false);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+      photo_url = urlData?.publicUrl;
+    }
+
+    const { data: existingProfile, error: fetchProfileError } = await supabase
+      .from("profile")
+      .select("id")
+      .eq("id", userId)
+      .single();
+
+    if (fetchProfileError && fetchProfileError.code !== "PGRST116") {
+      setError("Failed to check existing profile.");
+      setLoading(false);
+      return;
+    }
+
+    if (existingProfile) {
+      const { error: updateError } = await supabase
+        .from("profile")
+        .update({
+          full_name: form.fullName,
+          phone: !isEmail(form.contact) ? form.contact : null,
+          email: isEmail(form.contact) ? form.contact : null,
+          photo_url,
+        })
+        .eq("id", userId);
+
+      if (updateError) {
+        setError("Profile update failed: " + updateError.message);
+        setLoading(false);
+        return;
+      }
+    } else {
+      const { error: insertError } = await supabase.from("profile").insert([
+        {
+          id: userId,
+          email: isEmail(form.contact) ? form.contact : null,
+          phone: !isEmail(form.contact) ? form.contact : null,
+          full_name: form.fullName,
+          role: "fan",
+          photo_url,
+        },
+      ]);
+
+      if (insertError) {
+        setError("Profile insert failed: " + insertError.message);
+        setLoading(false);
+        return;
       }
     }
 
-    await supabase.from("profiles").insert([
-      {
-        id: data.user.id,
-        email: isEmail(form.contact) ? form.contact : null,
-        phone_number: !isEmail(form.contact) ? form.contact : null,
-        full_name: form.fullName,
-        role: "fan",
-        photo_url: photo_url,
-      },
-    ]);
-
+    // ✅ Success flow
     setLoading(false);
     router.push("/auth/login");
   };
@@ -106,7 +165,6 @@ export default function SignUp() {
             required
           />
 
-          {/* Profile Picture */}
           <input
             type="file"
             accept="image/*"
