@@ -28,6 +28,13 @@ export default function Dashboard() {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
 
+  useEffect(() => {
+  if (profile) {
+    setFullName(profile.full_name || "");
+    setPhone(profile.phone || "");
+  }
+}, [profile]);
+
 
 useEffect(() => {
   if (!profile?.id) return;
@@ -232,48 +239,48 @@ const handlePayNow = async () => {
   if (loading) return <div className="text-center p-20">Loading...</div>;
   if (!profile) return null;
 
-  useEffect(() => {
-    if (user) {
-      fetchProfile();
-    }
-  }, [user]);
+  const handleUpdate = async (e) => {
+  e.preventDefault();
 
-  const fetchProfile = async () => {
-    const { data, error } = await supabase
-      .from("profile")
-      .select("full_name, phone")
-      .eq("email", user.email)
-      .single();
+  if (!user || !user.id) {
+    setMessage("User not authenticated");
+    console.error("User not authenticated");
+    return;
+  }
 
-    if (data) {
-      setFullName(data.full_name || "");
-      setPhone(data.phone || "");
-    }
+  setLoading(true);
+  setMessage("");
+
+  const updates = {
+    id: user.id,
+    full_name: fullName.trim(),
+    phone: phone.trim(),
+    updated_at: new Date().toISOString(),
   };
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage("");
-
-    const { error } = await supabase
-      .from("profile")
-      .update({
-        full_name: fullName,
-        phone: phone,
-      })
-      .eq("email", user.email);
+  try {
+    const { error } = await supabase.from("profile").upsert(updates, {
+      returning: "minimal", // Faster, only updates without returning row
+    });
 
     if (error) {
-      setMessage("Failed to update profile.");
+      console.error("Profile update error:", error.message);
+      setMessage("❌ Failed to update profile");
     } else {
-      setMessage("Profile updated successfully!");
+      setMessage("✅ Profile updated successfully!");
+      setProfile((prev) => ({
+        ...prev,
+        full_name: fullName,
+        phone: phone,
+      }));
     }
-
+  } catch (err) {
+    console.error("Unexpected update error:", err);
+    setMessage("⚠️ An unexpected error occurred");
+  } finally {
     setLoading(false);
-  };
-
-
+  }
+};
 
  return (
   <>
