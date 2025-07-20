@@ -24,6 +24,10 @@ export default function Dashboard() {
   const router = useRouter();
   const [transactions, setTransactions] = useState([]);
   const [activeTab, setActiveTab] = useState("update");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [message, setMessage] = useState("");
+
 
 useEffect(() => {
   if (!profile?.id) return;
@@ -228,6 +232,47 @@ const handlePayNow = async () => {
   if (loading) return <div className="text-center p-20">Loading...</div>;
   if (!profile) return null;
 
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    const { data, error } = await supabase
+      .from("profile")
+      .select("full_name, phone")
+      .eq("email", user.email)
+      .single();
+
+    if (data) {
+      setFullName(data.full_name || "");
+      setPhone(data.phone || "");
+    }
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage("");
+
+    const { error } = await supabase
+      .from("profile")
+      .update({
+        full_name: fullName,
+        phone: phone,
+      })
+      .eq("email", user.email);
+
+    if (error) {
+      setMessage("Failed to update profile.");
+    } else {
+      setMessage("Profile updated successfully!");
+    }
+
+    setLoading(false);
+  };
+
 
 
  return (
@@ -346,76 +391,97 @@ const handlePayNow = async () => {
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-sm text-gray-700">Settings</p>
-              <Settings className="text-gray-600" />
-            </div>
-            <ul className="text-sm text-gray-700 space-y-2 mb-4">
-              <li
-                onClick={() => setActiveTab("update")}
-                className={`cursor-pointer ${activeTab === "update" ? "text-rose-600 font-bold" : "hover:text-rose-600"}`}
-              >
-                Update Profile
-              </li>
-              <li
-                onClick={() => setActiveTab("password")}
-                className={`cursor-pointer ${activeTab === "password" ? "text-rose-600 font-bold" : "hover:text-rose-600"}`}
-              >
-                Change Password
-              </li>
-              <li
-                onClick={() => setActiveTab("notifications")}
-                className={`cursor-pointer ${activeTab === "notifications" ? "text-rose-600 font-bold" : "hover:text-rose-600"}`}
-              >
-                Notification Preferences
-              </li>
-            </ul>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-sm text-gray-700">Settings</p>
+        <Settings className="text-gray-600" />
+      </div>
 
-            {activeTab === "update" && (
-              <form className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium">Full Name</label>
-                  <input type="text" className="w-full mt-1 border rounded text-gray-800" placeholder="Enter full name" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">Phone</label>
-                  <input type="text" className="w-full mt-1 border rounded text-gray-800" placeholder="Enter phone number" />
-                </div>
-                <button type="submit" className="bg-rose-600 text-white px-4 py-2 rounded">
-                  Save Changes
-                </button>
-              </form>
-            )}
+      <ul className="text-sm text-gray-700 space-y-2 mb-4">
+        <li
+          onClick={() => setActiveTab("update")}
+          className={`cursor-pointer ${activeTab === "update" ? "text-rose-600 font-bold" : "hover:text-rose-600"}`}
+        >
+          Update Profile
+        </li>
+        <li
+          onClick={() => setActiveTab("password")}
+          className={`cursor-pointer ${activeTab === "password" ? "text-rose-600 font-bold" : "hover:text-rose-600"}`}
+        >
+          Change Password
+        </li>
+        <li
+          onClick={() => setActiveTab("notifications")}
+          className={`cursor-pointer ${activeTab === "notifications" ? "text-rose-600 font-bold" : "hover:text-rose-600"}`}
+        >
+          Notification Preferences
+        </li>
+      </ul>
 
-            {activeTab === "password" && (
-              <form className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium">Current Password</label>
-                  <input type="password" className="w-full mt-1 border rounded text-gray-800" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium">New Password</label>
-                  <input type="password" className="w-full mt-1 border rounded text-gray-800" />
-                </div>
-                <button type="submit" className="bg-rose-600 text-white px-4 py-2 rounded">
-                  Update Password
-                </button>
-              </form>
-            )}
+      {/* Update Profile */}
+      {activeTab === "update" && (
+        <form className="space-y-4" onSubmit={handleUpdate}>
+          <div>
+            <label className="block text-sm font-medium">Full Name</label>
+            <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full mt-1 border rounded text-gray-800 p-2"
+              placeholder="Enter full name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Phone</label>
+            <input
+              type="text"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full mt-1 border rounded text-gray-800 p-2"
+              placeholder="Enter phone number"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-rose-600 text-white px-4 py-2 rounded"
+          >
+            {loading ? "Saving..." : "Save Changes"}
+          </button>
+          {message && <p className="text-sm mt-2">{message}</p>}
+        </form>
+      )}
 
-            {activeTab === "notifications" && (
-  <div className="space-y-2">
-    <label className="flex items-center space-x-2">
-      <input type="checkbox" className="accent-rose-600" />
-      <span className="text-gray-800">Email Notifications</span>
-    </label>
-    <label className="flex items-center space-x-2">
-      <input type="checkbox" className="accent-rose-600" />
-      <span className="text-gray-800">SMS Alerts</span>
-    </label>
-    <button className="mt-2 bg-rose-600 text-white px-4 py-2 rounded">
-      Save Preferences
-    </button>
+      {/* Change Password */}
+      {activeTab === "password" && (
+        <form className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium">Current Password</label>
+            <input type="password" className="w-full mt-1 border rounded text-gray-800 p-2" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">New Password</label>
+            <input type="password" className="w-full mt-1 border rounded text-gray-800 p-2" />
+          </div>
+          <button type="submit" className="bg-rose-600 text-white px-4 py-2 rounded">
+            Update Password
+          </button>
+        </form>
+      )}
+
+      {/* Notifications */}
+      {activeTab === "notifications" && (
+        <div className="space-y-2">
+          <label className="flex items-center space-x-2">
+            <input type="checkbox" className="accent-rose-600" />
+            <span className="text-gray-800">Email Notifications</span>
+          </label>
+          <label className="flex items-center space-x-2">
+            <input type="checkbox" className="accent-rose-600" />
+            <span className="text-gray-800">SMS Alerts</span>
+          </label>
+          <button className="mt-2 bg-rose-600 text-white px-4 py-2 rounded">
+            Save Preferences
+          </button>
   </div>
 )}
 
