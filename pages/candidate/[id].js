@@ -284,7 +284,7 @@ function VotingSection({ candidate, scrollRef }) {
           <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow text-black">
             <h3 className="text-lg font-bold mb-4 text-center">Confirm Your Vote</h3>
             <p className="text-center mb-4">
-              You are voting {form.votes} times for {candidate.name} (₦{parseInt(form.votes) * 100})
+              You are sending {form.votes} votes for {candidate.name} (₦{parseInt(form.votes) * 100})
             </p>
             <div className="flex gap-4">
               <button
