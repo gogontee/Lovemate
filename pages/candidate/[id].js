@@ -281,7 +281,7 @@ function VotingSection({ candidate, scrollRef }) {
 
       {showConfirmVote && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow">
+          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow text-black">
             <h3 className="text-lg font-bold mb-4 text-center">Confirm Your Vote</h3>
             <p className="text-center mb-4">
               You are voting {form.votes} times for {candidate.name} (₦{parseInt(form.votes) * 100})
@@ -294,7 +294,7 @@ function VotingSection({ candidate, scrollRef }) {
                 Confirm
               </button>
               <button
-                className="flex-1 border border-gray-300 py-2 rounded"
+                className="flex-1 border border-gray-300 py-2 rounded text-black"
                 onClick={() => setShowConfirmVote(false)}
               >
                 Cancel
@@ -306,7 +306,7 @@ function VotingSection({ candidate, scrollRef }) {
 
       {showGiftModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow">
+          <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow text-black">
             <h3 className="text-lg font-bold mb-4 text-center">
               Confirm gifting {showGiftModal} to {candidate.name}?
             </h3>
@@ -319,7 +319,7 @@ function VotingSection({ candidate, scrollRef }) {
               </button>
               <button
                 onClick={() => setShowGiftModal(null)}
-                className="flex-1 border border-gray-300 py-2 rounded"
+                className="flex-1 border border-gray-300 py-2 rounded text-black"
               >
                 Cancel
               </button>
