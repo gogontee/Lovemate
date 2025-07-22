@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       {
         email,
         amount: amount * 100,
-        callback_url: "https://lovemateshow.zeta.vercel.app/wallet/callback",
+        callback_url: "https://lovemateshow-zeta.vercel.app/wallet/callback",
       },
       {
         headers: {
