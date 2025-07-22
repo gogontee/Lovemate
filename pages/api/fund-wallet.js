@@ -9,38 +9,63 @@ export default async function handler(req, res) {
 
   const { amount, email, redirect_url } = req.body;
 
+  // Debug: Show incoming data
+  console.log("🔔 Incoming payment request:", { amount, email, redirect_url });
+
   if (!amount || !email || !redirect_url) {
+    console.warn("❌ Missing required fields");
     return res.status(400).json({ error: "Amount, email, and redirect_url are required" });
   }
 
-  try {
-    console.log("Initiating payment with:", { email, amount, redirect_url });
+  const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
+  if (!secretKey) {
+    console.error("❌ PAYSTACK_SECRET_KEY is not set in environment");
+    return res.status(500).json({ error: "Server configuration error" });
+  }
+
+  try {
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: amount * 100,
-        callback_url: redirect_url, // ✅ use dynamic callback
+        amount: amount * 100, // Paystack expects kobo
+        callback_url: redirect_url,
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          Authorization: `Bearer ${secretKey}`,
           "Content-Type": "application/json",
         },
       }
     );
 
-    const { authorization_url } = response.data.data;
-    return res.status(200).json({ authorization_url }); // 🔁 fix key name to match frontend
+    const { authorization_url, access_code, reference } = response.data.data;
+
+    console.log("✅ Payment initialization successful:", {
+      reference,
+      authorization_url,
+    });
+
+    return res.status(200).json({
+      authorization_url,
+      reference,
+      access_code,
+    });
 
   } catch (error) {
-    console.error("Payment initiation error:", {
-      status: error.response?.status,
-      data: error.response?.data,
+    const status = error.response?.status;
+    const data = error.response?.data;
+
+    console.error("❌ Payment initiation error:", {
+      status,
+      data,
       message: error.message,
     });
 
-    return res.status(500).json({ error: "Unable to initiate payment" });
+    return res.status(500).json({
+      error: "Unable to initiate payment",
+      details: data || error.message,
+    });
   }
 }

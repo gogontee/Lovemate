@@ -168,7 +168,7 @@ useEffect(() => {
             .from("wallet_summary")
             .select("balance")
             .eq("user_id", profile.id)
-            .single();
+            .maybesingle();
 
           if (!error) {
             setWalletBalance(data?.balance || 0);
