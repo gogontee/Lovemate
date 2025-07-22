@@ -28,7 +28,7 @@ export default function FundWallet() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount,
+          amount: form.amount,
           email: user.email,
           user_id: user.id,
           redirect_url: "https://lovemate-zeta.vercel.app/wallet/callback", // ✅ correct domain

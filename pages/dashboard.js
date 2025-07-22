@@ -33,7 +33,8 @@ export default function Dashboard() {
     .from("wallets")
     .select("*")
     .eq("user_id", userId)
-    .single();
+    .single()
+    .headers({ Accept: "application/json" }); // 👈 Fix for 406 error
 
   if (error) {
     console.error("Failed to fetch wallet:", error);
