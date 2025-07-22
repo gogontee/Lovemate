@@ -28,6 +28,22 @@ export default function Dashboard() {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
 
+  const fetchWallet = async (userId) => {
+  const { data, error } = await supabase
+    .from("wallets")
+    .select("*")
+    .eq("user_id", userId)
+    .single();
+
+  if (error) {
+    console.error("Failed to fetch wallet:", error);
+    return null;
+  }
+
+  return data;
+};
+
+
   useEffect(() => {
   if (profile) {
     setFullName(profile.full_name || "");
@@ -95,33 +111,41 @@ useEffect(() => {
 
   // Fetch wallet balance
   useEffect(() => {
-  const fetchWallet = async () => {
-    const { data, error } = await supabase
-      .from("wallets")
-      .select("*")
-      .eq("user_id", user?.id)
-      .single();
+  if (user?.id) {
+    fetchWallet(user.id).then((data) => {
+      if (data) {
+        setWalletBalance(data.balance || 0);
+      }
+    });
 
-    if (!error) {
-      setWallet(data.balance);
-    }
-  };
+    const interval = setInterval(() => {
+      fetchWallet(user.id).then((data) => {
+        if (data) {
+          setWalletBalance(data.balance || 0);
+        }
+      });
+    }, 30000); // refresh every 30s
 
-  fetchWallet();
-
-  // Optional: auto-refresh every 30 seconds
-  const interval = setInterval(fetchWallet, 30000);
-
-  return () => clearInterval(interval); // cleanup
+    return () => clearInterval(interval);
+  }
 }, [user?.id]);
+
 
 // 3. Second useEffect: listen for payment redirect
 useEffect(() => {
-  if (typeof window !== "undefined" && localStorage.getItem("wallet_updated") === "true") {
-    fetchWallet();
+  if (
+    typeof window !== "undefined" &&
+    localStorage.getItem("wallet_updated") === "true" &&
+    user?.id
+  ) {
+    fetchWallet(user.id).then((data) => {
+      if (data) {
+        setWalletBalance(data.balance || 0);
+      }
+    });
     localStorage.removeItem("wallet_updated");
   }
-}, []);
+}, [user]);
 
 
 
