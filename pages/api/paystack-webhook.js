@@ -1,72 +1,59 @@
-import { buffer } from 'micro';
-import crypto from 'crypto';
-import { supabase } from '@/utils/supabaseClient';
+// pages/api/paystack-webhook.js
+import { supabase } from "@/utils/supabaseClient";
+import crypto from "crypto";
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Important for raw body
   },
 };
 
+function buffer(readable) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    readable.on("data", (chunk) => chunks.push(chunk));
+    readable.on("end", () => resolve(Buffer.concat(chunks)));
+    readable.on("error", reject);
+  });
+}
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).end('Method not allowed');
+  if (req.method !== "POST") return res.status(405).end();
+
+  const rawBody = await buffer(req);
+  const sig = req.headers["x-paystack-signature"];
+  const hash = crypto
+    .createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
+    .update(rawBody)
+    .digest("hex");
+
+  if (hash !== sig) return res.status(401).send("Invalid signature");
+
+  const event = JSON.parse(rawBody.toString());
+
+  if (event.event === "charge.success") {
+    const { metadata, amount } = event.data;
+    const userId = metadata?.user_id;
+
+    if (!userId) return res.status(400).send("User ID not found");
+
+    const { data: wallet, error: walletError } = await supabase
+      .from("wallets")
+      .select("balance")
+      .eq("user_id", userId)
+      .single();
+
+    if (walletError) return res.status(500).send("Wallet fetch failed");
+
+    const { error: updateError } = await supabase
+      .from("wallets")
+      .update({ balance: (wallet.balance || 0) + amount / 100 })
+      .eq("user_id", userId);
+
+    if (updateError) return res.status(500).send("Wallet update failed");
+
+    return res.status(200).send("Wallet updated");
   }
 
-  const secret = process.env.PAYSTACK_SECRET_KEY;
-  const buf = await buffer(req);
-  const sig = req.headers['x-paystack-signature'];
-
-  const expectedSig = crypto
-    .createHmac('sha512', secret)
-    .update(buf)
-    .digest('hex');
-
-  // Verify signature
-  if (sig !== expectedSig) {
-    console.warn('Invalid webhook signature attempt:', sig);
-    return res.status(401).json({ error: 'Invalid signature' });
-  }
-
-  const payload = JSON.parse(buf.toString());
-
-  // Only respond to successful charges
-  if (payload.event === 'charge.success') {
-    const email = payload.data.customer.email;
-    const amount = payload.data.amount / 100; // Convert kobo to naira
-    const reference = payload.data.reference;
-
-    // 1. Update user's wallet
-    const { error: rpcError } = await supabase.rpc('fund_wallet_by_email', {
-      user_email: email,
-      amount_to_add: amount,
-    });
-
-    if (rpcError) {
-      console.error('Supabase RPC error:', rpcError.message);
-      return res.status(500).json({ error: 'Failed to update wallet' });
-    }
-
-    // 2. Log transaction
-    const { error: txError } = await supabase.from('transactions').insert([
-      {
-        user_email: email,
-        amount: amount,
-        reference: reference,
-        type: 'wallet_funding',
-        status: 'success',
-      },
-    ]);
-
-    if (txError) {
-      console.error('Transaction log error:', txError.message);
-      // Don't fail the webhook just because logging failed
-    }
-
-    return res.status(200).json({ received: true });
-  }
-
-  // Unhandled event
-  console.log('Unhandled Paystack event:', payload.event);
-  return res.status(200).json({ status: 'ignored', event: payload.event });
+  res.status(200).send("OK");
 }

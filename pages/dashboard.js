@@ -95,22 +95,26 @@ useEffect(() => {
 
   // Fetch wallet balance
   useEffect(() => {
-    const fetchWalletBalance = async () => {
-      if (!profile?.id) return;
+  const fetchWallet = async () => {
+    const { data, error } = await supabase
+      .from("wallets")
+      .select("*")
+      .eq("user_id", user?.id)
+      .single();
 
-      const { data, error } = await supabase
-        .from("wallet_summary")
-        .select("balance")
-        .eq("user_id", profile.id)
-        .single();
+    if (!error) {
+      setWallet(data.balance);
+    }
+  };
 
-      if (!error) {
-        setWalletBalance(data?.balance || 0);
-      }
-    };
+  fetchWallet();
 
-    fetchWalletBalance();
-  }, [profile]);
+  // Optional: auto-refresh every 30 seconds
+  const interval = setInterval(fetchWallet, 30000);
+
+  return () => clearInterval(interval); // cleanup
+}, [user?.id]);
+
 
   // Subscribe to wallet updates
   useEffect(() => {
