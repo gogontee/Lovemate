@@ -7,21 +7,21 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const { amount, email } = req.body;
+  const { amount, email, redirect_url } = req.body;
 
-  if (!amount || !email) {
-    return res.status(400).json({ error: "Amount and email are required" });
+  if (!amount || !email || !redirect_url) {
+    return res.status(400).json({ error: "Amount, email, and redirect_url are required" });
   }
 
   try {
-    console.log("Initiating payment with:", { email, amount });
+    console.log("Initiating payment with:", { email, amount, redirect_url });
 
     const response = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email,
         amount: amount * 100,
-        callback_url: "https://lovemateshow-zeta.vercel.app/wallet/callback",
+        callback_url: redirect_url, // ✅ use dynamic callback
       },
       {
         headers: {
@@ -32,10 +32,9 @@ export default async function handler(req, res) {
     );
 
     const { authorization_url } = response.data.data;
-    return res.status(200).json({ url: authorization_url });
+    return res.status(200).json({ authorization_url }); // 🔁 fix key name to match frontend
 
   } catch (error) {
-    // ✅ <--- This is where your improved catch block goes
     console.error("Payment initiation error:", {
       status: error.response?.status,
       data: error.response?.data,

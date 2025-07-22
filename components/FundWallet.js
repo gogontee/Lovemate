@@ -23,19 +23,28 @@ export default function FundWallet() {
       return;
     }
 
-    // Call server API to create Paystack payment link
-    const response = await fetch("/api/fund-wallet", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount, user_id: user.id, email: user.email }),
-    });
+    try {
+      const response = await fetch("/api/fund-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          email: user.email,
+          user_id: user.id,
+          redirect_url: "https://lovemate-zeta.vercel.app/wallet/callback", // ✅ correct domain
+        }),
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (data?.authorization_url) {
-      window.location.href = data.authorization_url; // redirect to Paystack
-    } else {
-      alert("Error initializing payment");
+      if (data?.authorization_url) {
+        window.location.href = data.authorization_url;
+      } else {
+        alert("Error initializing payment: " + (data?.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert("Something went wrong. Try again later.");
     }
 
     setLoading(false);
