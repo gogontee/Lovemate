@@ -115,6 +115,15 @@ useEffect(() => {
   return () => clearInterval(interval); // cleanup
 }, [user?.id]);
 
+// 3. Second useEffect: listen for payment redirect
+useEffect(() => {
+  if (typeof window !== "undefined" && localStorage.getItem("wallet_updated") === "true") {
+    fetchWallet();
+    localStorage.removeItem("wallet_updated");
+  }
+}, []);
+
+
 
   // Subscribe to wallet updates
   useEffect(() => {
