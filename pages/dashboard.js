@@ -254,14 +254,16 @@ const handlePayNow = async () => {
   }
 
   const response = await fetch("/api/fund-wallet", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      amount: fundAmount,
-      email: profile.email,
-      user_id: profile.id,
-    }),
-  });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    amount: fundAmount,
+    email: profile.email,
+    user_id: profile.id,
+    redirect_url: "https://lovemate-zeta.vercel.app/wallet/callback", // ✅ this is required
+  }),
+});
+
 
   const data = await response.json();
 
