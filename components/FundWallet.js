@@ -7,47 +7,48 @@ export default function FundWallet() {
   const [loading, setLoading] = useState(false);
 
   const startPayment = async () => {
-    if (!amount || isNaN(amount) || Number(amount) < 100) {
-      alert("Enter a valid amount (minimum ₦100)");
-      return;
-    }
+  if (!amount || isNaN(amount) || Number(amount) < 100) {
+    alert("Enter a valid amount (minimum ₦100)");
+    return;
+  }
 
-    setLoading(true);
+  setLoading(true);
 
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData?.user;
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
 
-    if (!user) {
-      alert("User not logged in");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/fund-wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: form.amount,
-          email: user.email,
-          user_id: user.id,
-          redirect_url: "https://lovemate-zeta.vercel.app/wallet/callback", // ✅ correct domain
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data?.authorization_url) {
-        window.location.href = data.authorization_url;
-      } else {
-        alert("Error initializing payment: " + (data?.error || "Unknown error"));
-      }
-    } catch (err) {
-      console.error("Payment error:", err);
-      alert("Something went wrong. Try again later.");
-    }
-
+  if (!user) {
+    alert("User not logged in");
     setLoading(false);
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/fund-wallet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount, // ✅ CORRECTED: this was previously form.amount
+        email: user.email,
+        user_id: user.id,
+        redirect_url: "https://lovemate-zeta.vercel.app/wallet/callback",
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data?.authorization_url) {
+      window.location.href = data.authorization_url;
+    } else {
+      alert("Error initializing payment: " + (data?.error || "Unknown error"));
+    }
+  } catch (err) {
+    console.error("Payment error:", err);
+    alert("Something went wrong. Try again later.");
+  }
+
+  setLoading(false);
+  
   };
 
   return (
