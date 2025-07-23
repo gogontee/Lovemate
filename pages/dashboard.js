@@ -27,6 +27,11 @@ export default function Dashboard() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
+  const [amountToFund, setAmountToFund] = useState("");
+  const [showFundModal, setShowFundModal] = useState(false);
+
+
+  
 
   const fetchWallet = async (userId) => {
   const { data, error } = await supabase
@@ -239,44 +244,38 @@ useEffect(() => {
   setAvatarUrl(publicUrl);
 };
 
-
-  const [showFundModal, setShowFundModal] = useState(false);
-const [fundAmount, setFundAmount] = useState("");
-
-const handleFundWallet = () => {
-  setShowFundModal(true);
-};
-
 const handlePayNow = async () => {
-  if (!fundAmount || isNaN(fundAmount) || fundAmount <= 0) {
-    alert("Please enter a valid amount");
+  if (!amountToFund) {
+    alert("Please enter an amount");
     return;
   }
 
-  const response = await fetch("/api/fund-wallet", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    amount: fundAmount,
-    email: profile.email,
-    redirect_url: "https://lovemate-zeta.vercel.app/wallet/callback", // ✅ Required
-  }),
-});
+  try {
+    const response = await fetch("/api/fund-wallet", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: amountToFund,
+        email: user.email,
+        redirect_url: "https://lovemate-zeta.vercel.app/wallet/callback",
+      }),
+    });
 
+    const data = await response.json();
 
-
-  const data = await response.json();
-
-  if (data?.url) {
-    window.location.href = data.url;
-  } else {
-    alert("Unable to initiate payment");
+    if (data.authorization_url) {
+      localStorage.setItem("wallet_updated", "true");
+      window.location.href = data.authorization_url;
+    } else {
+      alert("Payment initialization failed.");
+    }
+  } catch (error) {
+    console.error("Payment error:", error);
+    alert("Error initiating payment.");
   }
 };
 
 
-  if (loading) return <div className="text-center p-20">Loading...</div>;
-  if (!profile) return null;
 
   const handleUpdate = async (e) => {
   e.preventDefault();
@@ -371,7 +370,7 @@ const handlePayNow = async () => {
             <div>
               <h2 className="text-xl font-bold text-gray-800">Welcome back</h2>
               <p className="text-sm text-gray-600">
-                {profile.full_name || profile.email}
+                {profile?.full_name || profile?.email || "User"}
               </p>
             </div>
           </div>
@@ -389,40 +388,34 @@ const handlePayNow = async () => {
               <Wallet className="text-rose-600" />
             </div>
             <button
-              onClick={handleFundWallet}
-              className="mt-4 w-full bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white py-2 rounded"
-            >
-              Fund Wallet
-            </button>
+  onClick={() => setShowFundModal(true)}
+  className="px-4 py-2 bg-rose-600 text-white rounded"
+>
+  Fund Wallet
+</button>
+
           </div>
           {showFundModal && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-  <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm">
-    <h2 className="text-xl font-semibold mb-4 text-gray-900">Fund Wallet</h2>
+  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow">
+      <h3 className="text-lg font-bold text-rose-600 mb-4 text-center">Enter Amount to Fund</h3>
       <input
         type="number"
-        placeholder="Enter amount (₦)"
-        className="w-full border px-3 py-2 rounded mb-4 text-gray-800 placeholder-gray-500"
-        value={fundAmount}
-        onChange={(e) => setFundAmount(e.target.value)}
+        placeholder="Enter amount"
+        className="w-full p-2 border rounded text-black mb-4"
+        value={amountToFund}
+        onChange={(e) => setAmountToFund(e.target.value)}
       />
-      <div className="flex justify-end space-x-2">
-        <button
-          className="px-4 py-2 bg-gray-300 text-gray-700 rounded"
-          onClick={() => setShowFundModal(false)}
-        >
-          Cancel
-        </button>
-        <button
-          className="px-4 py-2 bg-rose-600 text-white rounded"
-          onClick={handlePayNow}
-        >
-          Pay Now
-        </button>
-      </div>
+      <button
+        className="w-full bg-rose-600 text-white py-2 rounded"
+        onClick={handlePayNow}
+      >
+        Pay Now
+      </button>
     </div>
   </div>
 )}
+
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-2">
