@@ -9,25 +9,36 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await axios.get(`https://api.paystack.co/transaction/verify/${reference}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-      },
-    });
+    const response = await axios.get(
+      `https://api.paystack.co/transaction/verify/${reference}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    const data = response.data.data;
+    const { data } = response;
 
-    if (data.status === "success") {
+    if (data?.data?.status === "success") {
+      const trx = data.data;
       return res.status(200).json({
         status: "success",
-        amount: data.amount,
-        email: data.customer.email,
+        amount: trx.amount,
+        email: trx.customer.email,
+        reference: trx.reference,
+        paid_at: trx.paid_at,
+        channel: trx.channel,
       });
     } else {
-      return res.status(400).json({ status: "failed" });
+      return res.status(400).json({
+        status: "failed",
+        message: data?.message || "Transaction not successful",
+      });
     }
   } catch (error) {
-    console.error("Paystack verification error:", error.response?.data || error.message);
+    console.error("❌ Paystack verification error:", error.response?.data || error.message);
     return res.status(500).json({ error: "Verification failed" });
   }
 }

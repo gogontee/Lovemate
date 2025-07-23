@@ -17,8 +17,8 @@ export default function WalletCallback() {
 
       try {
         // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (!user || userError) {
           setMessage("User not logged in.");
           return;
         }
@@ -32,13 +32,14 @@ export default function WalletCallback() {
           return;
         }
 
-        const amount = result.amount / 100; // Paystack returns amount in kobo
+        const amount = result.amount / 100;
 
-        // Update user's wallet
-        const { error } = await supabase
-          .from("wallet")
-          .update({ balance: supabase.rpc("increment_wallet_balance", { user_id_input: user.id, amount_input: amount }) }) // or your logic
-          .eq("user_id", user.id);
+        // ✅ Call your Supabase RPC function directly
+        const { error } = await supabase.rpc("increment_balance", {
+  p_user_id: user.id,
+  p_amount: amount,
+});
+
 
         if (error) {
           console.error("Wallet update error:", error.message);
