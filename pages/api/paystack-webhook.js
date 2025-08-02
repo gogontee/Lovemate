@@ -10,77 +10,84 @@ export const config = {
 };
 
 const handler = async (req, res) => {
+  if (req.method !== "POST") return res.status(405).send("Method Not Allowed");
+
   const buf = await buffer(req);
   const secret = process.env.PAYSTACK_SECRET_KEY;
-  const hash = req.headers["x-paystack-signature"];
-
-  const expectedHash = crypto.createHmac("sha512", secret).update(buf).digest("hex");
-
-  if (hash !== expectedHash) {
+  const signature = req.headers["x-paystack-signature"];
+  const expected = crypto.createHmac("sha512", secret).update(buf).digest("hex");
+  if (signature !== expected) {
+    console.warn("Invalid webhook signature");
     return res.status(401).send("Unauthorized");
   }
 
-  const event = JSON.parse(buf.toString());
+  let event;
+  try {
+    event = JSON.parse(buf.toString());
+  } catch (e) {
+    console.error("Webhook payload parse failed", e);
+    return res.status(400).send("Bad payload");
+  }
 
   if (event.event === "charge.success") {
     const data = event.data;
-    const amount = data.amount / 100; // Convert from kobo to naira
+    const amount = data.amount / 100; // naira
     const reference = data.reference;
-    const email = data.customer.email;
+    const channel = data.channel;
+    const paid_at = data.paid_at;
+    const metadata = data.metadata || {};
+    const user_id = metadata.user_id;
 
-    // Get user by email
-    const { data: user, error: userError } = await supabase
-      .from("profile")
-      .select("id")
-      .eq("email", email)
-      .single();
-
-    if (userError || !user) {
-      console.error("❌ User not found for email:", email, userError);
-      return res.status(400).json({ error: "User not found" });
+    if (!user_id) {
+      console.error("Missing user_id in metadata for reference", reference);
+      return res.status(400).json({ error: "Missing user_id in metadata" });
     }
 
-    // Check if transaction is already recorded
-    const { data: existing, error: txnError } = await supabase
+    // Idempotency: check if already processed
+    const { data: existing, error: existingErr } = await supabase
       .from("transactions")
       .select("id")
       .eq("reference", reference)
-      .maybeSingle();
+      .single();
 
-    if (txnError) {
-      console.error("❌ Error checking existing transaction:", txnError);
-      return res.status(500).json({ error: "Transaction check failed" });
+    if (existing) {
+      return res.status(200).json({ received: true, note: "Already processed" });
+    }
+    if (existingErr && existingErr.code !== "PGRST116") {
+      console.error("Error checking existing transaction:", existingErr);
+      return res.status(500).json({ error: "Transaction lookup failed" });
     }
 
-    if (!existing) {
-      // ✅ Use the RPC function to increment balance
-      const { error: rpcError } = await supabase.rpc("increment_balance", {
-        p_user_id: user.id,
-        p_amount: amount,
-      });
+    // Increment wallet (creates or updates)
+    const { error: rpcError } = await supabase.rpc("increment_balance", {
+      p_user_id: user_id,
+      p_amount: amount,
+    });
 
-      if (rpcError) {
-        console.error("❌ Error incrementing balance:", rpcError);
-        return res.status(500).json({ error: "Failed to update balance" });
-      }
+    if (rpcError) {
+      console.error("RPC increment_balance failed:", rpcError);
+      return res.status(500).json({ error: "Failed to update wallet" });
+    }
 
-      // ✅ Log the transaction
-      const { error: insertError } = await supabase.from("transactions").insert({
-        user_id: user.id,
-        amount,
-        reference,
-        type: "credit",
-        status: "success",
-      });
+    // Log transaction
+    const { error: insertError } = await supabase.from("transactions").insert({
+      user_id,
+      reference,
+      amount,
+      status: "success",
+      type: "fund",
+      channel,
+      paid_at,
+      description: "Wallet funding via Paystack",
+    });
 
-      if (insertError) {
-        console.error("❌ Failed to log transaction:", insertError);
-        return res.status(500).json({ error: "Transaction logging failed" });
-      }
+    if (insertError) {
+      console.error("Failed to insert transaction:", insertError);
+      return res.status(500).json({ error: "Transaction logging failed" });
     }
   }
 
-  res.status(200).json({ received: true });
+  return res.status(200).json({ received: true });
 };
 
 export default handler;
