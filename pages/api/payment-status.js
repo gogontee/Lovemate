@@ -8,15 +8,16 @@ export default async function handler(req, res) {
   try {
     const { data: trx, error } = await supabase
       .from("transactions")
-      .select("user_id, amount, status, paid_at")
+      .select("status, amount, user_id, paid_at")
       .eq("reference", reference)
       .single();
 
     if (error) {
+      // Not found yet: still pending
       return res.status(200).json({ status: "pending" });
     }
 
-    // Optionally fetch wallet balance
+    // Optionally, also fetch wallet balance
     const { data: wallet } = await supabase
       .from("wallets")
       .select("balance")

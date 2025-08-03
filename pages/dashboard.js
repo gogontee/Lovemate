@@ -251,31 +251,30 @@ const handlePayNow = async () => {
   }
 
   try {
-    const response = await fetch("/api/fund-wallet", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: amountToFund,
-        email: user.email,
-        redirect_url: "https://lovemate-zeta.vercel.app/wallet/callback",
-      }),
-    });
+  const response = await fetch("/api/fund-wallet", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      amount: Number(amountToFund),
+      email: user.email,
+      user_id: user.id, // <--- required
+      redirect_url: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/wallet/callback`,
+    }),
+  });
 
     const data = await response.json();
+    console.log("fund-wallet response:", data);
 
-    if (data.authorization_url) {
-      localStorage.setItem("wallet_updated", "true");
-      window.location.href = data.authorization_url;
-    } else {
-      alert("Payment initialization failed.");
-    }
-  } catch (error) {
-    console.error("Payment error:", error);
-    alert("Error initiating payment.");
+    if (data?.authorization_url) {
+    window.location.href = data.authorization_url;
+  } else {
+    alert("Payment initialization failed: " + (data?.error || "Unknown")); 
   }
+  } catch (err) {
+  console.error("Payment error:", err);
+  alert("Something went wrong. Try again later.");
+}
 };
-
-
 
   const handleUpdate = async (e) => {
   e.preventDefault();
