@@ -1,28 +1,42 @@
 // pages/api/payment-status.js
-import { supabase } from "@/utils/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   const { reference } = req.query;
   if (!reference) return res.status(400).json({ error: "Missing reference" });
 
   try {
-    const { data: trx, error } = await supabase
+    // Fetch the transaction (bypass RLS)
+    const { data: trx, error: trxErr } = await supabaseAdmin
       .from("transactions")
-      .select("status, amount, user_id, paid_at")
+      .select("user_id, amount, status, paid_at")
       .eq("reference", reference)
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      // Not found yet: still pending
+    if (trxErr) {
+      console.error("Error fetching transaction:", trxErr);
       return res.status(200).json({ status: "pending" });
     }
 
-    // Optionally, also fetch wallet balance
-    const { data: wallet } = await supabase
+    if (!trx) {
+      return res.status(200).json({ status: "pending" });
+    }
+
+    // Fetch wallet balance (bypass RLS)
+    const { data: wallet, error: walletErr } = await supabaseAdmin
       .from("wallets")
       .select("balance")
       .eq("user_id", trx.user_id)
       .maybeSingle();
+
+    if (walletErr) {
+      console.warn("Error fetching wallet:", walletErr);
+    }
 
     return res.status(200).json({
       status: trx.status,

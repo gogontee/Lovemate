@@ -1,6 +1,6 @@
 // pages/api/paystack-webhook.js
 import { buffer } from "micro";
-import { supabase } from "@/utils/supabaseClient";
+import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
 export const config = {
@@ -8,6 +8,12 @@ export const config = {
     bodyParser: false,
   },
 };
+
+// Admin client (bypasses RLS)
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 const handler = async (req, res) => {
   if (req.method !== "POST") {
@@ -57,7 +63,7 @@ const handler = async (req, res) => {
 
     try {
       // Idempotency: check if transaction already exists
-      const { data: existing, error: existingErr } = await supabase
+      const { data: existing, error: existingErr } = await supabaseAdmin
         .from("transactions")
         .select("id")
         .eq("reference", reference)
@@ -70,7 +76,7 @@ const handler = async (req, res) => {
 
       if (!existing) {
         // Ensure wallet exists
-        const { data: walletRow, error: walletErr } = await supabase
+        const { data: walletRow, error: walletErr } = await supabaseAdmin
           .from("wallets")
           .select("*")
           .eq("user_id", userId)
@@ -82,7 +88,7 @@ const handler = async (req, res) => {
         }
 
         if (!walletRow) {
-          const { error: createWalletErr } = await supabase.from("wallets").insert({
+          const { error: createWalletErr } = await supabaseAdmin.from("wallets").insert({
             user_id: userId,
             balance: 0,
           });
@@ -90,14 +96,14 @@ const handler = async (req, res) => {
         }
 
         // Increment balance via RPC
-        const { error: rpcErr } = await supabase.rpc("increment_balance", {
+        const { error: rpcErr } = await supabaseAdmin.rpc("increment_balance", {
           p_user_id: userId,
           p_amount: amount,
         });
         if (rpcErr) throw rpcErr;
 
         // Log transaction
-        const { error: insertErr } = await supabase.from("transactions").insert({
+        const { error: insertErr } = await supabaseAdmin.from("transactions").insert({
           user_id: userId,
           reference,
           amount,
