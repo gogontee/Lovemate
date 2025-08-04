@@ -37,43 +37,9 @@ export default function CandidateCard({
     };
   }, [id]);
 
-  const handleVote = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      alert("You must be logged in to vote.");
-      router.push("/auth/login");
-      return;
-    }
-
-    const { data: summary } = await supabase
-      .from("wallet_summary")
-      .select("balance")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!summary || summary.balance < 100) {
-      alert("Insufficient balance.");
-      return;
-    }
-
-    await supabase.from("wallets").insert([
-      {
-        user_id: user.id,
-        amount: -100,
-        type: "vote",
-        status: "completed",
-      },
-    ]);
-
-    await supabase.rpc("increment_vote", {
-      candidate_id_param: id,
-      vote_count: 1,
-    });
-
-    alert("Vote submitted!");
+  // New vote button handler - navigate to candidate page #vote section
+  const goToVoteSection = () => {
+    router.push(`/candidate/${id}#vote`);
   };
 
   return (
@@ -96,8 +62,9 @@ export default function CandidateCard({
 
       {/* Action Buttons */}
       <div className="mt-4 flex flex-wrap justify-center gap-3">
+        {/* Vote button now navigates to #vote section */}
         <button
-          onClick={handleVote}
+          onClick={goToVoteSection}
           className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-sm font-semibold transition duration-300 shadow"
         >
           Vote
