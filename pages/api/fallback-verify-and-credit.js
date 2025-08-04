@@ -11,6 +11,13 @@ export default async function handler(req, res) {
   const { reference } = req.query;
   if (!reference) return res.status(400).json({ error: "Missing reference" });
 
+  // Admin guard: require secret header
+  const providedSecret = req.headers["x-fallback-secret"];
+  const expectedSecret = process.env.FALLBACK_SECRET;
+  if (!expectedSecret || !providedSecret || providedSecret !== expectedSecret) {
+    return res.status(403).json({ error: "Forbidden: invalid fallback secret" });
+  }
+
   try {
     console.log("Fallback verify start for reference:", reference);
 

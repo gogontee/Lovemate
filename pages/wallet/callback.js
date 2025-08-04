@@ -8,16 +8,18 @@ export default function WalletCallback() {
   const [message, setMessage] = useState("Checking payment status...");
   const attemptsRef = useRef(0);
   const intervalRef = useRef(null);
-  const fallbackTriedRef = useRef(false);
+  const maxAttempts = 15; // ~30 seconds with 2s interval
 
   useEffect(() => {
     if (!reference) return;
 
     const checkStatus = async () => {
       try {
-        const res = await fetch(`/api/payment-status?reference=${encodeURIComponent(reference)}`);
+        const res = await fetch(
+          `/api/payment-status?reference=${encodeURIComponent(reference)}`
+        );
         if (!res.ok) {
-          setMessage("Error checking payment status.");
+          setMessage("Error checking payment status. Retrying...");
           return;
         }
         const data = await res.json();
@@ -32,48 +34,77 @@ export default function WalletCallback() {
         }
       } catch (e) {
         console.error("Status check error:", e);
-        setMessage("Error checking payment status.");
+        setMessage("Error checking payment status. Retrying...");
       }
 
       attemptsRef.current += 1;
-
-      if (attemptsRef.current >= 10 && !fallbackTriedRef.current) {
-        // attempt fallback once
-        fallbackTriedRef.current = true;
-        setMessage("Taking longer than expected. Attempting fallback verification...");
-        try {
-          const fb = await fetch(`/api/fallback-verify-and-credit?reference=${encodeURIComponent(reference)}`);
-          const fbData = await fb.json();
-          console.log("Fallback result:", fbData);
-          if (fbData.status === "credited_fallback" || fbData.status === "already_recorded") {
-            setMessage("Payment confirmed via fallback. Redirecting...");
-            setTimeout(() => router.push("/dashboard"), 1000);
-            clearInterval(intervalRef.current);
-            return;
-          } else {
-            setMessage("Fallback failed. Please refresh to retry.");
-          }
-        } catch (err) {
-          console.error("Fallback error:", err);
-          setMessage("Fallback verification error. Please refresh.");
-        }
-      } else if (attemptsRef.current >= 15) {
-        setMessage("Still pending. Please refresh to retry.");
+      if (attemptsRef.current >= maxAttempts) {
+        setMessage(
+          "Still pending. Payment may be processing on the server. Please refresh or contact support if it doesn't complete."
+        );
         clearInterval(intervalRef.current);
       }
     };
 
+    // initial check + polling
     checkStatus();
     intervalRef.current = setInterval(checkStatus, 2000);
     return () => clearInterval(intervalRef.current);
   }, [reference, router]);
 
+  const handleRefresh = () => {
+    attemptsRef.current = 0;
+    setMessage("Re-checking payment status...");
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    // kick off again
+    intervalRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `/api/payment-status?reference=${encodeURIComponent(reference)}`
+        );
+        if (!res.ok) {
+          setMessage("Error checking payment status. Retrying...");
+          return;
+        }
+        const data = await res.json();
+        if (data.status === "success") {
+          setMessage("Payment confirmed. Redirecting...");
+          clearInterval(intervalRef.current);
+          setTimeout(() => router.push("/dashboard"), 1000);
+          return;
+        } else {
+          setMessage("Waiting for confirmation...");
+        }
+      } catch (e) {
+        console.error("Status check error:", e);
+        setMessage("Error checking payment status. Retrying...");
+      }
+    }, 2000);
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <div>
+      <div className="text-center max-w-md p-6 bg-white shadow rounded">
         <h2 className="text-xl font-bold mb-4">{message}</h2>
-        <p>Reference: {reference}</p>
-        <p>Redirecting to dashboard when confirmed...</p>
+        <p className="mb-2">Reference: {reference || "—"}</p>
+        <div className="flex gap-2 justify-center mt-4">
+          <button
+            onClick={() => router.reload()}
+            className="px-4 py-2 bg-gray-200 rounded"
+          >
+            Refresh Page
+          </button>
+          <button
+            onClick={handleRefresh}
+            className="px-4 py-2 bg-rose-600 text-white rounded"
+          >
+            Retry Status
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 mt-3">
+          If the payment shows successful on Paystack but this page remains pending,
+          contact support with the reference.
+        </p>
       </div>
     </div>
   );
