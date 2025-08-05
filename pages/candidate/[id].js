@@ -6,12 +6,20 @@ import { supabase } from "@/utils/supabaseClient";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
 
+function formatNaira(n) {
+  if (n == null) return "G0";
+  // add commas, no decimal if integer
+  const formatted = Number(n).toLocaleString("en-NG");
+  return `G${formatted}`;
+}
+
 export default function CandidateProfile() {
   const router = useRouter();
   const { id } = router.query;
   const voteRef = useRef(null);
   const giftRef = useRef(null);
   const [candidate, setCandidate] = useState(null);
+  
 
   // Fetch candidate + subscribe to real-time updates
   useEffect(() => {
@@ -112,6 +120,7 @@ function VotingSection({ candidate, voteRef, giftRef }) {
     Crown: "bg-purple-500 hover:bg-green-500",
     Gold: "bg-orange-600 hover:bg-green-500",
     Love: "bg-rose-600 hover:bg-green-500",
+    Heart: "bg-red-500 hover:bg-green-500",
   };
 
   const handleVote = async () => {
@@ -154,18 +163,45 @@ const handleGift = async (gift) => {
     return router.push("/auth/login");
   }
 
+  const giftAmount = giftValueMap[gift];
+  // fetch current wallet balance
+  const { data: walletData, error: walletErr } = await supabase
+    .from("wallets")
+    .select("balance")
+    .eq("user_id", user.id)
+    .single();
+
+  const balance = walletData?.balance ?? 0;
+
+  if (walletErr) {
+    console.error("Error fetching wallet balance for gift:", walletErr);
+    alert("Unable to verify balance. Try again."); 
+    return;
+  }
+
+  if (balance < giftAmount) {
+    // friendly UI message instead of plain alert
+    alert(
+      `Insufficient balance. You have ₦${Number(balance).toLocaleString(
+        "en-NG"
+      )}, but the gift costs ₦${Number(giftAmount).toLocaleString("en-NG")}. Please add to your wallet.`
+    );
+    return;
+  }
+
+  // proceed with RPC
   const { error } = await supabase.rpc("send_gift", {
     p_user_id: user.id,
     p_candidate_id: candidate.id,
-    p_gift: gift,
+    p_gift_type: gift,
   });
 
   if (error) {
     console.error("send_gift error:", error);
     if (error.message.includes("insufficient_balance")) {
-      alert("Insufficient balance.");
+      alert("Insufficient balance. Please top up your wallet."); 
     } else if (error.message.includes("invalid_gift")) {
-      alert("Invalid gift.");
+      alert("Invalid gift type.");
     } else {
       alert("Gift failed. Try again.");
     }
@@ -175,6 +211,7 @@ const handleGift = async (gift) => {
   setShowGiftModal(null);
   setShowThankYou(true);
 };
+
 
 
   return (
@@ -202,25 +239,32 @@ const handleGift = async (gift) => {
 
       {/* Stats */}
       <section className="bg-white py-8 flex justify-center gap-10 text-center">
-        <div>
-          <p className="text-3xl font-bold text-rose-600">
-            {candidate?.votes ?? 0}
-          </p>
-          <p className="text-sm text-gray-600">Votes</p>
-        </div>
-        <div>
-          <p className="text-3xl font-bold text-rose-600">
-            {candidate?.views ?? 0}
-          </p>
-          <p className="text-sm text-gray-600">Views</p>
-        </div>
-        <div>
-          <p className="text-3xl font-bold text-rose-600">
-            {candidate?.gifts ?? 0}
-          </p>
-          <p className="text-sm text-gray-600">Gifts</p>
-        </div>
-      </section>
+  <div>
+    <p className="text-3xl font-bold text-rose-600">
+      {candidate?.votes ?? 0}
+    </p>
+    <p className="text-sm text-gray-600">Votes</p>
+  </div>
+  <div>
+    <p className="text-3xl font-bold text-rose-600">
+      {candidate?.views ?? 0}
+    </p>
+    <p className="text-sm text-gray-600">Views</p>
+  </div>
+  <div>
+    <p className="text-3xl font-bold text-rose-600">
+      {candidate?.gifts ?? 0}
+    </p>
+    <p className="text-sm text-gray-600">Gifts</p>
+  </div>
+  <div>
+    <p className="text-3xl font-bold text-rose-600">
+      {formatNaira(candidate?.gift_worth)}
+    </p>
+    <p className="text-sm text-gray-600">Gift Worth</p>
+  </div>
+</section>
+
 
       {/* Bio */}
       <section className="bg-rose-100 py-10 px-6 max-w-4xl mx-auto">
@@ -361,10 +405,10 @@ const handleGift = async (gift) => {
       {showGiftPrompt && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-xl max-w-sm w-full shadow-lg text-center">
-            <h3 className="text-lg font-bold mb-4">
+            <h3 className="text-lg font-bold mb-4 text-black">
               🎉 Thank you for supporting {candidate.name}!
             </h3>
-            <p className="mb-4">Would you like to send a gift?</p>
+            <p className="mb-4 text-black">Would you like to send a gift?</p>
             <div className="flex gap-4">
               <button
                 onClick={() => {
@@ -377,7 +421,7 @@ const handleGift = async (gift) => {
               </button>
               <button
                 onClick={() => setShowGiftPrompt(false)}
-                className="flex-1 border border-gray-300 py-2 rounded"
+                className="flex-1 border border-gray-300 py-2 rounded text-black "
               >
                 No, maybe later
               </button>
@@ -392,7 +436,7 @@ const handleGift = async (gift) => {
             <h3 className="text-xl font-bold text-green-600 mb-4">
               🎁 Gift sent with love!
             </h3>
-            <p className="mb-2">
+            <p className="mb-2 text-black">
               Thank you for your heartfelt gift to {candidate.name}!
             </p>
             <button
