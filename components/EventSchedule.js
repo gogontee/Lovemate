@@ -20,7 +20,6 @@ export default function EventSchedule({ startDate, endDate }) {
     const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
-
     return () => clearInterval(timer);
   }, [endDate]);
 
@@ -32,14 +31,19 @@ export default function EventSchedule({ startDate, endDate }) {
     });
 
   return (
-    <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-gray-700 text-sm sm:text-base">
-      <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
+    <div
+      className="
+        flex flex-nowrap overflow-x-auto sm:flex-wrap justify-center items-center
+        gap-4 text-gray-700 text-sm sm:text-base
+      "
+    >
+      <div className="min-w-[220px] bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300 text-center">
         Start Date: <strong>{formatDate(startDate)}</strong>
       </div>
-      <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
+      <div className="min-w-[220px] bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300 text-center">
         End Date: <strong>{formatDate(endDate)}</strong>
       </div>
-      <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
+      <div className="min-w-[220px] bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300 text-center">
         ⏳ Voting closes in:{' '}
         {timeLeft ? (
           <strong>
