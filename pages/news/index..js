@@ -24,21 +24,24 @@ export default function NewsPage() {
   const [newsItems, setNewsItems] = useState([]);
 
   useEffect(() => {
-    const fetchNews = async () => {
-      const { data, error } = await supabase
-        .from("news")
-        .select("*")
-        .order("created_at", { ascending: false });
+  const fetchNews = async () => {
+    const { data, error } = await supabase
+      .from("news")
+      .select("*")
+      .order("date", { ascending: false }); // ✅ FIXED HERE
 
-      if (error) {
-        console.error("Error fetching news:", error.message);
-      } else {
-        setNewsItems(data);
-      }
-    };
+    if (error) {
+      console.error("Error fetching news:", error.message);
+    } else {
+      console.log("✅ News fetched:", data);
+      setNewsItems(data);
+    }
+  };
 
-    fetchNews();
-  }, []);
+  fetchNews();
+}, []);
+
+
 
   return (
     <>
@@ -88,7 +91,7 @@ export default function NewsPage() {
           {newsItems.map((item) => (
   <NewsCard
     key={item.id}
-    image={item.image_url}  // ✅ use image_url from Supabase
+    image={item.image}           // ✅ corrected
     title={item.title}
     summary={item.summary}
     views={item.views}

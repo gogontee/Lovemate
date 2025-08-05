@@ -4,6 +4,7 @@ import Footer from "../components/Footer";
 import SponsorCarousel from "../components/SponsorCarousel";
 import CandidateCard from "../components/CandidateCard";
 import { useState, useEffect } from "react";
+import EventSchedule from "@/components/EventSchedule";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 
@@ -147,17 +148,11 @@ export default function VotePage() {
     <p className="text-lg text-gray-700 mb-4">
       Scroll down and show your support. Cast your votes, send gifts and make your voice count.
     </p>
-    <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-gray-700 text-sm sm:text-base">
-      <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
-        Start Date: <strong>Aug 1, 2025</strong>
-      </div>
-      <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
-        End Date: <strong>Aug 15, 2025</strong>
-      </div>
-      <div className="bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300">
-        ⏳ Voting closes in: <strong>10d 5h 20m</strong>
-      </div>
-          </div>
+    
+    <EventSchedule
+  startDate="2025-08-01T00:00:00"
+  endDate="2025-08-15T23:59:59"
+/>
         </div>
       <section 
       
@@ -180,7 +175,7 @@ export default function VotePage() {
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
           All Candidates
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filteredCandidates.map((candidate) => (
             <CandidateCard
               key={candidate.id}

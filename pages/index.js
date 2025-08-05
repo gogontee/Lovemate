@@ -5,13 +5,14 @@ import StatsSection from "../components/StatsSection";
 import VideoCarousel from "../components/VideoCarousel";
 import SponsorCarousel from "../components/SponsorCarousel";
 import TopFansCarousel from "../components/TopFansCarousel";
-import CandidateCard from "@/components/CandidateCard";
 import NewsCard from "@/components/NewsCard";
 import { motion } from "framer-motion";
 import Slider from "react-slick";
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/utils/supabaseClient";
+import TopCandidates from "@/components/TopCandidates";
+
 
 export default function Home() {
   const router = useRouter();
@@ -178,34 +179,7 @@ export default function Home() {
 
       <StatsSection />
 
-      <section className="bg-rose-100 py-19 px-4">
-  <h2 className="text-2xl font-bold text-center text-rose-600 mb-6">
-    Top Candidates
-  </h2>
-
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-    {topCandidates.map((candidate) => (
-  <CandidateCard
-    key={candidate.id}
-    id={candidate.id}
-    name={candidate.name}
-    imageUrl={candidate.image_url}
-    votes={candidate.total_votes}
-  />
-))}
-
-  </div>
-
-  <div className="mt-8 text-center">
-    <a
-      href="/vote"
-      className="inline-block bg-rose-600 hover:bg-rose-700 text-white font-semibold px-3 py-6 rounded-full shadow transition"
-    >
-      Discover More
-    </a>
-  </div>
-</section>
-
+      <TopCandidates />
 
 
       <VideoCarousel videos={[
