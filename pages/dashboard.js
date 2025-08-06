@@ -531,19 +531,37 @@ const handlePayNow = async () => {
             <h3 className="text-lg font-bold mb-4 text-gray-800">Recent Transactions</h3>
             {transactions.length > 0 ? (
               <div className="space-y-3">
-                {transactions.map((txn) => (
-                  <div key={txn.id} className="flex justify-between text-sm border-b pb-2">
-                    <span>
-                      {txn.type === "vote" && `Voted for ${txn.recipient_name}`}
-                      {txn.type === "gift" && `Gifted ${txn.recipient_name}`}
-                      {txn.type === "funding" && `Wallet Funded`}
-                      {!["vote", "gift", "funding"].includes(txn.type) && txn.type}
-                    </span>
-                    <span className={txn.type === "funding" ? "text-green-600" : "text-red-500"}>
-                      {txn.type === "funding" ? `+₦${txn.amount}` : `-₦${txn.amount}`}
-                    </span>
-                  </div>
-                ))}
+                {transactions.map((txn) => {
+  let label = "";
+  let amountDisplay = "";
+  let amountClass = "";
+
+  if (txn.type === "funding") {
+    label = "Wallet Top-up";
+    amountDisplay = `+₦${txn.amount.toLocaleString()}`;
+    amountClass = "text-green-600";
+  } else if (txn.type === "vote") {
+    label = `Voted for ${txn.recipient_name}`;
+    amountDisplay = `-₦${txn.amount.toLocaleString()}`;
+    amountClass = "text-red-500";
+  } else if (txn.type === "gift") {
+    label = `Gifted ${txn.recipient_name}`;
+    amountDisplay = `-₦${txn.amount.toLocaleString()}`;
+    amountClass = "text-red-500";
+  } else {
+    label = txn.type;
+    amountDisplay = `₦${txn.amount.toLocaleString()}`;
+    amountClass = "text-gray-500";
+  }
+
+  return (
+    <div key={txn.id} className="flex justify-between text-sm border-b pb-2">
+      <span>{label}</span>
+      <span className={amountClass}>{amountDisplay}</span>
+    </div>
+  );
+})}
+
               </div>
             ) : (
               <p className="text-sm text-gray-400">No transactions yet.</p>
