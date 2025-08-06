@@ -9,37 +9,46 @@ import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 
 const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
+const PAGE_SIZE = 50;
 
 export default function VotePage() {
   const [candidates, setCandidates] = useState([]);
   const [filteredCandidates, setFilteredCandidates] = useState([]);
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const router = useRouter();
+
+  const fetchCandidates = async (pageNum = 1) => {
+    const from = (pageNum - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("*")
+      .order("votes", { ascending: false })
+      .range(from, to);
+
+    if (error) {
+      console.error("Error fetching candidates:", error);
+    } else {
+      const updated = data.map((item) => ({
+        ...item,
+        imageUrl:
+          item.image_url && item.image_url.startsWith("http")
+            ? item.image_url
+            : item.image_url
+            ? `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${item.image_url}`
+            : fallbackImage,
+      }));
+
+      if (data.length < PAGE_SIZE) setHasMore(false);
+
+      setCandidates((prev) => [...prev, ...updated]);
+    }
+  };
 
   useEffect(() => {
-    const fetchCandidates = async () => {
-      const { data, error } = await supabase
-        .from("candidates")
-        .select("*")
-        .order("votes", { ascending: false });
-
-      if (error) {
-        console.error("Error fetching candidates:", error);
-      } else {
-        const updated = data.map((item) => ({
-          ...item,
-          imageUrl:
-            item.image_url && item.image_url.startsWith("http")
-              ? item.image_url
-              : item.image_url
-              ? `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${item.image_url}`
-              : fallbackImage,
-        }));
-
-        setCandidates(updated);
-        setFilteredCandidates(updated);
-      }
-    };
-
     fetchCandidates();
   }, []);
 
@@ -67,6 +76,13 @@ export default function VotePage() {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  useEffect(() => {
+    const filtered = candidates.filter((candidate) =>
+      candidate.name.toLowerCase().includes(search.toLowerCase())
+    );
+    setFilteredCandidates(filtered);
+  }, [search, candidates]);
 
   const handleVoteOrGift = async () => {
     const {
@@ -119,14 +135,6 @@ export default function VotePage() {
     alert("Vote submitted!");
   };
 
-  useEffect(() => {
-  const filtered = candidates.filter((candidate) =>
-    candidate.name.toLowerCase().includes(search.toLowerCase())
-  );
-  setFilteredCandidates(filtered);
-}, [search, candidates]);
-
-
   return (
     <>
       <Head>
@@ -141,33 +149,31 @@ export default function VotePage() {
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-rose-100 via-white to-pink-50 pt-20 pb-17 px-4 text-center">
-  <div className="max-w-4xl mx-auto">
-    <h1 className="text-4xl sm:text-5xl font-extrabold text-rose-600 mb-4">
-      Ready to Vote for Your Favorite Lovemate?
-    </h1>
-    <p className="text-lg text-gray-700 mb-4">
-      Scroll down and show your support. Cast your votes, send gifts and make your voice count.
-    </p>
-    
-    <EventSchedule
-  startDate="2025-08-01T00:00:00"
-  endDate="2025-08-15T23:59:59"
-/>
-        </div>
-      <section 
-      
-      className="py-4 px-2 bg-white">
-  <div className="max-w-xs mx-auto"> {/* reduced max width */}
-    <input
-      type="text"
-      placeholder="Search..."
-      className="w-full px-3 py-2 border border-gray-300 rounded-full shadow-sm text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-400"
-      value={search}
-      onChange={(e) => setSearch(e.target.value)}
-    />
-  </div>
-</section>
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-rose-600 mb-4">
+            Ready to Vote for Your Favorite Lovemate?
+          </h1>
+          <p className="text-lg text-gray-700 mb-4">
+            Scroll down and show your support. Cast your votes, send gifts and make your voice count.
+          </p>
 
+          <EventSchedule
+            startDate="2025-08-01T00:00:00"
+            endDate="2025-08-15T23:59:59"
+          />
+        </div>
+
+        <section className="py-4 px-2 bg-white">
+          <div className="max-w-xs mx-auto">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-full shadow-sm text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-400"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </section>
       </section>
 
       {/* Candidate Cards */}
@@ -183,10 +189,26 @@ export default function VotePage() {
               name={candidate.name}
               country={candidate.country}
               votes={candidate.votes}
-              imageUrl={candidate.imageUrl} // ✅ correct prop
+              imageUrl={candidate.imageUrl}
             />
           ))}
         </div>
+
+        {/* Load More */}
+        {hasMore && (
+          <div className="text-center mt-8">
+            <button
+              onClick={() => {
+                const nextPage = page + 1;
+                fetchCandidates(nextPage);
+                setPage(nextPage);
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded-full text-sm shadow"
+            >
+              Load More
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Sponsors */}
