@@ -1,5 +1,5 @@
 import { Heart, Users, Briefcase, Hourglass } from "lucide-react";
-import VotingCountdown from "./VotingCountdown"; // ✅ import the countdown
+import RegistrationCountdown from "./VotingCountdown"; // ✅ new countdown component
 
 const stats = [
   { icon: <Users className="w-8 h-8 text-rose-600" />, label: "Candidates", value: 24 },
@@ -7,8 +7,8 @@ const stats = [
   { icon: <Briefcase className="w-8 h-8 text-rose-600" />, label: "Winner Takes It All", value: "MONEY BAG" },
   {
     icon: <Hourglass className="w-8 h-8 text-rose-600" />,
-    label: "Voting Closes In",
-    value: <VotingCountdown endDate="2025-08-15T23:59:59" /> // 🕒 adjust this date
+    label: "Registration Starts In",
+    value: <RegistrationCountdown startDate="2025-09-01T00:00:00" endDate="2025-09-30T23:59:59" />
   },
 ];
 

@@ -1,9 +1,25 @@
 'use client';
 import { useEffect, useState } from 'react';
 
-export default function EventSchedule({ startDate, endDate }) {
+export default function EventSchedule() {
+  const startDate = new Date("2025-09-01T00:00:00");
+  const endDate = new Date("2025-09-30T23:59:59");
+
   const calculateTimeLeft = () => {
-    const difference = +new Date(endDate) - +new Date();
+    const now = new Date();
+
+    let difference;
+    if (now < startDate) {
+      // Countdown to registration start
+      difference = startDate - now;
+    } else if (now >= startDate && now <= endDate) {
+      // Countdown to registration end
+      difference = endDate - now;
+    } else {
+      // After registration ends
+      difference = 0;
+    }
+
     if (difference <= 0) return null;
 
     return {
@@ -21,10 +37,10 @@ export default function EventSchedule({ startDate, endDate }) {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
     return () => clearInterval(timer);
-  }, [endDate]);
+  }, []);
 
-  const formatDate = (dateString) =>
-    new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (dateObj) =>
+    dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -44,13 +60,20 @@ export default function EventSchedule({ startDate, endDate }) {
         End Date: <strong>{formatDate(endDate)}</strong>
       </div>
       <div className="min-w-[220px] bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300 text-center">
-        ⏳ Voting closes in:{' '}
+        ⏳ {new Date() < startDate
+          ? "Registration Starts in:"
+          : new Date() <= endDate
+          ? "Registration Ends in:"
+          : "Registration Closed"}
+        {" "}
         {timeLeft ? (
           <strong>
             {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
           </strong>
         ) : (
-          <span className="text-red-600 font-bold">Voting closed</span>
+          <span className="text-red-600 font-bold">
+            {new Date() > endDate ? "Registration Closed" : "Registration Started"}
+          </span>
         )}
       </div>
     </div>

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import CandidateCard from "./CandidateCard";
-import { supabase } from "../lib/supabaseClient";
+import { supabase } from "@/utils/supabaseClient";
 
-export default function TopCandidates() {
+const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
+
+export default function TopCandidate() {
   const [topCandidates, setTopCandidates] = useState([]);
 
   useEffect(() => {
@@ -10,44 +12,48 @@ export default function TopCandidates() {
       const { data, error } = await supabase
         .from("candidates")
         .select("*")
-        .order("votes", { ascending: false }) // ✅ Fixed here
-        .limit(4);
+        .eq("role", "Yes")             // Only role = "Yes"
+        .order("votes", { ascending: false })
+        .limit(4);                    // Limit to 4 highest voted
 
       if (error) {
         console.error("Error fetching top candidates:", error);
-      } else {
-        setTopCandidates(data);
+        return;
       }
+
+      const processed = data.map((item) => ({
+        ...item,
+        imageUrl:
+          item.image_url && item.image_url.startsWith("http")
+            ? item.image_url
+            : item.image_url
+            ? `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${item.image_url}`
+            : fallbackImage,
+      }));
+
+      setTopCandidates(processed);
     };
 
     fetchTopCandidates();
   }, []);
 
   return (
-    <section className="bg-rose-100 py-6 px-4">
-      <h2 className="text-2xl font-bold text-center text-rose-600 mb-6">
+    <section className="py-10 px-4 bg-white max-w-6xl mx-auto">
+      <h2 className="text-3xl font-bold text-center mb-8 text-gray-800">
         Top Candidates
       </h2>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6">
         {topCandidates.map((candidate) => (
           <CandidateCard
             key={candidate.id}
             id={candidate.id}
             name={candidate.name}
-            imageUrl={candidate.image_url}
-            votes={candidate.votes} // ✅ Also fixed here
+            country={candidate.country}
+            votes={candidate.votes}
+            imageUrl={candidate.imageUrl}
           />
         ))}
-      </div>
-
-      <div className="mt-8 text-center">
-        <a
-          href="/vote"
-          className="inline-block bg-rose-600 hover:bg-rose-700 text-white font-semibold px-6 py-3 rounded-full shadow transition"
-        >
-          Discover More
-        </a>
       </div>
     </section>
   );

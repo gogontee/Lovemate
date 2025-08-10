@@ -1,40 +1,46 @@
-"use client"; // Important for Next.js 13+ App Router or hydration safety
+'use client';
+import { useEffect, useState } from 'react';
 
-import { useEffect, useState } from "react";
+export default function RegistrationCountdown({ startDate, endDate }) {
+  const calculateTimeLeft = () => {
+    const now = new Date();
+    let difference;
 
-export default function VotingCountdown({ endDate }) {
-  const [timeLeft, setTimeLeft] = useState("");
-  const [isClient, setIsClient] = useState(false);
+    if (now < new Date(startDate)) {
+      // Before registration starts
+      difference = new Date(startDate) - now;
+    } else if (now >= new Date(startDate) && now <= new Date(endDate)) {
+      // During registration, countdown to end date
+      difference = new Date(endDate) - now;
+    } else {
+      // After registration ends
+      return null;
+    }
+
+    return {
+      days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+      minutes: Math.floor((difference / (1000 * 60)) % 60),
+      seconds: Math.floor((difference / 1000) % 60),
+    };
+  };
+
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
   useEffect(() => {
-    setIsClient(true);
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [startDate, endDate]);
 
-    const updateCountdown = () => {
-      const now = new Date();
-      const end = new Date(endDate);
-      const diff = end - now;
-
-      if (diff <= 0) {
-        setTimeLeft("Voting closed");
-        return;
-      }
-
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      const minutes = Math.floor((diff / (1000 * 60)) % 60);
-
-      setTimeLeft(`${days}d ${hours}h ${minutes}m`);
-    };
-
-    updateCountdown(); // run once immediately
-    const interval = setInterval(updateCountdown, 60000); // update every 60 seconds
-
-    return () => clearInterval(interval);
-  }, [endDate]);
-
-  if (!isClient) return null;
+  if (!timeLeft) {
+    return <span className="text-red-600 font-bold">Registration Closed</span>;
+  }
 
   return (
-    <span className="text-lg font-bold text-gray-800">{timeLeft}</span>
+    <strong>
+      {timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m
+    </strong>
   );
 }

@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../utils/supabaseClient";
+import CandidateWindow from "../components/CandidateWindow";
 import Image from "next/image";
 import {
   UserCircle,
@@ -427,6 +428,11 @@ const handlePayNow = async () => {
             </div>
             <p className="text-xs text-gray-500 mt-1">Spend more to rank up</p>
           </div>
+
+          {/* Insert CandidateWindow here */}
+<section className="mt-8">
+  <CandidateWindow profileId={profile?.id} />
+</section>
 
           <div className="bg-white rounded-lg shadow p-6">
       <div className="flex items-center justify-between mb-3">

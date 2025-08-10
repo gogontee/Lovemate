@@ -84,14 +84,14 @@ export default function Home() {
     },
     {
       image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero7.jpg",
-      title: "Will You Watch or Win?",
-      highlight: "Your Journey Begins",
+      title: "Time to Rock the Screen",
+      highlight: "The Journey Begins",
       subtitle: "Right Here.",
     },
     {
       image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero8.jpg",
-      title: "Do You Breath Love?",
-      highlight: "Your Journey Begins",
+      title: "If Your Oxygen is Love?",
+      highlight: "Then You Deserve A Spot",
       subtitle: "Right Here.",
     },
     {

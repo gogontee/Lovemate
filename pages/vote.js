@@ -26,6 +26,7 @@ export default function VotePage() {
     const { data, error } = await supabase
       .from("candidates")
       .select("*")
+      .eq("role", "Yes")
       .order("votes", { ascending: false })
       .range(from, to);
 

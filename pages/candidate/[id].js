@@ -415,7 +415,7 @@ const handleGift = async (gift) => {
                   setShowGiftPrompt(false);
                   voteRef.current?.scrollIntoView({ behavior: "smooth" });
                 }}
-                className="flex-1 bg-rose-500 text-white py-2 rounded"
+                className="flex-1 bg-green-500 text-white py-2 rounded"
               >
                 Yes, show gifts
               </button>
