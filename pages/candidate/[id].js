@@ -245,12 +245,7 @@ const handleGift = async (gift) => {
     </p>
     <p className="text-sm text-gray-600">Votes</p>
   </div>
-  <div>
-    <p className="text-3xl font-bold text-rose-600">
-      {candidate?.views ?? 0}
-    </p>
-    <p className="text-sm text-gray-600">Views</p>
-  </div>
+
   <div>
     <p className="text-3xl font-bold text-rose-600">
       {candidate?.gifts ?? 0}
