@@ -10,13 +10,10 @@ export default function EventSchedule() {
 
     let difference;
     if (now < startDate) {
-      // Countdown to registration start
       difference = startDate - now;
     } else if (now >= startDate && now <= endDate) {
-      // Countdown to registration end
       difference = endDate - now;
     } else {
-      // After registration ends
       difference = 0;
     }
 
@@ -50,16 +47,16 @@ export default function EventSchedule() {
     <div
       className="
         flex flex-nowrap overflow-x-auto sm:flex-wrap justify-center items-center
-        gap-4 text-gray-700 text-sm sm:text-base
+        gap-2 sm:gap-4 text-gray-800 text-xs sm:text-base
       "
     >
-      <div className="min-w-[220px] bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300 text-center">
+      <div className="min-w-[120px] sm:min-w-[220px] bg-rose-50 px-3 py-1 sm:px-6 sm:py-2 rounded-full shadow border border-gray-300 text-center">
         Start Date: <strong>{formatDate(startDate)}</strong>
       </div>
-      <div className="min-w-[220px] bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300 text-center">
+      <div className="min-w-[120px] sm:min-w-[220px] bg-rose-50 px-3 py-1 sm:px-6 sm:py-2 rounded-full shadow border border-gray-300 text-center">
         End Date: <strong>{formatDate(endDate)}</strong>
       </div>
-      <div className="min-w-[220px] bg-rose-50 px-6 py-2 rounded-full shadow border border-gray-300 text-center">
+      <div className="min-w-[120px] sm:min-w-[220px] bg-rose-50 px-3 py-1 sm:px-6 sm:py-2 rounded-full shadow border border-gray-300 text-center">
         ⏳ {new Date() < startDate
           ? "Registration Starts in:"
           : new Date() <= endDate

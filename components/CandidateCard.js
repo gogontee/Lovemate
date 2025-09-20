@@ -60,26 +60,25 @@ export default function CandidateCard({
         Votes: <span className="font-bold text-rose-600">{votes}</span>
       </p>
 
-      {/* Action Buttons */}
-      <div className="mt-4 flex flex-wrap justify-center gap-3">
-        {/* Vote button now navigates to #vote section */}
+      {/* Action Buttons - always in a row */}
+      <div className="mt-4 flex justify-center gap-2">
         <button
           onClick={goToVoteSection}
-          className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-sm font-semibold transition duration-300 shadow"
+          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs sm:text-sm font-semibold transition duration-300 shadow"
         >
           Vote
         </button>
 
         <Link
           href={`/candidate/${id}`}
-          className="px-4 py-2 border border-rose-600 text-rose-600 hover:bg-rose-50 rounded-full text-sm font-semibold transition duration-300"
+          className="px-3 py-1.5 border border-rose-600 text-rose-600 hover:bg-rose-50 rounded-full text-xs sm:text-sm font-semibold transition duration-300"
         >
           View
         </Link>
 
         <Link
           href={`/candidate/${id}#gift`}
-          className="px-4 py-2 bg-yellow-400 text-yellow-900 hover:bg-yellow-500 rounded-full text-sm font-semibold transition duration-300"
+          className="px-3 py-1.5 bg-yellow-400 text-yellow-900 hover:bg-yellow-500 rounded-full text-xs sm:text-sm font-semibold transition duration-300"
         >
           🎁 Gift
         </Link>

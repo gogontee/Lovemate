@@ -143,39 +143,52 @@ export default function Home() {
       <Header />
 
       {/* Hero */}
-      <section className="relative">
-        <Slider {...sliderSettings}>
-          {heroSlides.map((slide, index) => (
-            <div key={index}>
-              <div
-                className="relative bg-cover bg-center h-[400px]"
-                style={{ backgroundImage: `url('${slide.image}')` }}
+<section className="relative">
+  <Slider {...sliderSettings}>
+    {heroSlides.map((slide, index) => (
+      <div key={index}>
+        <div
+          className="relative bg-cover bg-center h-[240px] sm:h-[400px]"
+          style={{ backgroundImage: `url('${slide.image}')` }}
+        >
+          <div className="absolute inset-0 bg-rose/40"></div>
+          <div className="relative z-10 max-w-7xl mx-auto h-full grid grid-cols-1 md:grid-cols-2 items-end px-3 sm:px-6 pb-4 sm:pb-0">
+            <div
+              className="
+                text-left space-y-2 sm:space-y-6
+                max-w-xs sm:max-w-md md:max-w-none
+              "
+            >
+              <h1
+                className="
+                  text-lg sm:text-4xl md:text-5xl
+                  font-extrabold leading-snug sm:leading-tight text-white
+                  md:whitespace-nowrap
+                "
               >
-                <div className="absolute inset-0 bg-rose/40"></div>
-                <div className="relative z-10 max-w-7xl mx-auto h-full grid grid-cols-1 md:grid-cols-2 items-center px-6">
-                  <div className="text-left space-y-6">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight text-white">
-                      <span className="block">{slide.title}</span>
-                      <span className="text-rose-200">{slide.highlight}</span>{" "}
-                      <span className="text-white">{slide.subtitle}</span>
-                    </h1>
-                    <p className="text-lg sm:text-xl text-white max-w-md bg-primary/40 rounded px-3 py-2">
-                      24 LoveMates. 360 hours. 1 Winner. Watch love unfold under
-                      the spotlight in this thrilling reality show.
-                    </p>
-                    <a
-                      href="/register"
-                      className="inline-block bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 font-semibold px-8 py-3 rounded-full shadow-lg transition"
-                    >
-                      Register Now
-                    </a>
-                  </div>
-                </div>
-              </div>
+                <span className="block">{slide.title}</span>
+                <span className="block text-rose-200">{slide.highlight}</span>
+                <span className="block text-white">{slide.subtitle}</span>
+              </h1>
+              <p className="text-xs sm:text-lg text-white bg-primary/40 rounded px-2 py-1 sm:px-3 sm:py-2">
+                24 LoveMates. 360 hours. 1 Winner. Watch love unfold under
+                the spotlight in this thrilling reality show.
+              </p>
+              <a
+                href="/register"
+                className="inline-block bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-600 font-semibold px-3 py-1 text-xs sm:px-8 sm:py-3 sm:text-base rounded-full shadow-lg transition"
+              >
+                Register Now
+              </a>
             </div>
-          ))}
-        </Slider>
-      </section>
+          </div>
+        </div>
+      </div>
+    ))}
+  </Slider>
+</section>
+
+
 
       <StatsSection />
 

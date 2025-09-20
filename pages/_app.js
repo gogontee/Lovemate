@@ -1,8 +1,22 @@
 // pages/_app.js
 import "../styles/globals.css";
-// Inside your _app.js or _app.tsx
 import "react-phone-number-input/style.css";
+import Head from "next/head";
 
-export default function app({ Component, pageProps }) {
-  return <Component {...pageProps} />;
+export default function App({ Component, pageProps }) {
+  return (
+    <>
+      <Head>
+        <title>Lovemate Show</title>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
+        <meta name="theme-color" content="#ffffff" />
+      </Head>
+      <Component {...pageProps} />
+    </>
+  );
 }

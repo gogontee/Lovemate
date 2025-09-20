@@ -450,21 +450,22 @@ const handleGift = async (gift) => {
       )}
 
       {/* Video */}
-      <section className="bg-black py-8">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-4 text-center">
-            Featured Video
-          </h2>
-          <div className="aspect-video">
-            <iframe
-              className="w-full h-full"
-              src={candidate.video}
-              title={`Video for ${candidate.name}`}
-              allowFullScreen
-            ></iframe>
-          </div>
-        </div>
-      </section>
+<section className="bg-black py-8">
+  <div className="max-w-4xl mx-auto">
+    <h2 className="text-2xl font-bold text-white mb-4 text-center">
+      Featured Video
+    </h2>
+    <div className="aspect-video">
+      <iframe
+        className="w-full h-full"
+        src="https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE"
+        title="Featured LoveMate Video"
+        allowFullScreen
+      ></iframe>
+    </div>
+  </div>
+</section>
+
 
       <Footer />
     </>

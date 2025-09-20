@@ -215,7 +215,7 @@ export default function Register() {
             <h3 className="text-lg font-semibold text-rose-600 mb-2">Privacy & Public Info</h3>
             <p className="text-gray-700">
               Please note: <strong>only</strong> the candidate's public profile —
-              their <strong>images, name, country, and biography</strong> — will be shown publicly
+              their <strong>images, name, country, and about</strong> — will be shown publicly
               if selected for the show. All other information submitted in this form (contact details,
               personal history, answers to screening questions, etc.) is treated as confidential and
               will <strong>not</strong> be shared publicly by the production team. The only exception is
