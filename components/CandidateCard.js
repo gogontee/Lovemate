@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
+import { motion } from "framer-motion";
 
 export default function CandidateCard({
   id,
@@ -43,7 +44,11 @@ export default function CandidateCard({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden text-center p-4 border border-gray-100">
+    <motion.div
+      whileHover={{ scale: 1.03 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden text-center p-4 border border-gray-100"
+    >
       {/* Candidate Image */}
       <div className="w-full aspect-square relative overflow-hidden rounded-xl border-2 border-rose-500">
         <img
@@ -69,9 +74,10 @@ export default function CandidateCard({
           Vote
         </button>
 
+        {/* View button - hidden on mobile, visible on sm+ */}
         <Link
           href={`/candidate/${id}`}
-          className="px-3 py-1.5 border border-rose-600 text-rose-600 hover:bg-rose-50 rounded-full text-xs sm:text-sm font-semibold transition duration-300"
+          className="hidden sm:inline-flex px-3 py-1.5 border border-rose-600 text-rose-600 hover:bg-rose-50 rounded-full text-xs sm:text-sm font-semibold transition duration-300"
         >
           View
         </Link>
@@ -83,6 +89,6 @@ export default function CandidateCard({
           🎁 Gift
         </Link>
       </div>
-    </div>
+    </motion.div>
   );
 }
