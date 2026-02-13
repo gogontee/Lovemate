@@ -13,6 +13,15 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+}
+
+/* Remove all default spacing */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 /* Smooth transitions */
@@ -29,6 +38,7 @@ a {
 a:hover {
   color: #f43f5e; /* rose-500 for slightly brighter hover */
 }
+
 @keyframes fadeInUp {
   0% {
     opacity: 0;
@@ -42,4 +52,62 @@ a:hover {
 
 .animate-fadeInUp {
   animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* Mobile-first spacing fixes */
+@media (max-width: 768px) {
+  /* Remove all gaps between header and content */
+  header {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  
+  main,
+  .main-content,
+  [class*="container"],
+  [class*="wrapper"] {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Remove default section spacing */
+  section {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Force remove any top margins from first elements */
+  main > *:first-child,
+  .main-content > *:first-child,
+  section > *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Remove gap from any layout containers */
+  .max-w-7xl,
+  .max-w-6xl,
+  .max-w-5xl,
+  .max-w-4xl {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+  
+  /* Override Tailwind's default spacing */
+  .py-1, .py-2, .py-3, .py-4, .py-5, .py-6, .py-8, .py-10, .py-12, .py-16,
+  .pt-1, .pt-2, .pt-3, .pt-4, .pt-5, .pt-6, .pt-8, .pt-10, .pt-12, .pt-16,
+  .my-1, .my-2, .my-3, .my-4, .my-5, .my-6, .my-8, .my-10, .my-12, .my-16,
+  .mt-1, .mt-2, .mt-3, .mt-4, .mt-5, .mt-6, .mt-8, .mt-10, .mt-12, .mt-16 {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+}
+
+/* Optional: If you want to keep some spacing only for desktop */
+@media (min-width: 769px) {
+  /* Keep your desktop spacing here */
+  .desktop-spacing {
+    margin-top: 1rem;
+    padding-top: 1rem;
+  }
 }
