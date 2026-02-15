@@ -24,7 +24,7 @@ export default function TermsOfParticipation() {
           {/* Header with animation */}
           <div className="text-center mb-12 animate-fadeIn">
             <div className="inline-block px-4 py-1 bg-pink-600 text-white text-sm font-semibold rounded-full mb-4">
-              18+ ADULT CONTENT
+              18+ ADULT SHOW
             </div>
             <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
               Terms of <span className="text-pink-400">Participation</span>
@@ -56,7 +56,7 @@ export default function TermsOfParticipation() {
               >
                 <li>Participants must be <span className="font-bold text-pink-600">18 years of age or older</span> at the time of application</li>
                 <li>Valid government-issued ID required for final selection and age verification</li>
-                <li>Must be legally able to reside and travel within Nigeria for the duration of filming (4 weeks)</li>
+                <li>Must be legally able to reside and travel within Nigeria for the duration of filming (3 weeks)</li>
                 <li>No felony convictions or pending criminal cases that would prevent TV participation</li>
                 <li>Must be single, divorced, or legally separated (no current marital commitments)</li>
                 <li>Not currently in a serious, exclusive relationship that would conflict with show format</li>
@@ -71,9 +71,9 @@ export default function TermsOfParticipation() {
                 <li>You grant Lovemate Productions irrevocable rights to film, record, and photograph you 24/7 during production</li>
                 <li>The show contains adult content including: romantic situations, intimate conversations, and mature themes</li>
                 <li>Footage may be used in perpetuity across all media platforms worldwide (broadcast, streaming, social media, promotional materials)</li>
-                <li>No additional compensation beyond the agreed participant stipend for broadcast rights</li>
+                <li>No additional compensation beyond Winners prize and gift accumulated during the course of participation</li>
                 <li>You waive the right to inspect or approve final content before broadcast</li>
-                <li>Production may use your name, likeness, voice, and biographical information for promotional purposes</li>
+                <li>Production may use your name, likeness, voice, and biographical information for contents/promotional purposes</li>
               </Section>
 
               {/* Section 3 - Psychological Requirements */}
@@ -85,9 +85,10 @@ export default function TermsOfParticipation() {
                 <li>Participants must be mentally and emotionally prepared for reality TV pressures</li>
                 <li>Psychological evaluation required before final selection (at production's expense)</li>
                 <li>The show involves emotional situations, potential conflict, and public scrutiny</li>
-                <li>On-site psychological support available throughout filming</li>
                 <li>Production may remove participants whose mental health is at risk or compromises the show</li>
-                <li>You acknowledge that online harassment and media attention are possible after broadcast</li>
+                <li>Production shall not be held liable for any mental health issues arising from participation</li>
+                <li>Production shall not be held liable for any emotional harm caused by participation in the show</li>
+                <li>You acknowledge that online harassment and media attention are possible during and after broadcast</li>
               </Section>
 
               {/* Section 4 - Confidentiality */}
@@ -96,11 +97,7 @@ export default function TermsOfParticipation() {
                 title="Confidentiality & Non-Disclosure"
                 icon="🤫"
               >
-                <li>All show details, including outcomes, relationships, and production information, are strictly confidential until broadcast</li>
-                <li>No social media posts about the show, other participants, or production during filming</li>
-                <li>Violation of confidentiality may result in removal and legal action</li>
-                <li>Comprehensive NDA must be signed upon selection</li>
-                <li>You may not disclose who you voted for, who stayed, or relationship outcomes</li>
+                <li>Comprehensive NDA must be signed upon Candidate arrival at the show mansion</li>
               </Section>
 
               {/* Section 5 - Social Media */}
@@ -109,9 +106,6 @@ export default function TermsOfParticipation() {
                 title="Social Media & Public Conduct"
                 icon="📱"
               >
-                <li>Social media accounts may be monitored during production</li>
-                <li>No spoilers, behind-the-scenes content, or discussion of ongoing relationships</li>
-                <li>Professional conduct expected at all public appearances</li>
                 <li>Lovemate Productions not responsible for online harassment or media scrutiny</li>
                 <li>You may be required to participate in show promotional activities on your social channels</li>
               </Section>
@@ -123,10 +117,8 @@ export default function TermsOfParticipation() {
                 icon="🔍"
               >
                 <li>All finalists consent to comprehensive background check (criminal, employment, social media)</li>
-                <li>Misrepresentation in application results in immediate disqualification</li>
                 <li>Previous reality TV appearances must be disclosed</li>
-                <li>Production may contact provided references</li>
-                <li>Social media history may be reviewed for inappropriate content</li>
+                <li>Production may utilise external event surrounding the candidate for the purpose of the show</li>
               </Section>
 
               {/* Section 7 - Medical */}
@@ -135,8 +127,7 @@ export default function TermsOfParticipation() {
                 title="Medical & Physical Requirements"
                 icon="🏥"
               >
-                <li>Activities may include physical challenges and long filming hours (12-16 hour days)</li>
-                <li>You must have adequate health insurance coverage</li>
+                <li>Activities may include physical challenges and long filming hours</li>
                 <li>Production provides emergency medical care but not liable for pre-existing conditions</li>
                 <li>You consent to emergency medical treatment if necessary</li>
                 <li>Must disclose any medical conditions that could affect participation</li>
@@ -148,9 +139,8 @@ export default function TermsOfParticipation() {
                 title="Substance Use Policy"
                 icon="🚫"
               >
-                <li>No alcohol or drug use permitted during filming activities</li>
-                <li>Random testing may occur; positive results lead to immediate removal</li>
-                <li>Prescription medications must be disclosed to production</li>
+                <li>No hard drug use permitted during filming activities</li>
+                <li>Prescription medications must be disclosed to production if need be</li>
                 <li>Smoking/vaping restricted to designated areas and times</li>
               </Section>
 
@@ -162,7 +152,7 @@ export default function TermsOfParticipation() {
               >
                 <li>Relationships formed during the show may be portrayed for entertainment</li>
                 <li>Participants must respect boundaries and consent at all times</li>
-                <li>Harassment, non-consensual behavior, or aggression = immediate expulsion</li>
+                <li>Physical harassment, might attract immediate expulsion</li>
                 <li>Production may intervene in situations compromising safety</li>
                 <li>Intimate moments may be filmed and broadcast</li>
               </Section>
@@ -175,7 +165,7 @@ export default function TermsOfParticipation() {
               >
                 <li>Selected participants may be required for promotional activities (interviews, events, social media)</li>
                 <li>Exclusive media rights apply for 12 months after broadcast</li>
-                <li>Cannot participate in competing reality shows for 18 months</li>
+                <li>Cannot participate in competing reality shows for 12 months</li>
                 <li>Must maintain confidentiality about unaired content</li>
               </Section>
 
@@ -197,10 +187,11 @@ export default function TermsOfParticipation() {
                 title="Compensation & Expenses"
                 icon="💰"
               >
-                <li>Selected participants receive daily stipend during filming</li>
-                <li>Accommodation, meals, and transportation provided during production</li>
-                <li>No compensation for application or pre-selection process</li>
-                <li>Travel to filming location at participant's expense unless otherwise agreed</li>
+                <li>Accommodation, meals, and refreshments provided during production</li>
+                <li>Consolation prizes for runner ups shall rest on the discretion of producers</li>
+                <li>The winner's prize is $10,000 worth of prizes, and so the producers shall determine how it is awarded</li>
+                <li>Half of Gift accumulated by participants during filming shall be given to the candidate at the end of the the show season while half is retained by the producers</li>
+                <li>Travel to filming location from the mansion location during production at producers expense unless otherwise agreed</li>
               </Section>
 
               {/* Final Acknowledgment */}

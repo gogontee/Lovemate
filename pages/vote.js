@@ -3,10 +3,12 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SponsorCarousel from "../components/SponsorCarousel";
 import CandidateCard from "../components/CandidateCard";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import EventSchedule from "@/components/EventSchedule";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
+import Image from "next/image";
+import { motion } from "framer-motion";
 
 const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
 const PAGE_SIZE = 50;
@@ -17,8 +19,40 @@ export default function VotePage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [heroDesktop, setHeroDesktop] = useState(null);
+  const [heroMobile, setHeroMobile] = useState(null);
+  const [stats, setStats] = useState({
+    totalVotes: 0,
+    totalGifts: 0,
+    totalGiftWorth: 0,
+    activeVoters: 0
+  });
   const router = useRouter();
 
+  // Fetch hero content
+  useEffect(() => {
+    const fetchHeroContent = async () => {
+      const { data, error } = await supabase
+        .from("lovemate")
+        .select("vote_hero_desktop, vote_hero_mobile")
+        .single();
+
+      if (error) {
+        console.error("Error fetching hero content:", error);
+      } else {
+        if (data?.vote_hero_desktop) {
+          setHeroDesktop(data.vote_hero_desktop);
+        }
+        if (data?.vote_hero_mobile) {
+          setHeroMobile(data.vote_hero_mobile);
+        }
+      }
+    };
+
+    fetchHeroContent();
+  }, []);
+
+  // Fetch candidates
   const fetchCandidates = async (pageNum = 1) => {
     const from = (pageNum - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
@@ -49,10 +83,37 @@ export default function VotePage() {
     }
   };
 
+  // Fetch stats
+  const fetchStats = async () => {
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("votes, gifts, gift_worth");
+
+    if (!error && data) {
+      const totalVotes = data.reduce((sum, c) => sum + (c.votes || 0), 0);
+      const totalGifts = data.reduce((sum, c) => sum + (c.gifts || 0), 0);
+      const totalGiftWorth = data.reduce((sum, c) => sum + (c.gift_worth || 0), 0);
+      
+      // Get unique voters count (you'll need to implement this based on your data)
+      const { count } = await supabase
+        .from("vote_transactions")
+        .select("*", { count: "exact", head: true });
+
+      setStats({
+        totalVotes,
+        totalGifts,
+        totalGiftWorth,
+        activeVoters: count || 0
+      });
+    }
+  };
+
   useEffect(() => {
     fetchCandidates();
+    fetchStats();
   }, []);
 
+  // Real-time updates
   useEffect(() => {
     const channel = supabase
       .channel("votes-realtime")
@@ -66,9 +127,11 @@ export default function VotePage() {
         (payload) => {
           setCandidates((prev) =>
             prev.map((c) =>
-              c.id === payload.new.id ? { ...c, votes: payload.new.votes } : c
+              c.id === payload.new.id ? { ...c, votes: payload.new.votes, gifts: payload.new.gifts, gift_worth: payload.new.gift_worth } : c
             )
           );
+          // Update stats
+          fetchStats();
         }
       )
       .subscribe();
@@ -85,139 +148,267 @@ export default function VotePage() {
     setFilteredCandidates(filtered);
   }, [search, candidates]);
 
-  const handleVoteOrGift = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      alert("You must be logged in to vote or send gifts.");
-      router.push("/auth/login");
-      return false;
-    }
-    return true;
-  };
-
-  const handleVote = async (candidateId, voteCost = 100) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      router.push("/auth/login");
-      return;
-    }
-
-    const { data: summary } = await supabase
-      .from("wallet_summary")
-      .select("balance")
-      .eq("user_id", user.id)
-      .single();
-
-    if (!summary || summary.balance < voteCost) {
-      alert("Insufficient balance.");
-      return;
-    }
-
-    await supabase.from("wallets").insert([
-      {
-        user_id: user.id,
-        amount: -voteCost,
-        type: "vote",
-        status: "completed",
-      },
-    ]);
-
-    await supabase.rpc("increment_vote", {
-      candidate_id_param: candidateId,
-      vote_count: 1,
-    });
-
-    alert("Vote submitted!");
+  // Format number for display
+  const formatNumber = (num) => {
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
+    return num.toString();
   };
 
   return (
     <>
       <Head>
         <title>Vote – Lovemate Show</title>
-        <meta
-          name="description"
-          content="Vote for your favorite Lovemate contestant."
-        />
+        <meta name="description" content="Vote for your favorite Lovemate contestant." />
       </Head>
 
       <Header />
-
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-rose-100 via-white to-pink-50 pt-20 pb-17 px-4 text-center">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-rose-600 mb-4">
-            Ready to Vote for Your Favorite Lovemate?
-          </h1>
-          <p className="text-lg text-gray-700 mb-4">
-            Scroll down and show your support. Cast your votes, send gifts and make your voice count.
-          </p>
-
-          <EventSchedule
-            startDate="2025-08-01T00:00:00"
-            endDate="2025-08-15T23:59:59"
-          />
+      
+      <main className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen">
+        {/* Desktop Hero - 1000:300 ratio */}
+        <div className="hidden md:block relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
+          {heroDesktop?.image ? (
+            <div className="relative w-full h-full">
+              <Image
+                src={heroDesktop.image}
+                alt={heroDesktop.title || "Vote for your favorite"}
+                fill
+                className="object-cover opacity-70"
+                priority
+                sizes="100vw"
+                unoptimized={true}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
+            </div>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-pink-900 to-rose-900" />
+          )}
+          
+          {/* Hero Content */}
+          <div className="absolute inset-0 flex items-center">
+            <div className="max-w-7xl mx-auto px-8 w-full">
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-4xl md:text-5xl font-bold text-white mb-2"
+              >
+                {heroDesktop?.title || "Ready to Vote?"}
+              </motion.h1>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-lg text-gray-300 mb-4 max-w-2xl"
+              >
+                {heroDesktop?.subtitle || "Cast your votes and make your voice count"}
+              </motion.p>
+              
+              {/* Stats Bar - Desktop */}
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex gap-6 bg-black/30 backdrop-blur-md rounded-2xl p-3 border border-purple-500/30 max-w-2xl"
+              >
+                <div className="flex-1 text-center">
+                  <div className="text-sm font-bold text-red-500">
+                    {formatNumber(stats.totalVotes)}
+                  </div>
+                  <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Votes</div>
+                </div>
+                <div className="w-px bg-purple-500/30" />
+                <div className="flex-1 text-center">
+                  <div className="text-sm font-bold text-red-500">
+                    {formatNumber(stats.totalGifts)}
+                  </div>
+                  <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Gifts</div>
+                </div>
+                <div className="w-px bg-purple-500/30" />
+                <div className="flex-1 text-center">
+                  <div className="text-sm font-bold text-red-500">
+                    ₦{formatNumber(stats.totalGiftWorth)}
+                  </div>
+                  <div className="text-[8px] text-gray-400 uppercase tracking-wider">Gift Worth</div>
+                </div>
+                <div className="w-px bg-purple-500/30" />
+                <div className="flex-1 text-center">
+                  <div className="text-sm font-bold text-red-500">
+                    {formatNumber(stats.activeVoters)}
+                  </div>
+                  <div className="text-[8px] text-gray-400 uppercase tracking-wider">Active Voters</div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
         </div>
 
-        <section className="py-4 px-2 bg-white">
-          <div className="max-w-xs mx-auto">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-full shadow-sm text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-400"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+        {/* Mobile Hero - 1000:300 ratio */}
+        <div className="md:hidden relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
+          {heroMobile?.image ? (
+            <div className="relative w-full h-full">
+              <Image
+                src={heroMobile.image}
+                alt={heroMobile.title || "Vote for your favorite"}
+                fill
+                className="object-cover opacity-70"
+                priority
+                sizes="100vw"
+                unoptimized={true}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+            </div>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-pink-900 to-rose-900" />
+          )}
+          
+          {/* Mobile Hero Content */}
+          <div className="absolute inset-0 flex flex-col justify-end p-5">
+            <motion.h1 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-xl font-bold text-white mb-1"
+            >
+              {heroMobile?.title || "Ready to Vote?"}
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="text-xs text-gray-300 mb-3"
+            >
+              {heroMobile?.subtitle || "Cast your votes and make your voice count"}
+            </motion.p>
+            
+            {/* Stats Grid - Mobile */}
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="grid grid-cols-4 gap-1 bg-black/30 backdrop-blur-md rounded-xl p-2 border border-purple-500/20"
+            >
+              <div className="text-center">
+                <div className="text-[10px] font-bold text-red-500">
+                  {formatNumber(stats.totalVotes)}
+                </div>
+                <div className="text-[6px] text-gray-400 uppercase">Votes</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] font-bold text-red-500">
+                  {formatNumber(stats.totalGifts)}
+                </div>
+                <div className="text-[6px] text-gray-400 uppercase">Gifts</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] font-bold text-red-500">
+                  ₦{formatNumber(stats.totalGiftWorth)}
+                </div>
+                <div className="text-[6px] text-gray-400 uppercase">Worth</div>
+              </div>
+              <div className="text-center">
+                <div className="text-[10px] font-bold text-red-500">
+                  {formatNumber(stats.activeVoters)}
+                </div>
+                <div className="text-[6px] text-gray-400 uppercase">Voters</div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Event Schedule - Integrated into hero flow */}
+        <div className="max-w-7xl mx-auto px-4 -mt-8 md:-mt-10 relative z-10">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-purple-500/20"
+          >
+            <EventSchedule
+              startDate="2025-08-01T00:00:00"
+              endDate="2025-08-15T23:59:59"
             />
+          </motion.div>
+        </div>
+
+        {/* Search Bar - Futuristic */}
+        <section className="py-6 px-4">
+          <div className="max-w-xs mx-auto">
+            <div className="relative group">
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
+              <input
+                type="text"
+                placeholder="🔍 Search candidate..."
+                className="relative w-full px-4 py-2 bg-gray-800 text-white border border-purple-500/30 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
         </section>
-      </section>
 
-      {/* Candidate Cards */}
-      <section className="bg-gray-50 py-1 px-4">
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">
-          All Candidates
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredCandidates.map((candidate) => (
-            <CandidateCard
-              key={candidate.id}
-              id={candidate.id}
-              name={candidate.name}
-              country={candidate.country}
-              votes={candidate.votes}
-              imageUrl={candidate.imageUrl}
-            />
-          ))}
-        </div>
+        {/* Candidate Cards */}
+        <section className="py-4 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+              {filteredCandidates.map((candidate, index) => (
+                <motion.div
+                  key={candidate.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <CandidateCard
+                    id={candidate.id}
+                    name={candidate.name}
+                    country={candidate.country}
+                    votes={candidate.votes}
+                    imageUrl={candidate.imageUrl}
+                  />
+                </motion.div>
+              ))}
+            </div>
 
-        {/* Load More */}
-        {hasMore && (
-          <div className="text-center mt-8">
-            <button
-              onClick={() => {
-                const nextPage = page + 1;
-                fetchCandidates(nextPage);
-                setPage(nextPage);
-              }}
-              className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 rounded-full text-sm shadow"
-            >
-              Load More
-            </button>
+            {/* Load More */}
+            {hasMore && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center mt-8"
+              >
+                <button
+                  onClick={() => {
+                    const nextPage = page + 1;
+                    fetchCandidates(nextPage);
+                    setPage(nextPage);
+                  }}
+                  className="relative group"
+                >
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300" />
+                  <div className="relative px-8 py-3 bg-gray-900 text-white rounded-full text-sm font-semibold">
+                    Load More Candidates
+                  </div>
+                </button>
+              </motion.div>
+            )}
           </div>
-        )}
-      </section>
+        </section>
 
-      {/* Sponsors */}
-      <SponsorCarousel
-        sponsors={["/sponsors/logo1.png", "/sponsors/logo2.png", "/sponsors/logo3.png"]}
-      />
+        {/* Sponsors - Futuristic with thinner borders */}
+        <section className="py-8 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 border border-purple-500/10 md:border-purple-500/5">
+              <SponsorCarousel
+                sponsors={["/sponsors/logo1.png", "/sponsors/logo2.png", "/sponsors/logo3.png"]}
+              />
+            </div>
+          </div>
+        </section>
+      </main>
 
-      <Footer />
+      {/* Footer - Hidden on mobile */}
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </>
   );
 }

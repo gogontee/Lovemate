@@ -5,12 +5,134 @@ import Image from "next/image";
 import { supabase } from "@/utils/supabaseClient";
 import Header from "../../components/Header";
 import Footer from "../../components/Footer";
+import VoteSection from "../../components/candidate/VoteSection";
+import GiftSection from "../../components/candidate/GiftSection";
+import { motion } from "framer-motion";
 
 function formatNaira(n) {
-  if (n == null) return "G0";
-  // add commas, no decimal if integer
+  if (n == null) return "₦0";
   const formatted = Number(n).toLocaleString("en-NG");
-  return `G${formatted}`;
+  return `₦${formatted}`;
+}
+
+// Digital Stats Component - Integrated into Hero
+function DigitalStats({ candidate, formatNaira, onVoteClick, onGiftClick }) {
+  const [animatedVotes, setAnimatedVotes] = useState(0);
+  const [animatedGifts, setAnimatedGifts] = useState(0);
+  const [animatedWorth, setAnimatedWorth] = useState(0);
+
+  // Animate numbers when they change
+  useEffect(() => {
+    if (candidate?.votes !== undefined) {
+      setAnimatedVotes(candidate.votes);
+    }
+  }, [candidate?.votes]);
+
+  useEffect(() => {
+    if (candidate?.gifts !== undefined) {
+      setAnimatedGifts(candidate.gifts);
+    }
+  }, [candidate?.gifts]);
+
+  useEffect(() => {
+    if (candidate?.gift_worth !== undefined) {
+      setAnimatedWorth(candidate.gift_worth);
+    }
+  }, [candidate?.gift_worth]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, duration: 0.5 }}
+      className="absolute bottom-4 right-4 md:bottom-8 md:right-8 z-20"
+    >
+      {/* Desktop: Bottom Right */}
+      <div className="hidden md:flex gap-4 bg-black/30 backdrop-blur-md rounded-2xl p-4 border border-rose-500/30 shadow-2xl">
+        {/* Votes - Clickable */}
+        <button 
+          onClick={onVoteClick}
+          className="text-right hover:scale-105 transition-transform cursor-pointer group"
+        >
+          <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
+            {Math.round(animatedVotes).toLocaleString()}
+          </div>
+          <div className="text-xs text-rose-300/80 uppercase tracking-wider flex items-center gap-1 group-hover:text-rose-200">
+            <span className="text-rose-400 group-hover:text-rose-300">🗳️</span> Votes
+          </div>
+        </button>
+        
+        <div className="w-px bg-rose-500/30" />
+        
+        {/* Gifts - Clickable */}
+        <button 
+          onClick={onGiftClick}
+          className="text-right hover:scale-105 transition-transform cursor-pointer group"
+        >
+          <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
+            {Math.round(animatedGifts).toLocaleString()}
+          </div>
+          <div className="text-xs text-rose-300/80 uppercase tracking-wider flex items-center gap-1 group-hover:text-rose-200">
+            <span className="text-rose-400 group-hover:text-rose-300">🎁</span> Gifts
+          </div>
+        </button>
+        
+        <div className="w-px bg-rose-500/30" />
+        
+        {/* Gift Worth - Not Clickable */}
+        <div className="text-right">
+          <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100">
+            {formatNaira(Math.round(animatedWorth))}
+          </div>
+          <div className="text-xs text-rose-300/80 uppercase tracking-wider flex items-center gap-1">
+            <span className="text-rose-400">💰</span> Worth
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile: Bottom Right */}
+      <div className="md:hidden flex flex-col gap-2 bg-gradient-to-r from-black/60 to-black/40 backdrop-blur-md rounded-2xl p-3 max-w-[180px] border border-rose-500/30">
+        {/* Votes - Clickable */}
+        <button 
+          onClick={onVoteClick}
+          className="flex items-center justify-between hover:scale-105 transition-transform cursor-pointer group w-full"
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-rose-400 text-xs group-hover:text-rose-300">🗳️</span>
+            <span className="text-[8px] text-rose-300/80 uppercase group-hover:text-rose-200">Votes</span>
+          </div>
+          <div className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
+            {Math.round(animatedVotes).toLocaleString()}
+          </div>
+        </button>
+        
+        {/* Gifts - Clickable */}
+        <button 
+          onClick={onGiftClick}
+          className="flex items-center justify-between hover:scale-105 transition-transform cursor-pointer group w-full"
+        >
+          <div className="flex items-center gap-1.5">
+            <span className="text-rose-400 text-xs group-hover:text-rose-300">🎁</span>
+            <span className="text-[8px] text-rose-300/80 uppercase group-hover:text-rose-200">Gifts</span>
+          </div>
+          <div className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
+            {Math.round(animatedGifts).toLocaleString()}
+          </div>
+        </button>
+        
+        {/* Gift Worth - Not Clickable */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span className="text-rose-400 text-xs">💰</span>
+            <span className="text-[8px] text-rose-300/80 uppercase">Worth</span>
+          </div>
+          <div className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100">
+            {formatNaira(Math.round(animatedWorth))}
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 export default function CandidateProfile() {
@@ -19,13 +141,14 @@ export default function CandidateProfile() {
   const voteRef = useRef(null);
   const giftRef = useRef(null);
   const [candidate, setCandidate] = useState(null);
-  
+  const [loading, setLoading] = useState(true);
 
   // Fetch candidate + subscribe to real-time updates
   useEffect(() => {
     if (!id) return;
 
     const fetchCandidate = async () => {
+      setLoading(true);
       const { data, error } = await supabase
         .from("candidates")
         .select("*")
@@ -38,12 +161,14 @@ export default function CandidateProfile() {
       } else {
         setCandidate(data);
       }
+      setLoading(false);
     };
 
     fetchCandidate();
 
+    // Real-time subscription
     const channel = supabase
-      .channel("realtime-candidate")
+      .channel(`candidate-${id}`)
       .on(
         "postgres_changes",
         {
@@ -53,6 +178,7 @@ export default function CandidateProfile() {
           filter: `id=eq.${id}`,
         },
         (payload) => {
+          console.log("Real-time update received:", payload.new);
           setCandidate(payload.new);
         }
       )
@@ -65,404 +191,200 @@ export default function CandidateProfile() {
 
   // Scroll to vote or gift based on hash
   useEffect(() => {
-    if (!router.isReady) return;
+    if (!router.isReady || !candidate) return;
+    
     const hash = router.asPath.split("#")[1];
-    if (hash === "vote" && voteRef.current) {
-      voteRef.current.scrollIntoView({ behavior: "smooth" });
-    } else if (hash === "gift" && giftRef.current) {
-      giftRef.current.scrollIntoView({ behavior: "smooth" });
+    
+    if (hash === "vote") {
+      const timer = setTimeout(() => {
+        if (voteRef.current) {
+          voteRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 800);
+      return () => clearTimeout(timer);
     }
-  }, [router.asPath, router.isReady]);
+    
+    if (hash === "gift") {
+      const timer = setTimeout(() => {
+        if (giftRef.current) {
+          giftRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [router.asPath, router.isReady, candidate]);
 
-  return (
-    <div>
-      <Head>
-        <title>Candidate Profile</title>
-      </Head>
-      <Header />
-
-      {candidate ? (
-        <VotingSection
-          candidate={candidate}
-          voteRef={voteRef}
-          giftRef={giftRef}
-        />
-      ) : (
-        <div className="text-center py-20">Loading...</div>
-      )}
-
-    </div>
-  );
-}
-
-function VotingSection({ candidate, voteRef, giftRef }) {
-  const [form, setForm] = useState({ votes: 1 });
-  const [showConfirmVote, setShowConfirmVote] = useState(false);
-  const [showGiftModal, setShowGiftModal] = useState(null);
-  const [showThankYou, setShowThankYou] = useState(false);
-  const [showGiftPrompt, setShowGiftPrompt] = useState(false);
-  const router = useRouter();
-
-  const giftValueMap = {
-    Flower: 50000,
-    Teddy: 20000,
-    Ring: 3000000,
-    Crown: 500000,
-    Gold: 700000,
-    Love: 5000000,
-    Heart: 100,
+  // Scroll handlers for clickable stats
+  const scrollToVote = () => {
+    if (voteRef.current) {
+      voteRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
-  const giftStyles = {
-    Flower: "bg-pink-300 hover:bg-green-500",
-    Teddy: "bg-yellow-500 hover:bg-green-500",
-    Ring: "bg-blue-500 hover:bg-green-500",
-    Crown: "bg-purple-500 hover:bg-green-500",
-    Gold: "bg-orange-600 hover:bg-green-500",
-    Love: "bg-rose-600 hover:bg-green-500",
-    Heart: "bg-red-500 hover:bg-green-500",
+  const scrollToGift = () => {
+    if (giftRef.current) {
+      giftRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   };
 
-  const handleVote = async () => {
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) {
-    alert("Login required to vote.");
-    return router.push("/auth/login");
-  }
-
-  const votes = Number(form.votes) || 0;
-  if (votes < 1) {
-    alert("Enter at least 1 vote.");
-    return;
-  }
-
-  const { error } = await supabase.rpc("cast_vote", {
-    p_user_id: user.id,
-    p_candidate_id: candidate.id,
-    p_vote_count: votes,
-  });
-
-  if (error) {
-    console.error("cast_vote error:", error);
-    if (error.message.includes("insufficient_balance")) {
-      alert("Insufficient balance.");
-    } else {
-      alert("Vote failed. Try again.");
-    }
-    return;
-  }
-
-  setShowConfirmVote(false);
-  setShowGiftPrompt(true);
-};
-
-const handleGift = async (gift) => {
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) {
-    alert("Login required to send gift.");
-    return router.push("/auth/login");
-  }
-
-  const giftAmount = giftValueMap[gift];
-  // fetch current wallet balance
-  const { data: walletData, error: walletErr } = await supabase
-    .from("wallets")
-    .select("balance")
-    .eq("user_id", user.id)
-    .single();
-
-  const balance = walletData?.balance ?? 0;
-
-  if (walletErr) {
-    console.error("Error fetching wallet balance for gift:", walletErr);
-    alert("Unable to verify balance. Try again."); 
-    return;
-  }
-
-  if (balance < giftAmount) {
-    // friendly UI message instead of plain alert
-    alert(
-      `Insufficient balance. You have ₦${Number(balance).toLocaleString(
-        "en-NG"
-      )}, but the gift costs ₦${Number(giftAmount).toLocaleString("en-NG")}. Please add to your wallet.`
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-pink-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading profile...</p>
+          </div>
+        </div>
+        <div className="hidden md:block">
+          <Footer />
+        </div>
+      </>
     );
-    return;
   }
 
-  // proceed with RPC
-  const { error } = await supabase.rpc("send_gift", {
-    p_user_id: user.id,
-    p_candidate_id: candidate.id,
-    p_gift_type: gift,
-  });
-
-  if (error) {
-    console.error("send_gift error:", error);
-    if (error.message.includes("insufficient_balance")) {
-      alert("Insufficient balance. Please top up your wallet."); 
-    } else if (error.message.includes("invalid_gift")) {
-      alert("Invalid gift type.");
-    } else {
-      alert("Gift failed. Try again.");
-    }
-    return;
+  if (!candidate) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Candidate Not Found</h2>
+            <p className="text-gray-600 mb-4">The candidate you're looking for doesn't exist.</p>
+            <button
+              onClick={() => router.push('/')}
+              className="px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors"
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
+        <div className="hidden md:block">
+          <Footer />
+        </div>
+      </>
+    );
   }
-
-  setShowGiftModal(null);
-  setShowThankYou(true);
-};
-
-
 
   return (
     <>
       <Head>
-        <title>{candidate.name} – Lovemate</title>
+        <title>{candidate.name} – Lovemate Show</title>
+        <meta name="description" content={`Support ${candidate.name} on Lovemate Show with votes and gifts`} />
       </Head>
 
-      {/* Hero Section */}
-      <section className="relative h-[26rem] bg-black">
-        <div className="absolute inset-0 overflow-hidden">
-          <Image
-            src={candidate.image_url}
-            alt={candidate.name}
-            layout="fill"
-            objectFit="cover"
-            className="opacity-80"
-          />
-        </div>
-        <div className="relative z-10 h-full flex flex-col justify-end p-8 bg-gradient-to-t from-black via-black/60 to-transparent text-white">
-          <h1 className="text-4xl font-extrabold mb-2">{candidate.name}</h1>
-          <p className="text-lg">{candidate.country}</p>
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="bg-white py-8 flex justify-center gap-10 text-center">
-  <div>
-    <p className="text-3xl font-bold text-rose-600">
-      {candidate?.votes ?? 0}
-    </p>
-    <p className="text-sm text-gray-600">Votes</p>
-  </div>
-
-  <div>
-    <p className="text-3xl font-bold text-rose-600">
-      {candidate?.gifts ?? 0}
-    </p>
-    <p className="text-sm text-gray-600">Gifts</p>
-  </div>
-  <div>
-    <p className="text-3xl font-bold text-rose-600">
-      {formatNaira(candidate?.gift_worth)}
-    </p>
-    <p className="text-sm text-gray-600">Gift Worth</p>
-  </div>
-</section>
-
-
-      {/* Bio */}
-      <section className="bg-rose-100 py-10 px-6 max-w-4xl mx-auto">
-        <h2 className="text-2xl font-bold mb-4 text-center text-rose-600">
-          About {candidate.name}
-        </h2>
-        <p className="text-gray-700 text-center">{candidate.bio}</p>
-      </section>
-
-      {/* Gallery */}
-      <section className="bg-white py-12 px-6 max-w-6xl mx-auto">
-        <h2 className="text-2xl font-bold mb-6">Gallery</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {Array.isArray(candidate.gallery) &&
-            candidate.gallery.map((img, i) => (
-              <img
-                key={i}
-                src={img}
-                alt={`Gallery ${i + 1}`}
-                className="rounded-xl shadow hover:scale-105 transition"
-              />
-            ))}
-        </div>
-      </section>
-
-      {/* Vote Section */}
-      <section
-        id="vote"
-        ref={voteRef}
-        className="bg-gradient-to-br from-pink-50 to-rose-100 py-12 px-4"
-      >
-        <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-6 text-rose-600">
-            Vote {candidate.name}
-          </h2>
-          <div className="space-y-4">
-            <input
-              type="number"
-              placeholder="Number of Votes"
-              min={1}
-              className="w-full px-4 py-3 rounded border border-gray-300 shadow-sm bg-white text-gray-900"
-              value={form.votes}
-              onChange={(e) => setForm({ ...form, votes: e.target.value })}
+      <Header />
+      
+      <main className="bg-gradient-to-br from-pink-50 via-white to-rose-50 min-h-screen pb-20 md:pb-0">
+        {/* Hero Section with Integrated Stats */}
+        <section className="relative h-[250px] md:h-[300px] bg-black">
+          <div className="absolute inset-0 overflow-hidden">
+            <Image
+              src={candidate.image_url}
+              alt={candidate.name}
+              fill
+              className="object-cover opacity-80"
+              priority
+              sizes="100vw"
+              unoptimized={true}
             />
-            <p className="text-sm text-gray-600 mt-1">
-              💰 Total Cost: ₦{parseInt(form.votes || 0) * 100}
-            </p>
-            <button
-              className="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 rounded-full shadow"
-              onClick={() => setShowConfirmVote(true)}
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+          
+          {/* Digital Stats Overlay - Now clickable */}
+          <DigitalStats 
+            candidate={candidate} 
+            formatNaira={formatNaira} 
+            onVoteClick={scrollToVote}
+            onGiftClick={scrollToGift}
+          />
+          
+          {/* Candidate Info */}
+          <div className="relative z-10 h-full flex flex-col justify-end p-4 md:p-8 text-white">
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="text-2xl md:text-4xl font-extrabold mb-1"
             >
-              Submit Vote
-            </button>
-          </div>
-        </div>
-
-        {showConfirmVote && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow text-black">
-              <h3 className="text-lg font-bold mb-4 text-center">
-                Confirm Your Vote
-              </h3>
-              <p className="text-center mb-4">
-                You are sending {form.votes} votes for {candidate.name} (₦
-                {parseInt(form.votes) * 100})
-              </p>
-              <div className="flex gap-4">
-                <button
-                  className="flex-1 bg-rose-600 text-white py-2 rounded"
-                  onClick={handleVote}
-                >
-                  Confirm
-                </button>
-                <button
-                  className="flex-1 border border-gray-300 py-2 rounded text-black"
-                  onClick={() => setShowConfirmVote(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Gift Section */}
-      <section
-        id="gift"
-        ref={giftRef}
-        className="bg-gradient-to-br from-rose-50 to-rose-100 py-12 px-4"
-      >
-        <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-2xl font-bold mb-6 text-yellow-600">
-            Send a Gift to {candidate.name}
-          </h2>
-          <div className="grid grid-cols-2 gap-4">
-            {Object.keys(giftValueMap).map((gift) => (
-              <div key={gift} className="text-center">
-                <button
-                  onClick={() => setShowGiftModal(gift)}
-                  className={`w-full font-semibold py-2 px-4 rounded shadow ${giftStyles[gift]}`}
-                >
-                  🎁 {gift}
-                </button>
-                <p className="text-sm text-gray-600 mt-1">
-                  ₦{giftValueMap[gift].toLocaleString()}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {showGiftModal && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow text-black">
-              <h3 className="text-lg font-bold mb-4 text-center">
-                Confirm gifting {showGiftModal} to {candidate.name}?
-              </h3>
-              <div className="flex gap-4">
-                <button
-                  onClick={() => handleGift(showGiftModal)}
-                  className="flex-1 bg-yellow-400 text-yellow-900 font-semibold py-2 rounded"
-                >
-                  Confirm
-                </button>
-                <button
-                  onClick={() => setShowGiftModal(null)}
-                  className="flex-1 border border-gray-300 py-2 rounded text-black"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {showGiftPrompt && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl max-w-sm w-full shadow-lg text-center">
-            <h3 className="text-lg font-bold mb-4 text-black">
-              🎉 Thank you for supporting {candidate.name}!
-            </h3>
-            <p className="mb-4 text-black">Would you like to send a gift?</p>
-            <div className="flex gap-4">
-              <button
-                onClick={() => {
-                  setShowGiftPrompt(false);
-                  voteRef.current?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="flex-1 bg-green-500 text-white py-2 rounded"
-              >
-                Yes, show gifts
-              </button>
-              <button
-                onClick={() => setShowGiftPrompt(false)}
-                className="flex-1 border border-gray-300 py-2 rounded text-black "
-              >
-                No, maybe later
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showThankYou && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl text-center w-full max-w-sm shadow">
-            <h3 className="text-xl font-bold text-green-600 mb-4">
-              🎁 Gift sent with love!
-            </h3>
-            <p className="mb-2 text-black">
-              Thank you for your heartfelt gift to {candidate.name}!
-            </p>
-            <button
-              onClick={() => setShowThankYou(false)}
-              className="mt-4 bg-rose-500 text-white py-2 px-4 rounded"
+              {candidate.name}
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-sm md:text-lg flex items-center gap-1.5"
             >
-              Close
-            </button>
+              <span>📍</span> {candidate.country}
+            </motion.p>
           </div>
+        </section>
+
+        {/* Small gap between hero and about section on mobile */}
+        <div className="md:hidden h-3"></div>
+
+        {/* Bio Section - Reduced top padding on desktop */}
+        <section className="py-4 md:py-6 px-4 max-w-4xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="bg-white/80 backdrop-blur-sm rounded-2xl md:rounded-3xl p-5 md:p-8 shadow-xl"
+          >
+            <h2 className="text-lg md:text-2xl font-bold mb-3 text-center">
+              <span className="text-gray-800">About</span>{" "}
+              <span className="text-red-600">{candidate.name}</span>
+            </h2>
+            <p className="text-gray-700 text-sm md:text-base leading-relaxed text-center">
+              {candidate.bio}
+            </p>
+          </motion.div>
+        </section>
+
+        {/* Gallery Section - No title */}
+        {Array.isArray(candidate.gallery) && candidate.gallery.length > 0 && (
+          <section className="py-4 md:py-5 px-4 max-w-6xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+              {candidate.gallery.map((img, i) => (
+                <motion.div 
+                  key={i} 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="relative aspect-square rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                >
+                  <Image
+                    src={img}
+                    alt={`${candidate.name} gallery ${i + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                    unoptimized={true}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Vote Section - Reduced gap */}
+        <div ref={voteRef} id="vote" className="mt-2 md:mt-4">
+          <VoteSection candidate={candidate} />
         </div>
-      )}
 
-      {/* Video */}
-<section className="bg-black py-8">
-  <div className="max-w-4xl mx-auto">
-    <h2 className="text-2xl font-bold text-white mb-4 text-center">
-      Featured Video
-    </h2>
-    <div className="aspect-video">
-      <iframe
-        className="w-full h-full"
-        src="https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE"
-        title="Featured LoveMate Video"
-        allowFullScreen
-      ></iframe>
-    </div>
-  </div>
-</section>
+        {/* Gift Section - Reduced gap */}
+        <div ref={giftRef} id="gift" className="mt-2 md:mt-4">
+          <GiftSection candidate={candidate} />
+        </div>
+      </main>
 
-
-      <Footer />
+      {/* Footer - Hidden on mobile */}
+      <div className="hidden md:block">
+        <Footer />
+      </div>
     </>
   );
 }

@@ -83,26 +83,27 @@ export default function Header() {
   return (
     <>
       <header className="bg-gradient-to-r from-rose-50 to-pink-50 shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-3">
-          {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <Image
-              src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/logo/logo10.png"
-              width={120}
-              height={40}
-              className="object-contain"
-              alt="Lovemate Logo"
-              priority
-            />
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-4">
+          {/* Logo - Reduced by 30% */}
+          <Link href="/" className="block leading-none">
+            <div className="relative w-11 h-11 md:w-14 md:h-14">
+              <Image
+                src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/lovemateshow/logo/lovemateicon.png"
+                alt="Lovemate Logo"
+                fill
+                className="object-contain"
+                priority
+              />
+            </div>
           </Link>
 
           {/* Desktop Nav */}
-          <nav className="hidden md:flex space-x-2 text-sm">
+          <nav className="hidden md:flex space-x-2 text-sm items-center">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 href={link.path}
-                className={`px-4 py-2 rounded-md font-medium transition-all duration-300 ${
+                className={`px-4 py-1 rounded-md font-medium transition-all duration-300 ${
                   router.pathname === link.path
                     ? "bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md"
                     : "text-gray-700 hover:text-red-600 hover:bg-rose-100"
@@ -118,7 +119,7 @@ export default function Header() {
             {/* Live */}
             <Link
               href="/gallery?tab=stream#livestream"
-              className="hidden md:flex px-4 py-2 rounded-md bg-gradient-to-r from-rose-100 to-pink-100 text-rose-700 hover:from-red-600 hover:to-rose-600 hover:text-white font-semibold transition-all duration-300 items-center gap-1"
+              className="hidden md:flex px-4 py-1 rounded-md bg-gradient-to-r from-rose-100 to-pink-100 text-rose-700 hover:from-red-600 hover:to-rose-600 hover:text-white font-semibold transition-all duration-300 items-center gap-1"
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
@@ -132,7 +133,7 @@ export default function Header() {
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setDropdownOpen(!dropdownOpen)} 
-                  className="hidden md:flex items-center gap-2 px-2 py-1 rounded-full hover:bg-rose-100 transition"
+                  className="hidden md:flex items-center gap-2 px-2 py-0 rounded-full hover:bg-rose-100 transition"
                 >
                   {avatarUrl ? (
                     <Image
@@ -168,7 +169,7 @@ export default function Header() {
             ) : (
               <Link
                 href="/auth/login"
-                className="hidden md:flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-700 hover:to-rose-700 font-medium transition-all duration-300 shadow-md hover:shadow-lg"
+                className="hidden md:flex items-center gap-2 px-4 py-1 rounded-md bg-gradient-to-r from-red-600 to-rose-600 text-white hover:from-red-700 hover:to-rose-700 font-medium transition-all duration-300 shadow-md hover:shadow-lg"
               >
                 <UserCircle size={20} /> Login
               </Link>
@@ -177,7 +178,7 @@ export default function Header() {
             {/* Hamburger for Mobile */}
             <button
               onClick={() => setMenuOpen(!menuOpen)}
-              className="md:hidden p-2 rounded-lg text-rose-700 hover:bg-rose-100 transition"
+              className="md:hidden p-1 rounded-lg text-rose-700 hover:bg-rose-100 transition"
             >
               {menuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -350,9 +351,6 @@ export default function Header() {
         {/* Safe area padding for modern phones */}
         <div className="h-[env(safe-area-inset-bottom)] bg-white/95"></div>
       </nav>
-
-      {/* 🚨 REMOVED THE PROBLEMATIC SPACER - THIS WAS CAUSING THE GAP 🚨 */}
-      {/* <div className="md:hidden h-20"></div> - DELETED */}
     </>
   );
 }

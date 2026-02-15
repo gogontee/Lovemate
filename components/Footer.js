@@ -5,115 +5,173 @@ import {
   Facebook,
   Youtube,
   Music,
+  Heart,
+  Mail,
+  MapPin,
+  ArrowRight,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { supabase } from "@/utils/supabaseClient";
 import Link from "next/link";
 
 export default function Footer() {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const currentYear = new Date().getFullYear();
 
-  useEffect(() => {
-    const checkAdmin = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
+  const quickLinks = [
+    { label: "Home", href: "/" },
+    { label: "Register", href: "/register" },
+    { label: "Vote", href: "/vote" },
+    { label: "Gallery", href: "/gallery" },
+    { label: "News", href: "/news" },
+    { label: "About", href: "/about" },
+    { label: "Contact", href: "/contact" },
+  ];
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (!error && data?.role === "admin") {
-        setIsAdmin(true);
-      }
-    };
-
-    checkAdmin();
-  }, []);
+  const socialLinks = [
+    { icon: Instagram, href: "https://instagram.com/lovemateshow", label: "Instagram", color: "hover:text-pink-600" },
+    { icon: Twitter, href: "https://twitter.com/lovemateshow", label: "Twitter", color: "hover:text-sky-500" },
+    { icon: Facebook, href: "https://facebook.com/lovemateshow", label: "Facebook", color: "hover:text-blue-600" },
+    { icon: Music, href: "https://tiktok.com/@lovemateshow", label: "TikTok", color: "hover:text-gray-900" },
+    { icon: Youtube, href: "https://youtube.com/@lovemateshow", label: "YouTube", color: "hover:text-red-600" },
+  ];
 
   return (
-    <footer className="bg-gradient-to-t from-rose-100 via-white to-white text-gray-700 pt-12 pb-6 px-4 border-t border-rose-200">
-      <div className="max-w-7xl mx-auto grid gap-10 sm:grid-cols-3 text-center sm:text-left">
-        {/* Logo & Description */}
-        <div>
-          <h3 className="text-2xl font-bold text-gray-800">Lovemate Show</h3>
-          <p className="mt-2 text-sm text-gray-600 leading-relaxed">
-            Set in an atmosphere of luxury, challenge, and passion, the Lovemate Show combines romance with fierce competition, where every vote counts and every moment matters. Whether you're rooting for your favorite contestant, gifting them your support, or simply enjoying the emotional rollercoaster, Lovemate invites the world to witness love in its rawest, most dazzling form.
-          </p>
-        </div>
+    <footer className="relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-gray-300 pt-16 pb-8 px-4 overflow-hidden">
+      {/* Decorative Background Elements */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute top-0 left-0 w-64 h-64 bg-rose-500 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-rose-600 rounded-full blur-3xl"></div>
+      </div>
+      
+      {/* Animated Hearts */}
+      <div className="absolute top-20 right-20 opacity-10 hidden lg:block">
+        <Heart className="w-32 h-32 text-rose-400 animate-pulse" />
+      </div>
+      <div className="absolute bottom-20 left-20 opacity-10 hidden lg:block">
+        <Heart className="w-24 h-24 text-rose-400 animate-bounce" />
+      </div>
 
-        {/* Quick Links */}
-        <div>
-          <h4 className="text-lg font-semibold text-gray-800 mb-3">Quick Links</h4>
-          <ul className="text-sm space-y-2">
-            {[
-              { label: "Home", href: "/" },
-              { label: "Register", href: "/register" },
-              { label: "Vote", href: "/vote" },
-              { label: "Gallery", href: "/gallery" },
-              { label: "News", href: "/news" },
-              { label: "About", href: "/about" },
-              { label: "Contact", href: "/contact" },
-            ].map((link) => (
-              <li key={link.href}>
+      <div className="relative z-10 max-w-7xl mx-auto">
+        {/* Main Footer Content */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12">
+          {/* Brand Column - Wider */}
+          <div className="md:col-span-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="relative w-12 h-12">
+                <Image
+                  src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/lovemateshow/logo/lovemateicon.png"
+                  alt="Lovemate Show Logo"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <h3 className="text-2xl font-bold text-white">Lovemate Show</h3>
+            </div>
+            
+            <p className="text-sm text-gray-400 leading-relaxed mb-6">
+              Where love meets destiny, and every heartbeat tells a story. 
+              Africa's premier love and lifestyle reality show bringing you 
+              drama, romance, and unforgettable moments.
+            </p>
+
+            {/* Email Subscription */}
+            <div className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10">
+              <h4 className="text-white text-sm font-semibold mb-2">Stay Updated</h4>
+              <p className="text-xs text-gray-400 mb-3">Get the latest news and updates</p>
+              <div className="flex">
+                <input
+                  type="email"
+                  placeholder="Your email"
+                  className="flex-1 bg-white/10 border border-white/10 rounded-l-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-rose-500"
+                />
+                <button className="bg-rose-600 hover:bg-rose-700 text-white px-3 rounded-r-lg transition-colors">
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Links - Middle */}
+          <div className="md:col-span-3">
+            <h4 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="w-8 h-0.5 bg-rose-500"></span>
+              Quick Links
+            </h4>
+            <ul className="grid grid-cols-2 gap-2">
+              {quickLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-sm text-gray-400 hover:text-rose-400 transition-colors inline-flex items-center gap-1 group"
+                  >
+                    <span className="w-1 h-1 bg-rose-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Contact & Social - Right */}
+          <div className="md:col-span-3 md:col-start-9">
+            <h4 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
+              <span className="w-8 h-0.5 bg-rose-500"></span>
+              Connect With Us
+            </h4>
+            
+            {/* Email Contact */}
+            <div className="flex items-center gap-3 mb-4 bg-white/5 rounded-lg p-3 border border-white/10">
+              <Mail className="w-5 h-5 text-rose-400 flex-shrink-0" />
+              <a 
+                href="mailto:lovemateshow@gmail.com" 
+                className="text-sm text-gray-300 hover:text-rose-400 transition-colors truncate"
+              >
+                lovemateshow@gmail.com
+              </a>
+            </div>
+
+            {/* Location */}
+            <div className="flex items-center gap-3 mb-6 bg-white/5 rounded-lg p-3 border border-white/10">
+              <MapPin className="w-5 h-5 text-rose-400 flex-shrink-0" />
+              <span className="text-sm text-gray-300">Lagos, Nigeria</span>
+            </div>
+
+            {/* Social Icons */}
+            <div className="flex flex-wrap gap-3">
+              {socialLinks.map((social) => (
                 <a
-                  href={link.href}
-                  className="hover:text-rose-600 transition duration-300"
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={social.label}
+                  className={`bg-white/10 hover:bg-white/20 p-2 rounded-lg text-gray-400 ${social.color} transition-all hover:scale-110`}
                 >
-                  {link.label}
+                  <social.icon className="w-5 h-5" />
                 </a>
-              </li>
-            ))}
-          </ul>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Social & Contact */}
-        <div>
-          <h4 className="text-lg font-semibold text-gray-800 mb-3">Follow & Contact</h4>
-          <div className="flex justify-center sm:justify-start gap-4 mb-4">
-            <a href="https://instagram.com/lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-gray-600 hover:text-rose-600 transition">
-              <Instagram size={20} />
-            </a>
-            <a href="https://twitter.com/lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="text-gray-600 hover:text-rose-600 transition">
-              <Twitter size={20} />
-            </a>
-            <a href="https://facebook.com/lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-gray-600 hover:text-rose-600 transition">
-              <Facebook size={20} />
-            </a>
-            <a href="https://tiktok.com/@lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="TikTok" className="text-gray-600 hover:text-rose-600 transition">
-              <Music size={20} />
-            </a>
-            <a href="https://youtube.com/@lovemateshow" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="text-gray-600 hover:text-rose-600 transition">
-              <Youtube size={20} />
-            </a>
-          </div>
-
-          <p className="text-sm text-gray-600">📧 lovemateshow@gmail.com</p>
-          <p className="text-sm text-gray-600 mb-4">📞 +234 815 309 3402</p>
-
-          <div className="flex justify-center sm:justify-start">
-            <Image src= "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/logo/logo10.png" width={100} height={32} className="object-contain" />
+        {/* Bottom Bar */}
+        <div className="mt-12 pt-6 border-t border-white/10">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-xs text-gray-500">
+              © {currentYear} Lovemate Show. All rights reserved.
+            </p>
+            <div className="flex gap-6 text-xs text-gray-500">
+              <Link href="/privacy" className="hover:text-rose-400 transition-colors">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="hover:text-rose-400 transition-colors">
+                Terms of Service
+              </Link>
+              <Link href="/cookies" className="hover:text-rose-400 transition-colors">
+                Cookie Policy
+              </Link>
+            </div>
           </div>
         </div>
       </div>
-
-      <div className="mt-10 text-center text-xs text-gray-500">
-        &copy; {new Date().getFullYear()} Lovemate Show. All rights reserved.
-      </div>
-
-      {isAdmin && (
-        <div className="mt-4 text-center">
-          <Link
-            href="/admin"
-            className="inline-block text-xs bg-rose-100 text-rose-700 hover:bg-rose-600 hover:text-white px-4 py-2 rounded transition"
-          >
-            Admin Dashboard
-          </Link>
-        </div>
-      )}
     </footer>
   );
 }
