@@ -143,7 +143,7 @@ export default function Contact() {
       <section className="bg-gradient-to-b from-white via-rose-50 to-white pt-8 pb-16 px-4">
         <div className="max-w-5xl mx-auto">
           <div className="grid grid-cols-3 gap-2 md:gap-4 -mt-8 md:-mt-16">
-            {/* Phone Card */}
+            {/* Phone Card - Updated with both numbers */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -154,11 +154,15 @@ export default function Contact() {
               <div className="w-8 h-8 md:w-14 md:h-14 bg-gradient-to-br from-rose-100 to-rose-200 rounded-lg md:rounded-xl flex items-center justify-center mx-auto mb-1 md:mb-4 group-hover:scale-110 transition-transform">
                 <Phone className="w-4 h-4 md:w-7 md:h-7 text-red-600" />
               </div>
-              <h3 className="text-xs md:text-xl font-bold text-gray-900 mb-0.5 md:mb-2">Call</h3>
-              <p className="text-[8px] md:text-sm text-gray-600 mb-1 md:mb-3">Mon-Fri, 9am-6pm</p>
-              <a href="tel:+2349072646902" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
-                +234 907 264 6902
-              </a>
+              <h3 className="text-xs md:text-xl font-bold text-gray-900 mb-1 md:mb-2">Call Us</h3>
+              <div className="space-y-1">
+                <a href="tel:+2349072646902" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
+                  +234 907 264 6902
+                </a>
+                <a href="tel:+447903184051" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
+                  +44 7903 184051
+                </a>
+              </div>
             </motion.div>
 
             {/* WhatsApp Card - Highlighted */}
@@ -197,8 +201,8 @@ export default function Contact() {
               </div>
               <h3 className="text-xs md:text-xl font-bold text-gray-900 mb-0.5 md:mb-2">Email</h3>
               <p className="text-[8px] md:text-sm text-gray-600 mb-1 md:mb-3">Reply within 24hrs</p>
-              <a href="mailto:info@lovemateshow.com" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
-                info@lovemateshow.com
+              <a href="mailto:lovemateshow@gmail.com" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
+                lovemateshow@gmail.com
               </a>
             </motion.div>
           </div>

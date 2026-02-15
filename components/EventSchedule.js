@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 
 export default function EventSchedule() {
-  const startDate = new Date("2025-09-01T00:00:00");
-  const endDate = new Date("2025-09-30T23:59:59");
+  const startDate = new Date("2026-02-17T00:00:00");
+  const endDate = new Date("2026-03-17T23:59:59");
 
   const calculateTimeLeft = () => {
     const now = new Date();

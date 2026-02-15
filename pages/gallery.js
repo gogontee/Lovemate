@@ -9,36 +9,21 @@ import Image from "next/image";
 import { supabase } from "@/utils/supabaseClient";
 import { useSwipeable } from "react-swipeable";
 
-const videos = [
-  { url: "https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE" },
-  { url: "https://www.youtube.com/embed/C-dWkLFEEw0?loop=1&playlist=C-dWkLFEEw0" },
-  { url: "https://www.youtube.com/embed/JfDes65L3Zg?loop=1&playlist=JfDes65L3Zg" },
-];
-
-const shorts = [
-  { url: "https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE" },
-  { url: "https://www.youtube.com/embed/C-dWkLFEEw0?loop=1&playlist=C-dWkLFEEw0" },
-  { url: "https://www.youtube.com/embed/JfDes65L3Zg?loop=1&playlist=JfDes65L3Zg" },
-];
-
-// Stream videos that will play sequentially on loop
-const streamVideos = [
-  { 
-    title: "coming soon!", 
-    url: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/video/ads/lovemate.mp4",
-  },
-  { 
-    title: "Coming Soon!!", 
-    url: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/video/ads/shoutoutfinal.mp4",
-  },
-];
-
 export default function Gallery() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("photos");
   const [photos, setPhotos] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [shorts, setShorts] = useState([]);
+  const [streamVideos, setStreamVideos] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [loading, setLoading] = useState({
+    photos: true,
+    videos: true,
+    shorts: true,
+    stream: true
+  });
   
   // Stream player state
   const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
@@ -64,35 +49,47 @@ export default function Gallery() {
     }
   }, [router.isReady, router.query.tab]);
 
-  // Fetch + sort photos
+  // Fetch all gallery data from lovemate table
   useEffect(() => {
-    const fetchPhotos = async () => {
-      const { data: files, error } = await supabase.storage
-        .from("asset")
-        .list("maingallery", { limit: 100 });
+    const fetchGalleryData = async () => {
+      const { data, error } = await supabase
+        .from("lovemate")
+        .select("image_gallery, video_gallery, shorts, tv")
+        .single();
 
       if (error) {
-        console.error("Error fetching images:", error);
-        return;
-      }
-      if (!files || files.length === 0) {
-        console.warn("No files found in maingallery");
+        console.error("Error fetching gallery data:", error);
         return;
       }
 
-      const sortedFiles = files
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .map(file => ({
-          url: supabase.storage
-            .from("asset")
-            .getPublicUrl(`maingallery/${file.name}`).data.publicUrl,
-          caption: file.name.replace(/\.[^/.]+$/, "")
-        }));
+      if (data) {
+        // Set photos from image_gallery
+        if (data.image_gallery && Array.isArray(data.image_gallery)) {
+          setPhotos(data.image_gallery);
+        }
+        setLoading(prev => ({ ...prev, photos: false }));
 
-      setPhotos(sortedFiles);
+        // Set videos from video_gallery
+        if (data.video_gallery && Array.isArray(data.video_gallery)) {
+          setVideos(data.video_gallery);
+        }
+        setLoading(prev => ({ ...prev, videos: false }));
+
+        // Set shorts from shorts
+        if (data.shorts && Array.isArray(data.shorts)) {
+          setShorts(data.shorts);
+        }
+        setLoading(prev => ({ ...prev, shorts: false }));
+
+        // Set stream videos from tv
+        if (data.tv && Array.isArray(data.tv)) {
+          setStreamVideos(data.tv);
+        }
+        setLoading(prev => ({ ...prev, stream: false }));
+      }
     };
 
-    fetchPhotos();
+    fetchGalleryData();
   }, []);
 
   // Handle video end - play next video and loop back to start
@@ -114,7 +111,7 @@ export default function Gallery() {
 
   // AUTO-PLAY: Immediately play video when stream tab is active AND video is loaded
   useEffect(() => {
-    if (activeTab === "stream" && videoRef.current) {
+    if (activeTab === "stream" && videoRef.current && streamVideos.length > 0) {
       const playVideo = async () => {
         try {
           // Check if video is ready to play
@@ -139,11 +136,11 @@ export default function Gallery() {
 
       playVideo();
     }
-  }, [activeTab, currentVideoIndex]); // Re-run when tab changes or video index changes
+  }, [activeTab, currentVideoIndex, streamVideos.length]); // Re-run when tab changes or video index changes
 
   // Also try to play when the video element is first created
   useEffect(() => {
-    if (activeTab === "stream" && videoRef.current && !hasAutoPlayed.current) {
+    if (activeTab === "stream" && videoRef.current && !hasAutoPlayed.current && streamVideos.length > 0) {
       const video = videoRef.current;
       
       const attemptPlay = async () => {
@@ -157,7 +154,7 @@ export default function Gallery() {
 
       attemptPlay();
     }
-  }, [activeTab, videoRef.current]);
+  }, [activeTab, videoRef.current, streamVideos.length]);
 
   // Swipe handlers for popup
   const swipeHandlers = useSwipeable({
@@ -167,7 +164,7 @@ export default function Gallery() {
   });
 
   const renderPhotoPopup = () => {
-    if (selectedIndex === null) return null;
+    if (selectedIndex === null || !photos[selectedIndex]) return null;
 
     return (
       <div
@@ -177,12 +174,14 @@ export default function Gallery() {
         <div {...swipeHandlers} className="relative max-w-3xl w-full">
           <img
             src={photos[selectedIndex].url}
-            alt={photos[selectedIndex].caption}
+            alt={photos[selectedIndex].caption || "Gallery image"}
             className="w-full max-h-[90vh] object-contain mx-auto"
           />
-          <div className="absolute top-4 left-4 text-white text-lg bg-black bg-opacity-50 px-2 rounded">
-            {photos[selectedIndex].caption}
-          </div>
+          {photos[selectedIndex].caption && (
+            <div className="absolute top-4 left-4 text-white text-lg bg-black bg-opacity-50 px-2 rounded">
+              {photos[selectedIndex].caption}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -191,24 +190,42 @@ export default function Gallery() {
   const renderContent = () => {
     switch (activeTab) {
       case "photos":
+        if (loading.photos) {
+          return (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600"></div>
+            </div>
+          );
+        }
+
+        if (photos.length === 0) {
+          return (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No photos available yet.</p>
+            </div>
+          );
+        }
+
         return (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {photos.map((photo, i) => (
                 <div
                   key={i}
-                  className="relative aspect-square overflow-hidden rounded-xl shadow cursor-pointer"
+                  className="relative aspect-square overflow-hidden rounded-xl shadow cursor-pointer group"
                   onClick={() => setSelectedIndex(i)}
                 >
                   <Image
                     src={photo.url}
-                    alt={photo.caption}
+                    alt={photo.caption || `Gallery image ${i + 1}`}
                     fill
-                    className="object-cover"
+                    className="object-cover transition-transform group-hover:scale-110"
                   />
-                  <div className="absolute bottom-0 w-full bg-black bg-opacity-40 text-white text-center text-xs py-1">
-                    {photo.caption}
-                  </div>
+                  {photo.caption && (
+                    <div className="absolute bottom-0 w-full bg-black bg-opacity-60 text-white text-center text-xs py-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {photo.caption}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -217,51 +234,155 @@ export default function Gallery() {
         );
 
       case "videos":
+        if (loading.videos) {
+          return (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600"></div>
+            </div>
+          );
+        }
+
+        if (videos.length === 0) {
+          return (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No videos available yet.</p>
+            </div>
+          );
+        }
+
         return (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {videos.map((v, i) => (
-              <div key={i} className="bg-white rounded-xl overflow-hidden shadow">
-                <iframe
-                  src={v.url}
-                  title={`Video ${i + 1}`}
-                  className="w-full h-56 sm:h-64 md:h-72"
-                  allowFullScreen
-                ></iframe>
+            {videos.map((video, i) => (
+              <div key={i} className="bg-white rounded-xl overflow-hidden shadow-lg group">
+                <div className="relative aspect-video">
+                  {video.thumbnail ? (
+                    <Image
+                      src={video.thumbnail}
+                      alt={video.title || `Video ${i + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-gray-400">No thumbnail</span>
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
+                    <a
+                      href={video.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-rose-600 text-white p-3 rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform hover:scale-110"
+                    >
+                      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+                {video.title && (
+                  <div className="p-3">
+                    <h3 className="font-semibold text-gray-800 truncate">{video.title}</h3>
+                  </div>
+                )}
               </div>
             ))}
           </div>
         );
 
       case "shorts":
+        if (loading.shorts) {
+          return (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600"></div>
+            </div>
+          );
+        }
+
+        if (shorts.length === 0) {
+          return (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No shorts available yet.</p>
+            </div>
+          );
+        }
+
         return (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {shorts.map((short, i) => (
-              <div key={i} className="rounded-xl overflow-hidden shadow">
-                <iframe
-                  src={short.url}
-                  title={`Short ${i + 1}`}
-                  className="w-full aspect-[9/16] object-cover"
-                  allowFullScreen
-                ></iframe>
+              <div key={i} className="rounded-xl overflow-hidden shadow-lg group relative">
+                <div className="relative aspect-[9/16]">
+                  <video
+                    src={short.url}
+                    className="w-full h-full object-cover"
+                    poster={short.thumbnail}
+                    muted
+                    loop
+                    playsInline
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all flex items-center justify-center">
+                    <a
+                      href={short.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="bg-rose-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity transform hover:scale-110"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z"/>
+                      </svg>
+                    </a>
+                  </div>
+                </div>
+                {short.caption && (
+                  <div className="absolute bottom-0 w-full bg-black bg-opacity-60 text-white text-center text-xs py-2">
+                    {short.caption}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         );
 
       case "stream":
+        if (loading.stream) {
+          return (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-rose-600"></div>
+            </div>
+          );
+        }
+
+        if (streamVideos.length === 0) {
+          return (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No live stream content available.</p>
+            </div>
+          );
+        }
+
         return (
           <div className="w-full bg-gradient-to-b from-gray-50 to-white rounded-xl p-4 md:p-6 shadow-lg border border-rose-100">
-            {/* Single TV Screen - Continuous Loop with Autoplay */}
-            <div className="w-full aspect-video rounded-lg overflow-hidden shadow-xl bg-black mx-auto">
+            {/* TV Screen with Logo Overlay - Desktop 20% smaller */}
+            <div className="relative w-full md:w-4/5 mx-auto aspect-video rounded-lg overflow-hidden shadow-xl bg-black">
+              {/* TV Logo Overlay - Top Right - No background, just logo */}
+              <div className="absolute top-2 right-2 z-10">
+                <img 
+                  src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/lovemateshow/logo/lovemateicon.png"
+                  alt="LOVEMATE TV"
+                  className="w-8 h-8 md:w-10 md:h-10 object-contain"
+                />
+              </div>
+              
+              {/* Video Player */}
               <video
                 key={currentVideoIndex}
                 ref={videoRef}
-                src={streamVideos[currentVideoIndex].url}
+                src={streamVideos[currentVideoIndex]?.url}
                 className="w-full h-full object-contain"
-                controls
+                controls={false} // No controls - users can't stop
                 autoPlay
                 playsInline
-                muted={false}
+                muted={false} // Users can control volume via browser/system
                 preload="auto"
                 onEnded={handleVideoEnd}
                 onLoadedData={(e) => {
@@ -275,15 +396,15 @@ export default function Gallery() {
               </video>
             </div>
             
-            {/* Now Playing - Minimal, no buttons */}
+            {/* Live Indicator Only - No now playing or counter */}
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-500 uppercase tracking-wider">NOW PLAYING</p>
-              <p className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-rose-600">
-                {streamVideos[currentVideoIndex].title}
-              </p>
-              <p className="text-xs text-gray-400 mt-1">
-                {currentVideoIndex + 1} / {streamVideos.length} • 🔁 Continuous Loop
-              </p>
+              <div className="flex items-center justify-center gap-1">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                <span className="text-xs font-semibold text-red-600 uppercase tracking-wider">LIVE</span>
+              </div>
             </div>
           </div>
         );

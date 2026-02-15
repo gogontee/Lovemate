@@ -3,12 +3,12 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SponsorCarousel from "../components/SponsorCarousel";
 import CandidateCard from "../components/CandidateCard";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import EventSchedule from "@/components/EventSchedule";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 import Image from "next/image";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
 const PAGE_SIZE = 50;
@@ -21,6 +21,7 @@ export default function VotePage() {
   const [hasMore, setHasMore] = useState(true);
   const [heroDesktop, setHeroDesktop] = useState(null);
   const [heroMobile, setHeroMobile] = useState(null);
+  const [hasEligibleCandidates, setHasEligibleCandidates] = useState(true);
   const [stats, setStats] = useState({
     totalVotes: 0,
     totalGifts: 0,
@@ -67,6 +68,11 @@ export default function VotePage() {
     if (error) {
       console.error("Error fetching candidates:", error);
     } else {
+      // Check if there are any eligible candidates
+      if (pageNum === 1) {
+        setHasEligibleCandidates(data.length > 0);
+      }
+      
       const updated = data.map((item) => ({
         ...item,
         imageUrl:
@@ -94,7 +100,7 @@ export default function VotePage() {
       const totalGifts = data.reduce((sum, c) => sum + (c.gifts || 0), 0);
       const totalGiftWorth = data.reduce((sum, c) => sum + (c.gift_worth || 0), 0);
       
-      // Get unique voters count (you'll need to implement this based on your data)
+      // Get unique voters count
       const { count } = await supabase
         .from("vote_transactions")
         .select("*", { count: "exact", head: true });
@@ -204,41 +210,47 @@ export default function VotePage() {
                 {heroDesktop?.subtitle || "Cast your votes and make your voice count"}
               </motion.p>
               
-              {/* Stats Bar - Desktop */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="flex gap-6 bg-black/30 backdrop-blur-md rounded-2xl p-3 border border-purple-500/30 max-w-2xl"
-              >
-                <div className="flex-1 text-center">
-                  <div className="text-sm font-bold text-red-500">
-                    {formatNumber(stats.totalVotes)}
-                  </div>
-                  <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Votes</div>
-                </div>
-                <div className="w-px bg-purple-500/30" />
-                <div className="flex-1 text-center">
-                  <div className="text-sm font-bold text-red-500">
-                    {formatNumber(stats.totalGifts)}
-                  </div>
-                  <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Gifts</div>
-                </div>
-                <div className="w-px bg-purple-500/30" />
-                <div className="flex-1 text-center">
-                  <div className="text-sm font-bold text-red-500">
-                    ₦{formatNumber(stats.totalGiftWorth)}
-                  </div>
-                  <div className="text-[8px] text-gray-400 uppercase tracking-wider">Gift Worth</div>
-                </div>
-                <div className="w-px bg-purple-500/30" />
-                <div className="flex-1 text-center">
-                  <div className="text-sm font-bold text-red-500">
-                    {formatNumber(stats.activeVoters)}
-                  </div>
-                  <div className="text-[8px] text-gray-400 uppercase tracking-wider">Active Voters</div>
-                </div>
-              </motion.div>
+              {/* Stats Bar - Desktop - Only show when candidates exist */}
+              <AnimatePresence mode="wait">
+                {hasEligibleCandidates && candidates.length > 0 && (
+                  <motion.div 
+                    key="desktop-stats"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ delay: 0.3 }}
+                    className="flex gap-6 bg-black/30 backdrop-blur-md rounded-2xl p-3 border border-purple-500/30 max-w-2xl"
+                  >
+                    <div className="flex-1 text-center">
+                      <div className="text-sm font-bold text-red-500">
+                        {formatNumber(stats.totalVotes)}
+                      </div>
+                      <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Votes</div>
+                    </div>
+                    <div className="w-px bg-purple-500/30" />
+                    <div className="flex-1 text-center">
+                      <div className="text-sm font-bold text-red-500">
+                        {formatNumber(stats.totalGifts)}
+                      </div>
+                      <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Gifts</div>
+                    </div>
+                    <div className="w-px bg-purple-500/30" />
+                    <div className="flex-1 text-center">
+                      <div className="text-sm font-bold text-red-500">
+                        ₦{formatNumber(stats.totalGiftWorth)}
+                      </div>
+                      <div className="text-[8px] text-gray-400 uppercase tracking-wider">Gift Worth</div>
+                    </div>
+                    <div className="w-px bg-purple-500/30" />
+                    <div className="flex-1 text-center">
+                      <div className="text-sm font-bold text-red-500">
+                        {formatNumber(stats.activeVoters)}
+                      </div>
+                      <div className="text-[8px] text-gray-400 uppercase tracking-wider">Active Voters</div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -280,38 +292,44 @@ export default function VotePage() {
               {heroMobile?.subtitle || "Cast your votes and make your voice count"}
             </motion.p>
             
-            {/* Stats Grid - Mobile */}
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="grid grid-cols-4 gap-1 bg-black/30 backdrop-blur-md rounded-xl p-2 border border-purple-500/20"
-            >
-              <div className="text-center">
-                <div className="text-[10px] font-bold text-red-500">
-                  {formatNumber(stats.totalVotes)}
-                </div>
-                <div className="text-[6px] text-gray-400 uppercase">Votes</div>
-              </div>
-              <div className="text-center">
-                <div className="text-[10px] font-bold text-red-500">
-                  {formatNumber(stats.totalGifts)}
-                </div>
-                <div className="text-[6px] text-gray-400 uppercase">Gifts</div>
-              </div>
-              <div className="text-center">
-                <div className="text-[10px] font-bold text-red-500">
-                  ₦{formatNumber(stats.totalGiftWorth)}
-                </div>
-                <div className="text-[6px] text-gray-400 uppercase">Worth</div>
-              </div>
-              <div className="text-center">
-                <div className="text-[10px] font-bold text-red-500">
-                  {formatNumber(stats.activeVoters)}
-                </div>
-                <div className="text-[6px] text-gray-400 uppercase">Voters</div>
-              </div>
-            </motion.div>
+            {/* Stats Grid - Mobile - Only show when candidates exist */}
+            <AnimatePresence mode="wait">
+              {hasEligibleCandidates && candidates.length > 0 && (
+                <motion.div 
+                  key="mobile-stats"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ delay: 0.2 }}
+                  className="grid grid-cols-4 gap-1 bg-black/30 backdrop-blur-md rounded-xl p-2 border border-purple-500/20"
+                >
+                  <div className="text-center">
+                    <div className="text-[10px] font-bold text-red-500">
+                      {formatNumber(stats.totalVotes)}
+                    </div>
+                    <div className="text-[6px] text-gray-400 uppercase">Votes</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[10px] font-bold text-red-500">
+                      {formatNumber(stats.totalGifts)}
+                    </div>
+                    <div className="text-[6px] text-gray-400 uppercase">Gifts</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[10px] font-bold text-red-500">
+                      ₦{formatNumber(stats.totalGiftWorth)}
+                    </div>
+                    <div className="text-[6px] text-gray-400 uppercase">Worth</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-[10px] font-bold text-red-500">
+                      {formatNumber(stats.activeVoters)}
+                    </div>
+                    <div className="text-[6px] text-gray-400 uppercase">Voters</div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -330,65 +348,88 @@ export default function VotePage() {
           </motion.div>
         </div>
 
-        {/* Search Bar - Futuristic */}
-        <section className="py-6 px-4">
-          <div className="max-w-xs mx-auto">
-            <div className="relative group">
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
-              <input
-                type="text"
-                placeholder="🔍 Search candidate..."
-                className="relative w-full px-4 py-2 bg-gray-800 text-white border border-purple-500/30 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+        {/* Search Bar - Only show if there are eligible candidates */}
+        {hasEligibleCandidates && candidates.length > 0 && (
+          <section className="py-6 px-4">
+            <div className="max-w-xs mx-auto">
+              <div className="relative group">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
+                <input
+                  type="text"
+                  placeholder="🔍 Search candidate..."
+                  className="relative w-full px-4 py-2 bg-gray-800 text-white border border-purple-500/30 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
-        {/* Candidate Cards */}
+        {/* Candidate Cards or Empty State */}
         <section className="py-4 px-4">
           <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-              {filteredCandidates.map((candidate, index) => (
-                <motion.div
-                  key={candidate.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  <CandidateCard
-                    id={candidate.id}
-                    name={candidate.name}
-                    country={candidate.country}
-                    votes={candidate.votes}
-                    imageUrl={candidate.imageUrl}
-                  />
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Load More */}
-            {hasMore && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center mt-8"
+            {!hasEligibleCandidates ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-3xl p-8 md:p-12 border border-purple-500/20 text-center max-w-3xl mx-auto"
               >
-                <button
-                  onClick={() => {
-                    const nextPage = page + 1;
-                    fetchCandidates(nextPage);
-                    setPage(nextPage);
-                  }}
-                  className="relative group"
-                >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300" />
-                  <div className="relative px-8 py-3 bg-gray-900 text-white rounded-full text-sm font-semibold">
-                    Load More Candidates
-                  </div>
-                </button>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+                  Stay Tuned!
+                </h2>
+                
+                <p className="text-gray-300 text-lg mb-2">
+                  Eligible candidates for Stage 1 will be revealed here
+                </p>
+                <p className="text-rose-400 font-semibold">
+                  at the close of registration.
+                </p>
               </motion.div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                  {filteredCandidates.map((candidate, index) => (
+                    <motion.div
+                      key={candidate.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                    >
+                      <CandidateCard
+                        id={candidate.id}
+                        name={candidate.name}
+                        country={candidate.country}
+                        votes={candidate.votes}
+                        imageUrl={candidate.imageUrl}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Load More */}
+                {hasMore && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center mt-8"
+                  >
+                    <button
+                      onClick={() => {
+                        const nextPage = page + 1;
+                        fetchCandidates(nextPage);
+                        setPage(nextPage);
+                      }}
+                      className="relative group"
+                    >
+                      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300" />
+                      <div className="relative px-8 py-3 bg-gray-900 text-white rounded-full text-sm font-semibold">
+                        Load More Candidates
+                      </div>
+                    </button>
+                  </motion.div>
+                )}
+              </>
             )}
           </div>
         </section>
