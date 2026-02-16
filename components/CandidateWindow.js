@@ -35,7 +35,8 @@ import {
   Search,
   X,
   ThumbsUp,
-  Award
+  Award,
+  Trash2
 } from "lucide-react";
 
 import celebrationAnimation from "../public/animations/Fireworks.json";
@@ -209,40 +210,40 @@ export default function CandidateWindow({ profileId }) {
   }, []);
 
   // Fetch favorite candidates
-  useEffect(() => {
+  const fetchFavorites = async () => {
     if (!profileId) return;
+    
+    setLoadingFavorites(true);
+    
+    // Get current user's profile with favorites
+    const { data: profileData, error: profileError } = await supabase
+      .from("profile")
+      .select("favorite")
+      .eq("id", profileId)
+      .single();
 
-    const fetchFavorites = async () => {
-      setLoadingFavorites(true);
+    if (!profileError && profileData?.favorite && profileData.favorite.length > 0) {
+      const favoriteIds = profileData.favorite;
       
-      // Get current user's profile with favorites
-      const { data: profileData, error: profileError } = await supabase
-        .from("profile")
-        .select("favorite")
-        .eq("id", profileId)
-        .single();
+      // Fetch candidate details for each favorite
+      const { data: candidatesData, error: candidatesError } = await supabase
+        .from("candidates")
+        .select("id, name, image_url, votes, gifts, country, code")
+        .in("id", favoriteIds);
 
-      if (!profileError && profileData?.favorite) {
-        const favoriteIds = profileData.favorite;
-        
-        if (favoriteIds.length > 0) {
-          // Fetch candidate details for each favorite
-          const { data: candidatesData, error: candidatesError } = await supabase
-            .from("candidates")
-            .select("id, name, image_url, votes, gifts, country, code")
-            .in("id", favoriteIds);
-
-          if (!candidatesError && candidatesData) {
-            setFavorites(candidatesData);
-          }
-        } else {
-          setFavorites([]);
-        }
+      if (!candidatesError && candidatesData) {
+        setFavorites(candidatesData);
+      } else {
+        setFavorites([]);
       }
-      
-      setLoadingFavorites(false);
-    };
+    } else {
+      setFavorites([]);
+    }
+    
+    setLoadingFavorites(false);
+  };
 
+  useEffect(() => {
     fetchFavorites();
   }, [profileId]);
 
@@ -530,14 +531,20 @@ export default function CandidateWindow({ profileId }) {
     if (!foundCandidate || !profileId) return;
 
     // Get current favorites
-    const { data: profileData } = await supabase
+    const { data: profileData, error: fetchError } = await supabase
       .from("profile")
       .select("favorite")
       .eq("id", profileId)
       .single();
 
+    if (fetchError) {
+      console.error("Error fetching favorites:", fetchError);
+      return;
+    }
+
     const currentFavorites = profileData?.favorite || [];
     
+    // Check if already in favorites
     if (currentFavorites.includes(foundCandidate.id)) {
       setOrakulMessage({
         icon: <AlertCircle className="w-3 h-3" />,
@@ -553,21 +560,60 @@ export default function CandidateWindow({ profileId }) {
     // Add new favorite
     const newFavorites = [...currentFavorites, foundCandidate.id];
     
-    const { error } = await supabase
+    const { error: updateError } = await supabase
       .from("profile")
       .update({ favorite: newFavorites })
       .eq("id", profileId);
 
-    if (!error) {
-      setFavorites([...favorites, foundCandidate]);
+    if (!updateError) {
+      // Refresh favorites list
+      await fetchFavorites();
+      
       setOrakulMessage({
         icon: <CheckCircle className="w-3 h-3" />,
         text: `🔮 ${foundCandidate.name} added to your favorites!`
       });
       setTimeout(() => setOrakulMessage(null), 3000);
-      setShowAddFavorite(false);
+      setShowCodeInput(false);
       setFoundCandidate(null);
       setCandidateCode("");
+    }
+  };
+
+  const handleRemoveFavorite = async (candidateId, candidateName) => {
+    if (!profileId) return;
+
+    // Get current favorites
+    const { data: profileData, error: fetchError } = await supabase
+      .from("profile")
+      .select("favorite")
+      .eq("id", profileId)
+      .single();
+
+    if (fetchError) {
+      console.error("Error fetching favorites:", fetchError);
+      return;
+    }
+
+    const currentFavorites = profileData?.favorite || [];
+    
+    // Remove the candidate
+    const newFavorites = currentFavorites.filter(id => id !== candidateId);
+    
+    const { error: updateError } = await supabase
+      .from("profile")
+      .update({ favorite: newFavorites })
+      .eq("id", profileId);
+
+    if (!updateError) {
+      // Refresh favorites list
+      await fetchFavorites();
+      
+      setOrakulMessage({
+        icon: <CheckCircle className="w-3 h-3" />,
+        text: `🔮 ${candidateName} removed from your favorites!`
+      });
+      setTimeout(() => setOrakulMessage(null), 3000);
     }
   };
 
@@ -808,39 +854,51 @@ export default function CandidateWindow({ profileId }) {
             ) : favorites.length > 0 ? (
               <div className="grid grid-cols-2 gap-2">
                 {favorites.map((fav) => (
-                  <motion.a
+                  <motion.div
                     key={fav.id}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    href={`/candidate/${fav.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 hover:border-purple-400 transition-colors"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 relative group"
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
-                        {fav.image_url ? (
-                          <img 
-                            src={fav.image_url.startsWith("http") 
-                              ? fav.image_url 
-                              : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
-                            } 
-                            alt={fav.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Bot className="w-4 h-4 text-purple-400 m-auto" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
-                          <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                    <button
+                      onClick={() => handleRemoveFavorite(fav.id, fav.name)}
+                      className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    >
+                      <Trash2 className="w-2.5 h-2.5 text-white" />
+                    </button>
+                    <a
+                      href={`/candidate/${fav.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
+                          {fav.image_url ? (
+                            <img 
+                              src={fav.image_url.startsWith("http") 
+                                ? fav.image_url 
+                                : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
+                              } 
+                              alt={fav.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Bot className="w-4 h-4 text-purple-400 m-auto" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
+                          <p className="text-purple-300 text-[7px] truncate">{fav.country}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
+                            <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </motion.a>
+                    </a>
+                  </motion.div>
                 ))}
               </div>
             ) : (
@@ -1188,6 +1246,94 @@ export default function CandidateWindow({ profileId }) {
             <span className="w-1 h-1 bg-purple-400 rounded-full animate-pulse"></span>
             ACTIVE
           </span>
+        </div>
+      </motion.div>
+
+      {/* Favorites Section for Candidates with Profile */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-3"
+      >
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:15px_15px]"></div>
+        
+        <div className="relative z-10">
+          <div className="flex items-center gap-1.5 mb-3">
+            <Award className="w-4 h-4 text-yellow-400" />
+            <h3 className="text-white text-xs font-bold">YOUR FAVORITE CANDIDATES</h3>
+          </div>
+
+          {loadingFavorites ? (
+            <div className="flex justify-center py-4">
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              >
+                <RefreshCw className="w-4 h-4 text-purple-400" />
+              </motion.div>
+            </div>
+          ) : favorites.length > 0 ? (
+            <div className="grid grid-cols-2 gap-2">
+              {favorites.map((fav) => (
+                <motion.div
+                  key={fav.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 relative group"
+                >
+                  <button
+                    onClick={() => handleRemoveFavorite(fav.id, fav.name)}
+                    className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  >
+                    <Trash2 className="w-2.5 h-2.5 text-white" />
+                  </button>
+                  <a
+                    href={`/candidate/${fav.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
+                        {fav.image_url ? (
+                          <img 
+                            src={fav.image_url.startsWith("http") 
+                              ? fav.image_url 
+                              : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
+                            } 
+                            alt={fav.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Bot className="w-4 h-4 text-purple-400 m-auto" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
+                        <p className="text-purple-300 text-[7px] truncate">{fav.country}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
+                          <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </a>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-3">
+              <p className="text-purple-300 text-[10px] mb-2">No favorite candidates yet</p>
+              <button
+                onClick={() => setShowCodeInput(true)}
+                className="text-[8px] bg-purple-600 text-white px-2 py-1 rounded-full font-semibold"
+              >
+                + ADD FAVORITE
+              </button>
+            </div>
+          )}
         </div>
       </motion.div>
 
