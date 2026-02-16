@@ -1,19 +1,19 @@
-// pages/dashboard.js
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../utils/supabaseClient";
 import CandidateWindow from "../components/CandidateWindow";
-import Image from "next/image";
-import {
-  UserCircle,
-  Wallet,
-  Settings,
-  LogOut,
-  Star,
-  Bell,
-} from "lucide-react";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
+import { motion } from "framer-motion";
+
+// Import dashboard components
+import ProfileHeader from "../components/dashboard/ProfileHeader";
+import WalletCard from "../components/dashboard/WalletCard";
+import RankCard from "../components/dashboard/RankCard";
+import TransactionsList from "../components/dashboard/TransactionsList";
+import NotificationsPanel from "../components/dashboard/NotificationsPanel";
+import SettingsPanel from "../components/dashboard/SettingsPanel";
+import FundWalletModal from "../components/dashboard/FundWalletModal";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -21,61 +21,52 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [avatarUrl, setAvatarUrl] = useState("/placeholder-profile.png");
   const [walletBalance, setWalletBalance] = useState(0);
-  const fileInputRef = useRef(null);
   const router = useRouter();
   const [transactions, setTransactions] = useState([]);
-  const [activeTab, setActiveTab] = useState("update");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [amountToFund, setAmountToFund] = useState("");
   const [showFundModal, setShowFundModal] = useState(false);
 
-
-  
-
   const fetchWallet = async (userId) => {
-  const { data, error } = await supabase
-    .from("wallets")
-    .select("*")
-    .eq("user_id", userId)
-    .single(); // ✅ FIXED — no .headers()
-
-  if (error) {
-    console.error("Error fetching wallet:", error);
-    return null;
-  }
-
-  return data;
-};
-
-
-  useEffect(() => {
-  if (profile) {
-    setFullName(profile.full_name || "");
-    setPhone(profile.phone || "");
-  }
-}, [profile]);
-
-
-useEffect(() => {
-  if (!profile?.id) return;
-
-  const fetchTransactions = async () => {
     const { data, error } = await supabase
-      .from("transactions")
+      .from("wallets")
       .select("*")
-      .eq("user_id", profile.id)
-      .order("created_at", { ascending: false });
+      .eq("user_id", userId)
+      .single();
 
-    if (!error) {
-      setTransactions(data);
+    if (error) {
+      console.error("Error fetching wallet:", error);
+      return null;
     }
+    return data;
   };
 
-  fetchTransactions();
-}, [profile]);
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name || "");
+      setPhone(profile.phone || "");
+    }
+  }, [profile]);
 
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const fetchTransactions = async () => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("user_id", profile.id)
+        .order("created_at", { ascending: false });
+
+      if (!error) {
+        setTransactions(data);
+      }
+    };
+
+    fetchTransactions();
+  }, [profile]);
 
   // Fetch user profile on mount
   useEffect(() => {
@@ -94,7 +85,7 @@ useEffect(() => {
 
       const { data: fetchedProfile, error: profileError } = await supabase
         .from("profile")
-        .select("id, email, role, photo_url, full_name")
+        .select("id, email, role, photo_url, full_name, phone")
         .eq("id", authUser.id)
         .single();
 
@@ -117,43 +108,40 @@ useEffect(() => {
 
   // Fetch wallet balance
   useEffect(() => {
-  if (user?.id) {
-    fetchWallet(user.id).then((data) => {
-      if (data) {
-        setWalletBalance(data.balance || 0);
-      }
-    });
-
-    const interval = setInterval(() => {
+    if (user?.id) {
       fetchWallet(user.id).then((data) => {
         if (data) {
           setWalletBalance(data.balance || 0);
         }
       });
-    }, 30000); // refresh every 30s
 
-    return () => clearInterval(interval);
-  }
-}, [user?.id]);
+      const interval = setInterval(() => {
+        fetchWallet(user.id).then((data) => {
+          if (data) {
+            setWalletBalance(data.balance || 0);
+          }
+        });
+      }, 30000);
 
+      return () => clearInterval(interval);
+    }
+  }, [user?.id]);
 
-// 3. Second useEffect: listen for payment redirect
-useEffect(() => {
-  if (
-    typeof window !== "undefined" &&
-    localStorage.getItem("wallet_updated") === "true" &&
-    user?.id
-  ) {
-    fetchWallet(user.id).then((data) => {
-      if (data) {
-        setWalletBalance(data.balance || 0);
-      }
-    });
-    localStorage.removeItem("wallet_updated");
-  }
-}, [user]);
-
-
+  // Listen for payment redirect
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      localStorage.getItem("wallet_updated") === "true" &&
+      user?.id
+    ) {
+      fetchWallet(user.id).then((data) => {
+        if (data) {
+          setWalletBalance(data.balance || 0);
+        }
+      });
+      localStorage.removeItem("wallet_updated");
+    }
+  }, [user]);
 
   // Subscribe to wallet updates
   useEffect(() => {
@@ -174,7 +162,7 @@ useEffect(() => {
             .from("wallet_summary")
             .select("balance")
             .eq("user_id", profile.id)
-            .maybesingle();
+            .maybeSingle();
 
           if (!error) {
             setWalletBalance(data?.balance || 0);
@@ -188,407 +176,210 @@ useEffect(() => {
     };
   }, [profile]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
+  const handleUpload = async (file) => {
+    if (!file || !profile) return;
+
+    const validTypes = ["image/jpeg", "image/png"];
+    if (!validTypes.includes(file.type)) {
+      alert("Only JPG and PNG files are allowed.");
+      return;
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert("Image is too large. Please upload a file less than 5MB.");
+      return;
+    }
+
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${profile.id}_${Date.now()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("avatars")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("Upload error:", uploadError.message);
+      alert("Upload failed. Please try again.");
+      return;
+    }
+
+    const { data: publicUrlData } = supabase.storage
+      .from("avatars")
+      .getPublicUrl(filePath);
+
+    const publicUrl = publicUrlData?.publicUrl;
+
+    const { error: updateError } = await supabase
+      .from("profile")
+      .update({ photo_url: publicUrl })
+      .eq("id", profile.id);
+
+    if (updateError) {
+      console.error("Error updating profile photo URL:", updateError.message);
+      alert("Failed to update your profile with the image URL.");
+      return;
+    }
+
+    setAvatarUrl(publicUrl);
   };
 
- const handleUpload = async (file) => {
-  if (!file || !profile) return;
+  const handlePayNow = async () => {
+    if (!amountToFund) {
+      alert("Please enter an amount");
+      return;
+    }
 
-  const validTypes = ["image/jpeg", "image/png"];
-  if (!validTypes.includes(file.type)) {
-    alert("Only JPG and PNG files are allowed.");
-    return;
-  }
+    try {
+      const response = await fetch("/api/fund-wallet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(amountToFund),
+          email: user.email,
+          user_id: user.id,
+          redirect_url: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/wallet/callback`,
+        }),
+      });
 
-  const maxSize = 5 * 1024 * 1024;
-  if (file.size > maxSize) {
-    alert("Image is too large. Please upload a file less than 5MB.");
-    return;
-  }
+      const data = await response.json();
 
-  const fileExt = file.name.split(".").pop();
-  const fileName = `${profile.id}_${Date.now()}.${fileExt}`;
-  const filePath = `${fileName}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from("avatars")
-    .upload(filePath, file, {
-      cacheControl: "3600",
-      upsert: true,
-    });
-
-  if (uploadError) {
-    console.error("Upload error:", uploadError.message);
-    alert("Upload failed. Please try again.");
-    return;
-  }
-
-  const { data: publicUrlData } = supabase.storage
-    .from("avatars")
-    .getPublicUrl(filePath);
-
-  const publicUrl = publicUrlData?.publicUrl;
-
-  const { error: updateError } = await supabase
-    .from("profile")
-    .update({ photo_url: publicUrl })
-    .eq("id", profile.id);
-
-  if (updateError) {
-    console.error("Error updating profile photo URL:", updateError.message);
-    alert("Failed to update your profile with the image URL.");
-    return;
-  }
-
-  setAvatarUrl(publicUrl);
-};
-
-const handlePayNow = async () => {
-  if (!amountToFund) {
-    alert("Please enter an amount");
-    return;
-  }
-
-  try {
-  const response = await fetch("/api/fund-wallet", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      amount: Number(amountToFund),
-      email: user.email,
-      user_id: user.id, // <--- required
-      redirect_url: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/wallet/callback`,
-    }),
-  });
-
-    const data = await response.json();
-    console.log("fund-wallet response:", data);
-
-    if (data?.authorization_url) {
-    window.location.href = data.authorization_url;
-  } else {
-    alert("Payment initialization failed: " + (data?.error || "Unknown")); 
-  }
-  } catch (err) {
-  console.error("Payment error:", err);
-  alert("Something went wrong. Try again later.");
-}
-};
+      if (data?.authorization_url) {
+        window.location.href = data.authorization_url;
+      } else {
+        alert("Payment initialization failed: " + (data?.error || "Unknown"));
+      }
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert("Something went wrong. Try again later.");
+    }
+  };
 
   const handleUpdate = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!user || !user.id) {
-    setMessage("User not authenticated");
-    console.error("User not authenticated");
-    return;
-  }
+    if (!user || !user.id) {
+      setMessage("User not authenticated");
+      return;
+    }
 
-  setLoading(true);
-  setMessage("");
+    setLoading(true);
+    setMessage("");
 
-  const updates = {
-    id: user.id,
-    full_name: fullName.trim(),
-    phone: phone.trim(),
-    updated_at: new Date().toISOString(),
+    const updates = {
+      id: user.id,
+      full_name: fullName.trim(),
+      phone: phone.trim(),
+      updated_at: new Date().toISOString(),
+    };
+
+    try {
+      const { error } = await supabase.from("profile").upsert(updates, {
+        returning: "minimal",
+      });
+
+      if (error) {
+        console.error("Profile update error:", error.message);
+        setMessage("❌ Failed to update profile");
+      } else {
+        setMessage("✅ Profile updated successfully!");
+        setProfile((prev) => ({
+          ...prev,
+          full_name: fullName,
+          phone: phone,
+        }));
+      }
+    } catch (err) {
+      console.error("Unexpected update error:", err);
+      setMessage("⚠️ An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  try {
-    const { error } = await supabase.from("profile").upsert(updates, {
-      returning: "minimal", // Faster, only updates without returning row
-    });
-
-    if (error) {
-      console.error("Profile update error:", error.message);
-      setMessage("❌ Failed to update profile");
-    } else {
-      setMessage("✅ Profile updated successfully!");
-      setProfile((prev) => ({
-        ...prev,
-        full_name: fullName,
-        phone: phone,
-      }));
-    }
-  } catch (err) {
-    console.error("Unexpected update error:", err);
-    setMessage("⚠️ An unexpected error occurred");
-  } finally {
-    setLoading(false);
-  }
-};
-
- return (
-  <>
-    <Header />
-    <section className="min-h-screen bg-rose-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <div className="relative w-16 h-16">
-              <div className="relative w-24 h-24">
-  <Image
-    src={avatarUrl || "/default-avatar.png"}
-    alt="Profile"
-    fill
-    className="rounded-full border object-cover"
-  />
-
-  {/* Hidden File Input */}
-  <input
-    type="file"
-    accept="image/png, image/jpeg"
-    ref={fileInputRef}
-    onChange={(e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      const validTypes = ["image/jpeg", "image/png"];
-      if (!validTypes.includes(file.type)) {
-        alert("Only JPG and PNG files are allowed.");
-        return;
-      }
-
-      handleUpload(file); // Make sure this function accepts `file` as a parameter
-    }}
-    className="hidden"
-  />
-
-  {/* Upload Button */}
-  <button
-    type="button"
-    className="absolute bottom-0 right-0 p-1 bg-white rounded-full shadow"
-    onClick={() => fileInputRef.current?.click()}
-  >
-    📷
-  </button>
-</div>
-
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">Welcome back</h2>
-              <p className="text-sm text-gray-600">
-                {profile?.full_name || profile?.email || "User"}
-              </p>
-            </div>
-          </div>
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-rose-50 flex items-center justify-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-12 h-12 border-4 border-rose-600 border-t-transparent rounded-full"
+          />
         </div>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Wallet Balance</p>
-                <h3 className="text-2xl font-bold text-gray-800">
-                  ₦{walletBalance.toLocaleString()}
-                </h3>
-              </div>
-              <Wallet className="text-rose-600" />
-            </div>
-            <button
-  onClick={() => setShowFundModal(true)}
-  className="px-4 py-2 bg-rose-600 text-white rounded"
->
-  Fund Wallet
-</button>
-
-          </div>
-          {showFundModal && (
-  <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-    <div className="bg-white p-6 rounded-xl w-full max-w-sm shadow">
-      <h3 className="text-lg font-bold text-rose-600 mb-4 text-center">Enter Amount to Fund</h3>
-      <input
-        type="number"
-        placeholder="Enter amount"
-        className="w-full p-2 border rounded text-black mb-4"
-        value={amountToFund}
-        onChange={(e) => setAmountToFund(e.target.value)}
-      />
-      <button
-        className="w-full bg-rose-600 text-white py-2 rounded"
-        onClick={handlePayNow}
-      >
-        Pay Now
-      </button>
-    </div>
-  </div>
-)}
-
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm text-gray-500">Current Rank</p>
-              <Star className="text-yellow-500" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-800">New</h3>
-            <div className="w-full bg-rose-100 h-2 rounded mt-2">
-              <div className="h-2 bg-rose-600 rounded w-0"></div>
-            </div>
-            <p className="text-xs text-gray-500 mt-1">Spend more to rank up</p>
-          </div>
-
-          {/* Insert CandidateWindow here */}
-<section className="mt-8">
-  <CandidateWindow profileId={profile?.id} />
-</section>
-
-          <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-sm text-gray-700">Settings</p>
-        <Settings className="text-gray-600" />
-      </div>
-
-      <ul className="text-sm text-gray-700 space-y-2 mb-4">
-        <li
-          onClick={() => setActiveTab("update")}
-          className={`cursor-pointer ${activeTab === "update" ? "text-rose-600 font-bold" : "hover:text-rose-600"}`}
-        >
-          Update Profile
-        </li>
-        <li
-          onClick={() => setActiveTab("password")}
-          className={`cursor-pointer ${activeTab === "password" ? "text-rose-600 font-bold" : "hover:text-rose-600"}`}
-        >
-          Change Password
-        </li>
-        <li
-          onClick={() => setActiveTab("notifications")}
-          className={`cursor-pointer ${activeTab === "notifications" ? "text-rose-600 font-bold" : "hover:text-rose-600"}`}
-        >
-          Notification Preferences
-        </li>
-      </ul>
-
-      {/* Update Profile */}
-      {activeTab === "update" && (
-        <form className="space-y-4" onSubmit={handleUpdate}>
-          <div>
-            <label className="block text-sm font-medium">Full Name</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full mt-1 border rounded text-gray-800 p-2"
-              placeholder="Enter full name"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Phone</label>
-            <input
-              type="text"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full mt-1 border rounded text-gray-800 p-2"
-              placeholder="Enter phone number"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-rose-600 text-white px-4 py-2 rounded"
-          >
-            {loading ? "Saving..." : "Save Changes"}
-          </button>
-          {message && <p className="text-sm mt-2">{message}</p>}
-        </form>
-      )}
-
-      {/* Change Password */}
-      {activeTab === "password" && (
-        <form className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium">Current Password</label>
-            <input type="password" className="w-full mt-1 border rounded text-gray-800 p-2" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">New Password</label>
-            <input type="password" className="w-full mt-1 border rounded text-gray-800 p-2" />
-          </div>
-          <button type="submit" className="bg-rose-600 text-white px-4 py-2 rounded">
-            Update Password
-          </button>
-        </form>
-      )}
-
-      {/* Notifications */}
-      {activeTab === "notifications" && (
-        <div className="space-y-2">
-          <label className="flex items-center space-x-2">
-            <input type="checkbox" className="accent-rose-600" />
-            <span className="text-gray-800">Email Notifications</span>
-          </label>
-          <label className="flex items-center space-x-2">
-            <input type="checkbox" className="accent-rose-600" />
-            <span className="text-gray-800">SMS Alerts</span>
-          </label>
-          <button className="mt-2 bg-rose-600 text-white px-4 py-2 rounded">
-            Save Preferences
-          </button>
-  </div>
-)}
-
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6 mt-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-bold mb-4 text-gray-800">Recent Transactions</h3>
-            {transactions.length > 0 ? (
-              <div className="space-y-3">
-                {transactions.map((txn) => {
-  let label = "";
-  let amountDisplay = "";
-  let amountClass = "";
-
-  if (txn.type === "funding") {
-    label = "Wallet Top-up";
-    amountDisplay = `+₦${txn.amount.toLocaleString()}`;
-    amountClass = "text-green-600";
-  } else if (txn.type === "vote") {
-    label = `Voted for ${txn.recipient_name}`;
-    amountDisplay = `-₦${txn.amount.toLocaleString()}`;
-    amountClass = "text-red-500";
-  } else if (txn.type === "gift") {
-    label = `Gifted ${txn.recipient_name}`;
-    amountDisplay = `-₦${txn.amount.toLocaleString()}`;
-    amountClass = "text-red-500";
-  } else {
-    label = txn.type;
-    amountDisplay = `₦${txn.amount.toLocaleString()}`;
-    amountClass = "text-gray-500";
+        <Footer />
+      </>
+    );
   }
 
   return (
-    <div key={txn.id} className="flex justify-between text-sm border-b pb-2">
-      <span>{label}</span>
-      <span className={amountClass}>{amountDisplay}</span>
-    </div>
-  );
-})}
+    <>
+      <Header />
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-rose-50 py-8 px-4 md:py-12">
+        <div className="max-w-7xl mx-auto">
+          {/* Profile Header */}
+          <ProfileHeader 
+            profile={profile} 
+            avatarUrl={avatarUrl} 
+            onUpload={handleUpload}
+          />
 
+          {/* Desktop Layout - 2 column grid with left column stacked and right column for candidate */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
+            {/* Left Column - Wallet & Rank stacked (takes 5 columns) */}
+            <div className="lg:col-span-5 space-y-6">
+              <WalletCard 
+                balance={walletBalance} 
+                onFundClick={() => setShowFundModal(true)} 
+              />
+              <RankCard />
+            </div>
+
+            {/* Right Column - Candidate Window (takes 7 columns) - Flushed with left column height */}
+            <div className="lg:col-span-7">
+              <div className="h-full flex items-stretch">
+                <CandidateWindow profileId={profile?.id} />
               </div>
-            ) : (
-              <p className="text-sm text-gray-400">No transactions yet.</p>
-            )}
+            </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-bold text-gray-800">Notifications</h3>
-              <Bell className="text-rose-600" />
-            </div>
-            <ul className="text-sm text-gray-600 space-y-2">
-              <li>📢 New voting round begins tomorrow!</li>
-              <li>🔥 Top 5 fans will win exclusive merch!</li>
-              <li>🎉 Don’t miss the live show tonight.</li>
-            </ul>
+          {/* Bottom Grid - 2 columns */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <TransactionsList transactions={transactions} />
+            <NotificationsPanel />
+          </div>
+
+          {/* Settings Panel - Full width */}
+          <div className="mt-6">
+            <SettingsPanel
+              fullName={fullName}
+              setFullName={setFullName}
+              phone={phone}
+              setPhone={setPhone}
+              onUpdate={handleUpdate}
+              loading={loading}
+              message={message}
+            />
           </div>
         </div>
-      </div>
-    </section>
-    <Footer />
-  </>
-);
+      </main>
+
+      {/* Fund Wallet Modal */}
+      <FundWalletModal
+        isOpen={showFundModal}
+        onClose={() => setShowFundModal(false)}
+        onConfirm={(amount) => {
+          setAmountToFund(amount);
+          handlePayNow();
+        }}
+      />
+
+      <Footer />
+    </>
+  );
 }
