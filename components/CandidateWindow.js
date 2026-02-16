@@ -29,7 +29,13 @@ import {
   MessageCircle,
   Link2,
   Send,
-  MoreHorizontal
+  MoreHorizontal,
+  UserPlus,
+  Users,
+  Search,
+  X,
+  ThumbsUp,
+  Award
 } from "lucide-react";
 
 import celebrationAnimation from "../public/animations/Fireworks.json";
@@ -38,41 +44,27 @@ import starsWinnerAnimation from "../public/animations/Stars - winner.json";
 import loveduckAnimation from "../public/animations/loveduck.json";
 import cuteBearAnimation from "../public/animations/Cute bear dancing.json";
 
-// Fun Orakul messages for different status checks
-const approvalCheckMessages = [
-  {
-    id: 1,
-    icon: <Bot className="w-4 h-4" />,
-    message: "🔮 *Orakul's eyes glow* I'm scanning the cosmic energies for your status...",
-    delay: 500
-  },
-  {
-    id: 2,
-    icon: <Clock className="w-4 h-4" />,
-    message: "⏰ The council of elders is consulting the stars. Your file is in the celestial queue!",
-    delay: 800
-  },
-  {
-    id: 3,
-    icon: <Sparkles className="w-4 h-4" />,
-    message: "✨ I sense powerful energies around you! The universe is aligning for your approval.",
-    delay: 600
-  },
-  {
-    id: 4,
-    icon: <AlertCircle className="w-4 h-4" />,
-    message: "🔮 My crystal ball shows great potential... but the fates are still deliberating.",
-    delay: 700
-  },
-  {
-    id: 5,
-    icon: <Rocket className="w-4 h-4" />,
-    message: "🚀 Orakul predicts an exciting journey ahead! I am in a meeting with the management, advocating for your approval.",
-    delay: 900
-  }
-];
+// Icon mapping for database-driven messages
+const iconMap = {
+  'Zap': <Zap className="w-4 h-4" />,
+  'Rocket': <Rocket className="w-4 h-4" />,
+  'Heart': <Heart className="w-4 h-4" />,
+  'Star': <Star className="w-4 h-4" />,
+  'Trophy': <Trophy className="w-4 h-4" />,
+  'Crown': <Crown className="w-4 h-4" />,
+  'Sparkles': <Sparkles className="w-4 h-4" />,
+  'Bot': <Bot className="w-4 h-4" />,
+  'Clock': <Clock className="w-4 h-4" />,
+  'AlertCircle': <AlertCircle className="w-4 h-4" />,
+  'PartyPopper': <PartyPopper className="w-4 h-4" />,
+  'Camera': <Camera className="w-4 h-4" />,
+  'Gift': <Gift className="w-4 h-4" />,
+  'Award': <Award className="w-4 h-4" />,
+  'Users': <Users className="w-4 h-4" />,
+  'UserPlus': <UserPlus className="w-4 h-4" />
+};
 
-// Congratulations messages for selected_24 with animations
+// These remain static as requested
 const selectedMessages = [
   {
     id: 1,
@@ -121,7 +113,6 @@ const selectedMessages = [
   }
 ];
 
-// Encouragement messages for approved candidates with animations
 const approvedMessages = [
   {
     id: 1,
@@ -182,6 +173,79 @@ export default function CandidateWindow({ profileId }) {
   const [showLoveduck, setShowLoveduck] = useState(false);
   const [showCuteBear, setShowCuteBear] = useState(false);
 
+  // New states for database-driven messages
+  const [orakulMessages, setOrakulMessages] = useState([]);
+  const [eligibleMessages, setEligibleMessages] = useState([]);
+  
+  // New states for favorite candidates feature
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [candidateCode, setCandidateCode] = useState("");
+  const [foundCandidate, setFoundCandidate] = useState(null);
+  const [favoriteCandidates, setFavoriteCandidates] = useState([]);
+  const [showAddFavorite, setShowAddFavorite] = useState(false);
+  const [favorites, setFavorites] = useState([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+
+  // Fetch Orakul messages from database
+  useEffect(() => {
+    const fetchMessages = async () => {
+      const { data, error } = await supabase
+        .from("lovemate")
+        .select("orakul_message, eligible_message")
+        .single();
+
+      if (!error && data) {
+        if (data.orakul_message && Array.isArray(data.orakul_message)) {
+          setOrakulMessages(data.orakul_message);
+        }
+        if (data.eligible_message && Array.isArray(data.eligible_message)) {
+          setEligibleMessages(data.eligible_message);
+        }
+      }
+    };
+
+    fetchMessages();
+  }, []);
+
+  // Fetch favorite candidates
+  useEffect(() => {
+    if (!profileId) return;
+
+    const fetchFavorites = async () => {
+      setLoadingFavorites(true);
+      
+      // Get current user's profile with favorites
+      const { data: profileData, error: profileError } = await supabase
+        .from("profile")
+        .select("favorite")
+        .eq("id", profileId)
+        .single();
+
+      if (!profileError && profileData?.favorite) {
+        const favoriteIds = profileData.favorite;
+        
+        if (favoriteIds.length > 0) {
+          // Fetch candidate details for each favorite
+          const { data: candidatesData, error: candidatesError } = await supabase
+            .from("candidates")
+            .select("id, name, image_url, votes, gifts, country, code")
+            .in("id", favoriteIds);
+
+          if (!candidatesError && candidatesData) {
+            setFavorites(candidatesData);
+          }
+        } else {
+          setFavorites([]);
+        }
+      }
+      
+      setLoadingFavorites(false);
+    };
+
+    fetchFavorites();
+  }, [profileId]);
+
   // Set greeting based on time
   useEffect(() => {
     const hour = new Date().getHours();
@@ -201,7 +265,6 @@ export default function CandidateWindow({ profileId }) {
       setLastPopupTime(parseInt(lastTime));
     }
 
-    // Check if user has seen stars winner animation
     const hasSeenStarsWinner = localStorage.getItem('hasSeenStarsWinner');
     if (hasSeenStarsWinner) {
       setShowStarsWinner(false);
@@ -212,13 +275,11 @@ export default function CandidateWindow({ profileId }) {
   useEffect(() => {
     if (!candidate) return;
 
-    // Loveduck for pending approval (role === "No")
     if (candidate.role === "No") {
       setShowLoveduck(true);
       setShowCuteBear(false);
       setShowStarsWinner(false);
       
-      // Loveduck appears for 30s, disappears for 30s
       const loveduckInterval = setInterval(() => {
         setShowLoveduck(prev => !prev);
       }, 30000);
@@ -226,25 +287,21 @@ export default function CandidateWindow({ profileId }) {
       return () => clearInterval(loveduckInterval);
     }
     
-    // Cute bear for approved (role === "Yes") but not selected
     if (candidate.role === "Yes" && !candidate.selected_24) {
       setShowLoveduck(false);
       setShowCuteBear(true);
       setShowStarsWinner(false);
     }
     
-    // Stars winner for selected_24
     if (candidate.selected_24) {
       setShowLoveduck(false);
       setShowCuteBear(false);
       
-      // Check if this is first time seeing stars winner
       const hasSeenStarsWinner = localStorage.getItem('hasSeenStarsWinner');
       
       if (!hasSeenStarsWinner) {
         setShowStarsWinner(true);
         
-        // Show stars winner for 30 seconds then switch to cute bear
         setTimeout(() => {
           setShowStarsWinner(false);
           setShowCuteBear(true);
@@ -263,7 +320,6 @@ export default function CandidateWindow({ profileId }) {
     const checkForNewStatus = async () => {
       const history = popupHistory || [];
       
-      // Check for selected_24 status (green star) - only show once
       if (candidate.selected_24 && !history.includes('selected_24')) {
         const randomIndex = Math.floor(Math.random() * selectedMessages.length);
         setCurrentPopup(selectedMessages[randomIndex]);
@@ -275,7 +331,6 @@ export default function CandidateWindow({ profileId }) {
         setPopupHistory(newHistory);
         localStorage.setItem('candidatePopupHistory', JSON.stringify(newHistory));
       }
-      // Check for approved status (yellow light) - only show once
       else if (candidate.role === 'Yes' && !history.includes('approved')) {
         const randomIndex = Math.floor(Math.random() * approvedMessages.length);
         setCurrentPopup({
@@ -327,7 +382,21 @@ export default function CandidateWindow({ profileId }) {
   const handleCheckStatus = () => {
     const now = Date.now();
     
-    // Check if enough time has passed (1 hour cooldown)
+    // If candidate is selected_24, show special message without rate limiting
+    if (candidate?.selected_24) {
+      setCurrentPopup({
+        icon: <Crown className="w-8 h-8" />,
+        title: "🏆 CONGRATULATIONS! 🏆",
+        message: "You have been selected as one of the 24 Lovemate! Now it is time to give the world an unforgettable show.. congratulations!",
+        color: "from-green-500 to-emerald-600"
+      });
+      setPopupType('selected');
+      setShowPopup(true);
+      setShowAnimation(true);
+      return;
+    }
+    
+    // Regular rate limiting for non-selected candidates
     if (lastPopupTime && now - lastPopupTime < 3600000) {
       const minutesLeft = Math.ceil((3600000 - (now - lastPopupTime)) / 60000);
       setOrakulMessage({
@@ -341,38 +410,72 @@ export default function CandidateWindow({ profileId }) {
     setIsThinking(true);
     setOrakulMessage(null);
 
-    // Simulate Orakul thinking
     setTimeout(() => {
-      // Get messages that haven't been shown yet
-      const availableMessages = approvalCheckMessages.filter(
-        msg => !popupHistory.includes(`check_${msg.id}`)
-      );
+      // Determine which message set to use based on candidate role
+      const messageSet = candidate?.role === "Yes" ? eligibleMessages : orakulMessages;
       
-      // If all messages have been shown, reset the history for check messages only
-      let messageToShow;
-      let newHistory;
-      
-      if (availableMessages.length === 0) {
-        // Reset check messages history but keep status messages
-        const checkMessagesOnly = popupHistory.filter(item => !item.startsWith('check_'));
-        messageToShow = approvalCheckMessages[Math.floor(Math.random() * approvalCheckMessages.length)];
-        newHistory = [...checkMessagesOnly, `check_${messageToShow.id}`];
+      if (messageSet.length === 0) {
+        // Fallback messages if database is empty
+        const fallbackMessages = [
+          {
+            id: 1,
+            icon: <Bot className="w-4 h-4" />,
+            message: "🔮 Orakul is consulting the stars... Please check back soon!"
+          }
+        ];
+        
+        setCurrentPopup({
+          icon: fallbackMessages[0].icon,
+          message: fallbackMessages[0].message,
+          title: "🔮 ORAKUL'S WISDOM"
+        });
       } else {
-        messageToShow = availableMessages[Math.floor(Math.random() * availableMessages.length)];
-        newHistory = [...popupHistory, `check_${messageToShow.id}`];
-      }
+        // Get messages that haven't been shown yet
+        const availableMessages = messageSet.filter(
+          msg => !popupHistory.includes(`check_${msg.id}`)
+        );
+        
+        let messageToShow;
+        let newHistory;
+        
+        if (availableMessages.length === 0) {
+          const checkMessagesOnly = popupHistory.filter(item => !item.startsWith('check_'));
+          messageToShow = messageSet[Math.floor(Math.random() * messageSet.length)];
+          newHistory = [...checkMessagesOnly, `check_${messageToShow.id}`];
+        } else {
+          messageToShow = availableMessages[Math.floor(Math.random() * availableMessages.length)];
+          newHistory = [...popupHistory, `check_${messageToShow.id}`];
+        }
 
-      setCurrentPopup({
-        icon: messageToShow.icon,
-        message: messageToShow.message,
-        title: "🔮 ORAKUL'S WISDOM"
-      });
+        // Replace placeholders with actual candidate values
+        let processedMessage = messageToShow.message;
+        if (candidate) {
+          processedMessage = processedMessage
+            .replace(/{votes}/g, candidate.votes || 0)
+            .replace(/{gifts}/g, candidate.gifts || 0)
+            .replace(/{giftWorth}/g, candidate.gift_worth || 0)
+            .replace(/{name}/g, candidate.name || "Candidate")
+            .replace(/{country}/g, candidate.country || "Nigeria");
+        }
+
+        // Get the icon component from the map or use Bot as fallback
+        const iconComponent = iconMap[messageToShow.icon] || <Bot className="w-4 h-4" />;
+
+        setCurrentPopup({
+          icon: iconComponent,
+          message: processedMessage,
+          title: "🔮 ORAKUL'S WISDOM"
+        });
+
+        // Update history
+        setPopupHistory(newHistory);
+        localStorage.setItem('candidatePopupHistory', JSON.stringify(newHistory));
+      }
+      
       setPopupType('check');
       setShowPopup(true);
       setShowAnimation(true);
       
-      setPopupHistory(newHistory);
-      localStorage.setItem('candidatePopupHistory', JSON.stringify(newHistory));
       localStorage.setItem('lastPopupTime', now.toString());
       setLastPopupTime(now);
       
@@ -384,7 +487,6 @@ export default function CandidateWindow({ profileId }) {
     if (!candidate) return;
     
     const shareUrl = `https://www.lovemateshow.com/candidate/${candidate.id}`;
-    const shareTitle = `Vote for ${candidate.name} on Lovemate Show! 🌟`;
     const shareText = `I'm a contestant on Lovemate Show! Support my journey to find love and win $10,000! Vote for me here:`;
     
     switch(platform) {
@@ -422,6 +524,71 @@ export default function CandidateWindow({ profileId }) {
     }
     
     setShowShareOptions(false);
+  };
+
+  const handleAddFavorite = async () => {
+    if (!foundCandidate || !profileId) return;
+
+    // Get current favorites
+    const { data: profileData } = await supabase
+      .from("profile")
+      .select("favorite")
+      .eq("id", profileId)
+      .single();
+
+    const currentFavorites = profileData?.favorite || [];
+    
+    if (currentFavorites.includes(foundCandidate.id)) {
+      setOrakulMessage({
+        icon: <AlertCircle className="w-3 h-3" />,
+        text: "🔮 This candidate is already in your favorites!"
+      });
+      setTimeout(() => setOrakulMessage(null), 3000);
+      setShowAddFavorite(false);
+      setFoundCandidate(null);
+      setCandidateCode("");
+      return;
+    }
+
+    // Add new favorite
+    const newFavorites = [...currentFavorites, foundCandidate.id];
+    
+    const { error } = await supabase
+      .from("profile")
+      .update({ favorite: newFavorites })
+      .eq("id", profileId);
+
+    if (!error) {
+      setFavorites([...favorites, foundCandidate]);
+      setOrakulMessage({
+        icon: <CheckCircle className="w-3 h-3" />,
+        text: `🔮 ${foundCandidate.name} added to your favorites!`
+      });
+      setTimeout(() => setOrakulMessage(null), 3000);
+      setShowAddFavorite(false);
+      setFoundCandidate(null);
+      setCandidateCode("");
+    }
+  };
+
+  const handleSearchCandidate = async () => {
+    if (!candidateCode) return;
+
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("id, name, image_url, votes, gifts, country")
+      .eq("code", candidateCode)
+      .maybeSingle();
+
+    if (!error && data) {
+      setFoundCandidate(data);
+    } else {
+      setOrakulMessage({
+        icon: <AlertCircle className="w-3 h-3" />,
+        text: "🔮 No candidate found with that code!"
+      });
+      setTimeout(() => setOrakulMessage(null), 3000);
+    }
   };
 
   const getStatusIndicator = () => {
@@ -486,38 +653,216 @@ export default function CandidateWindow({ profileId }) {
 
   if (!candidate) {
     return (
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-5 border border-purple-500/30 overflow-hidden w-full"
-      >
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
-        
-        <div className="relative z-10 text-center">
-          <motion.div
-            animate={{ y: [0, -5, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="flex justify-center mb-2"
-          >
-            <Bot className="w-12 h-12 text-purple-400" />
-          </motion.div>
+      <>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-5 border border-purple-500/30 overflow-hidden w-full"
+        >
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
           
-          <h3 className="text-base font-bold text-white mb-1 font-mono">
-            🔮 NO CANDIDATE DETECTED
-          </h3>
+          <div className="relative z-10">
+            <motion.div
+              animate={{ y: [0, -5, 0] }}
+              transition={{ duration: 2, repeat: Infinity }}
+              className="flex justify-center mb-3"
+            >
+              <Bot className="w-14 h-14 text-purple-400" />
+            </motion.div>
+            
+            <h3 className="text-lg font-bold text-white mb-3 text-center font-mono">
+              🔮 ARE YOU HERE TO...
+            </h3>
+            
+            <div className="space-y-2">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowCodeInput(true)}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg py-2 px-3 text-xs font-semibold flex items-center justify-center gap-2"
+              >
+                <Heart className="w-3 h-3" />
+                <span>CHEER A FAVORITE CANDIDATE</span>
+              </motion.button>
+              
+              <motion.a
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                href="/register"
+                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg py-2 px-3 text-xs font-semibold flex items-center justify-center gap-2"
+              >
+                <UserPlus className="w-3 h-3" />
+                <span>PARTICIPATE AS CANDIDATE</span>
+              </motion.a>
+            </div>
+
+            {/* Code Input Modal */}
+            <AnimatePresence>
+              {showCodeInput && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="mt-4 bg-purple-900/50 rounded-lg p-3 border border-purple-500/30"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-purple-300 text-[10px] font-mono">ENTER CANDIDATE CODE</p>
+                    <button
+                      onClick={() => {
+                        setShowCodeInput(false);
+                        setFoundCandidate(null);
+                        setCandidateCode("");
+                      }}
+                      className="p-1 hover:bg-purple-800 rounded"
+                    >
+                      <X className="w-3 h-3 text-purple-300" />
+                    </button>
+                  </div>
+                  
+                  <div className="flex gap-1 mb-2">
+                    <input
+                      type="text"
+                      value={candidateCode}
+                      onChange={(e) => setCandidateCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. A1B2"
+                      maxLength={4}
+                      className="flex-1 bg-gray-900 text-white text-xs rounded-lg px-2 py-1.5 border border-purple-500/30 focus:outline-none focus:border-purple-400"
+                    />
+                    <button
+                      onClick={handleSearchCandidate}
+                      className="bg-purple-600 text-white px-2 py-1.5 rounded-lg text-xs font-semibold"
+                    >
+                      <Search className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  {/* Found Candidate Preview */}
+                  <AnimatePresence>
+                    {foundCandidate && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
+                            {foundCandidate.image_url ? (
+                              <img 
+                                src={foundCandidate.image_url.startsWith("http") 
+                                  ? foundCandidate.image_url 
+                                  : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${foundCandidate.image_url}`
+                                } 
+                                alt={foundCandidate.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Bot className="w-4 h-4 text-purple-400 m-auto" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-white text-xs font-bold">{foundCandidate.name}</p>
+                            <p className="text-purple-300 text-[8px]">{foundCandidate.country}</p>
+                          </div>
+                          <button
+                            onClick={handleAddFavorite}
+                            className="bg-green-600 text-white px-2 py-1 rounded text-[8px] font-semibold flex items-center gap-1"
+                          >
+                            <ThumbsUp className="w-2 h-2" />
+                            ADD
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+
+        {/* Favorites Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-3"
+        >
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:15px_15px]"></div>
           
-          <p className="text-purple-300 text-xs mb-3">
-            This portal is for contestants only.
-          </p>
-        </div>
-      </motion.div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-1.5 mb-3">
+              <Award className="w-4 h-4 text-yellow-400" />
+              <h3 className="text-white text-xs font-bold">YOUR FAVORITE CANDIDATES</h3>
+            </div>
+
+            {loadingFavorites ? (
+              <div className="flex justify-center py-4">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                >
+                  <RefreshCw className="w-4 h-4 text-purple-400" />
+                </motion.div>
+              </div>
+            ) : favorites.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {favorites.map((fav) => (
+                  <motion.a
+                    key={fav.id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    href={`/candidate/${fav.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 hover:border-purple-400 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
+                        {fav.image_url ? (
+                          <img 
+                            src={fav.image_url.startsWith("http") 
+                              ? fav.image_url 
+                              : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
+                            } 
+                            alt={fav.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Bot className="w-4 h-4 text-purple-400 m-auto" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
+                          <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.a>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-3">
+                <p className="text-purple-300 text-[10px] mb-2">No favorite candidates yet</p>
+                <button
+                  onClick={() => setShowCodeInput(true)}
+                  className="text-[8px] bg-purple-600 text-white px-2 py-1 rounded-full font-semibold"
+                >
+                  + ADD FAVORITE
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </>
     );
   }
 
   const status = getStatusIndicator();
   const stats = getStats();
   
-  // Construct image URL without fallback
   const imageUrl = candidate.image_url?.startsWith("http")
     ? candidate.image_url
     : candidate.image_url
@@ -575,7 +920,7 @@ export default function CandidateWindow({ profileId }) {
             </div>
           </div>
           
-          {/* Status Check Button */}
+          {/* Status Check Button - Updated for selected_24 */}
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -583,8 +928,14 @@ export default function CandidateWindow({ profileId }) {
             disabled={isThinking}
             className="relative group"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-75 group-hover:opacity-100 blur-[2px] transition duration-300"></div>
-            <div className="relative px-2 py-1 bg-gray-900 text-white rounded-full text-[8px] md:text-[10px] font-semibold flex items-center gap-1">
+            <div className={`absolute inset-0 bg-gradient-to-r ${
+              candidate?.selected_24 
+                ? 'from-green-500 to-emerald-600' 
+                : 'from-purple-600 to-pink-600'
+            } rounded-full opacity-75 group-hover:opacity-100 blur-[2px] transition duration-300`}></div>
+            <div className={`relative px-2 py-1 ${
+              candidate?.selected_24 ? 'bg-green-600' : 'bg-gray-900'
+            } text-white rounded-full text-[8px] md:text-[10px] font-semibold flex items-center gap-1`}>
               {isThinking ? (
                 <>
                   <RefreshCw className="w-2.5 h-2.5 animate-spin" />
@@ -593,7 +944,7 @@ export default function CandidateWindow({ profileId }) {
               ) : (
                 <>
                   <Sparkles className="w-2.5 h-2.5" />
-                  <span>CHECK STATUS</span>
+                  <span>{candidate?.selected_24 ? "CONGRAT!" : "CHECK STATUS"}</span>
                 </>
               )}
             </div>
