@@ -720,25 +720,29 @@ export default function CandidateWindow({ profileId }) {
               🔮 ARE YOU HERE TO...
             </h3>
             
-            <div className="space-y-2">
+            <div className="space-y-3 sm:space-y-2">
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowCodeInput(true)}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg py-2 px-3 text-xs font-semibold flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg py-2 px-3 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1.5"
               >
-                <Heart className="w-3 h-3" />
-                <span>CHEER A FAVORITE CANDIDATE</span>
+                <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                <span className="truncate">CHEER</span>
+                <span className="hidden xs:inline sm:hidden">FAV</span>
+                <span className="hidden sm:inline">A FAVORITE CANDIDATE</span>
               </motion.button>
               
               <motion.a
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 href="/register"
-                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg py-2 px-3 text-xs font-semibold flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg py-2 px-3 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1.5"
               >
-                <UserPlus className="w-3 h-3" />
-                <span>PARTICIPATE AS CANDIDATE</span>
+                <UserPlus className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                <span className="truncate">JOIN</span>
+                <span className="hidden xs:inline sm:hidden">AS</span>
+                <span className="hidden sm:inline">PARTICIPATE AS CANDIDATE</span>
               </motion.a>
             </div>
 
@@ -827,93 +831,95 @@ export default function CandidateWindow({ profileId }) {
           </div>
         </motion.div>
 
-        {/* Favorites Section */}
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-3"
-        >
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:15px_15px]"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-1.5 mb-3">
-              <Award className="w-4 h-4 text-yellow-400" />
-              <h3 className="text-white text-xs font-bold">YOUR FAVORITE CANDIDATES</h3>
-            </div>
-
-            {loadingFavorites ? (
-              <div className="flex justify-center py-4">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                >
-                  <RefreshCw className="w-4 h-4 text-purple-400" />
-                </motion.div>
+        {/* Favorites Section - Only render if profile is NOT a candidate */}
+        {!candidate && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-3"
+          >
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:15px_15px]"></div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-1.5 mb-3">
+                <Award className="w-4 h-4 text-yellow-400" />
+                <h3 className="text-white text-xs font-bold">YOUR FAVORITE CANDIDATES</h3>
               </div>
-            ) : favorites.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
-                {favorites.map((fav) => (
+
+              {loadingFavorites ? (
+                <div className="flex justify-center py-4">
                   <motion.div
-                    key={fav.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 relative group"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   >
-                    <button
-                      onClick={() => handleRemoveFavorite(fav.id, fav.name)}
-                      className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    <RefreshCw className="w-4 h-4 text-purple-400" />
+                  </motion.div>
+                </div>
+              ) : favorites.length > 0 ? (
+                <div className="grid grid-cols-2 gap-2">
+                  {favorites.map((fav) => (
+                    <motion.div
+                      key={fav.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 relative group"
                     >
-                      <Trash2 className="w-2.5 h-2.5 text-white" />
-                    </button>
-                    <a
-                      href={`/candidate/${fav.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
-                          {fav.image_url ? (
-                            <img 
-                              src={fav.image_url.startsWith("http") 
-                                ? fav.image_url 
-                                : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
-                              } 
-                              alt={fav.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <Bot className="w-4 h-4 text-purple-400 m-auto" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
-                          <p className="text-purple-300 text-[7px] truncate">{fav.country}</p>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
-                            <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                      <button
+                        onClick={() => handleRemoveFavorite(fav.id, fav.name)}
+                        className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      >
+                        <Trash2 className="w-2.5 h-2.5 text-white" />
+                      </button>
+                      <a
+                        href={`/candidate/${fav.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
+                            {fav.image_url ? (
+                              <img 
+                                src={fav.image_url.startsWith("http") 
+                                  ? fav.image_url 
+                                  : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
+                                } 
+                                alt={fav.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <Bot className="w-4 h-4 text-purple-400 m-auto" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
+                            <p className="text-purple-300 text-[7px] truncate">{fav.country}</p>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
+                              <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </a>
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-3">
-                <p className="text-purple-300 text-[10px] mb-2">No favorite candidates yet</p>
-                <button
-                  onClick={() => setShowCodeInput(true)}
-                  className="text-[8px] bg-purple-600 text-white px-2 py-1 rounded-full font-semibold"
-                >
-                  + ADD FAVORITE
-                </button>
-              </div>
-            )}
-          </div>
-        </motion.div>
+                      </a>
+                    </motion.div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-3">
+                  <p className="text-purple-300 text-[10px] mb-2">No favorite candidates yet</p>
+                  <button
+                    onClick={() => setShowCodeInput(true)}
+                    className="text-[8px] bg-purple-600 text-white px-2 py-1 rounded-full font-semibold"
+                  >
+                    + ADD FAVORITE
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
       </>
     );
   }
@@ -1249,93 +1255,95 @@ export default function CandidateWindow({ profileId }) {
         </div>
       </motion.div>
 
-      {/* Favorites Section for Candidates with Profile */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-3"
-      >
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:15px_15px]"></div>
-        
-        <div className="relative z-10">
-          <div className="flex items-center gap-1.5 mb-3">
-            <Award className="w-4 h-4 text-yellow-400" />
-            <h3 className="text-white text-xs font-bold">YOUR FAVORITE CANDIDATES</h3>
-          </div>
-
-          {loadingFavorites ? (
-            <div className="flex justify-center py-4">
-              <motion.div
-                animate={{ rotate: 360 }}
-                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              >
-                <RefreshCw className="w-4 h-4 text-purple-400" />
-              </motion.div>
+      {/* Favorites Section for Candidates with Profile - Only render if NOT a candidate */}
+      {!candidate && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-3"
+        >
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:15px_15px]"></div>
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-1.5 mb-3">
+              <Award className="w-4 h-4 text-yellow-400" />
+              <h3 className="text-white text-xs font-bold">YOUR FAVORITE CANDIDATES</h3>
             </div>
-          ) : favorites.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2">
-              {favorites.map((fav) => (
+
+            {loadingFavorites ? (
+              <div className="flex justify-center py-4">
                 <motion.div
-                  key={fav.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 relative group"
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 >
-                  <button
-                    onClick={() => handleRemoveFavorite(fav.id, fav.name)}
-                    className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  <RefreshCw className="w-4 h-4 text-purple-400" />
+                </motion.div>
+              </div>
+            ) : favorites.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {favorites.map((fav) => (
+                  <motion.div
+                    key={fav.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 relative group"
                   >
-                    <Trash2 className="w-2.5 h-2.5 text-white" />
-                  </button>
-                  <a
-                    href={`/candidate/${fav.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
-                        {fav.image_url ? (
-                          <img 
-                            src={fav.image_url.startsWith("http") 
-                              ? fav.image_url 
-                              : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
-                            } 
-                            alt={fav.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Bot className="w-4 h-4 text-purple-400 m-auto" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
-                        <p className="text-purple-300 text-[7px] truncate">{fav.country}</p>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
-                          <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                    <button
+                      onClick={() => handleRemoveFavorite(fav.id, fav.name)}
+                      className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    >
+                      <Trash2 className="w-2.5 h-2.5 text-white" />
+                    </button>
+                    <a
+                      href={`/candidate/${fav.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
+                          {fav.image_url ? (
+                            <img 
+                              src={fav.image_url.startsWith("http") 
+                                ? fav.image_url 
+                                : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
+                              } 
+                              alt={fav.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Bot className="w-4 h-4 text-purple-400 m-auto" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
+                          <p className="text-purple-300 text-[7px] truncate">{fav.country}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
+                            <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </a>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-3">
-              <p className="text-purple-300 text-[10px] mb-2">No favorite candidates yet</p>
-              <button
-                onClick={() => setShowCodeInput(true)}
-                className="text-[8px] bg-purple-600 text-white px-2 py-1 rounded-full font-semibold"
-              >
-                + ADD FAVORITE
-              </button>
-            </div>
-          )}
-        </div>
-      </motion.div>
+                    </a>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-3">
+                <p className="text-purple-300 text-[10px] mb-2">No favorite candidates yet</p>
+                <button
+                  onClick={() => setShowCodeInput(true)}
+                  className="text-[8px] bg-purple-600 text-white px-2 py-1 rounded-full font-semibold"
+                >
+                  + ADD FAVORITE
+                </button>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Full Screen Celebration Popup */}
       <AnimatePresence>
