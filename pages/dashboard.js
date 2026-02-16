@@ -320,7 +320,7 @@ export default function Dashboard() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-rose-50 py-8 px-4 md:py-12">
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-rose-50 py-6 md:py-8 lg:py-12 px-4">
         <div className="max-w-7xl mx-auto">
           {/* Profile Header */}
           <ProfileHeader 
@@ -330,9 +330,9 @@ export default function Dashboard() {
           />
 
           {/* Desktop Layout - 2 column grid with left column stacked and right column for candidate */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mt-4 md:mt-8">
             {/* Left Column - Wallet & Rank stacked (takes 5 columns) */}
-            <div className="lg:col-span-5 space-y-6">
+            <div className="lg:col-span-5 space-y-4 md:space-y-6">
               <WalletCard 
                 balance={walletBalance} 
                 onFundClick={() => setShowFundModal(true)} 
@@ -349,13 +349,13 @@ export default function Dashboard() {
           </div>
 
           {/* Bottom Grid - 2 columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mt-4 md:mt-6">
             <TransactionsList transactions={transactions} />
             <NotificationsPanel />
           </div>
 
           {/* Settings Panel - Full width */}
-          <div className="mt-6">
+          <div className="mt-4 md:mt-6">
             <SettingsPanel
               fullName={fullName}
               setFullName={setFullName}
