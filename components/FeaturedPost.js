@@ -1,7 +1,7 @@
 // components/FeaturedPost.js
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play } from "lucide-react";
+import { Volume2, VolumeX, Maximize2 } from "lucide-react";
 import Image from "next/image";
 import { supabase } from "@/utils/supabaseClient";
 
@@ -18,6 +18,18 @@ export default function FeaturedPost() {
   const [scrollInterval, setScrollInterval] = useState(null);
   const [isUserInteracting, setIsUserInteracting] = useState(false);
   const interactionTimeoutRef = useRef(null);
+  
+  // Video controls state
+  const [isMuted, setIsMuted] = useState(true);
+  const [volume, setVolume] = useState(0.5);
+  const [showVolumeControl, setShowVolumeControl] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [currentVideoTime, setCurrentVideoTime] = useState(0);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
+  const videoRef = useRef(null);
+  const iframeRef = useRef(null);
+  const volumeTimeoutRef = useRef(null);
+  const videoProgressIntervalRef = useRef(null);
 
   // Fetch carousel images and videos from Supabase
   useEffect(() => {
@@ -81,24 +93,107 @@ export default function FeaturedPost() {
     if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
       // Extract YouTube ID and create embed URL with autoplay
       const videoId = videoUrl.split('/').pop()?.split('?')[0] || '';
-      return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&loop=1&playlist=${videoId}`;
+      return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${isMuted ? 1 : 0}&loop=0&playlist=${videoId}`;
     } else {
-      // For direct video files, we'll use a video player with a different approach
-      // Since iframe doesn't work well with direct MP4s, we'll return the URL and handle separately
+      // For direct video files
       return videoUrl;
     }
   };
 
-  // Rotate videos periodically (every 30 seconds)
+  // Handle volume change for HTML5 video
+  const handleVolumeChange = (e) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume;
+    }
+    // Show volume control temporarily
+    setShowVolumeControl(true);
+    if (volumeTimeoutRef.current) {
+      clearTimeout(volumeTimeoutRef.current);
+    }
+    volumeTimeoutRef.current = setTimeout(() => {
+      setShowVolumeControl(false);
+    }, 2000);
+  };
+
+  // Toggle mute
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    
+    // Update iframe src for YouTube videos
+    if (iframeRef.current && videos[currentVideoIndex]?.includes('youtube')) {
+      const videoId = videos[currentVideoIndex].split('/').pop()?.split('?')[0] || '';
+      iframeRef.current.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=${!isMuted ? 1 : 0}&loop=0&playlist=${videoId}`;
+    }
+    
+    // Update HTML5 video
+    if (videoRef.current) {
+      videoRef.current.muted = !isMuted;
+    }
+    
+    // Show volume control
+    setShowVolumeControl(true);
+    if (volumeTimeoutRef.current) {
+      clearTimeout(volumeTimeoutRef.current);
+    }
+    volumeTimeoutRef.current = setTimeout(() => {
+      setShowVolumeControl(false);
+    }, 2000);
+  };
+
+  // Track video progress and detect when video ends
   useEffect(() => {
-    if (videos.length <= 1) return;
+    if (videos.length <= 1 || !videoRef.current) return;
 
-    const videoInterval = setInterval(() => {
+    const video = videoRef.current;
+
+    const handleVideoEnded = () => {
+      // Video finished, move to next video
       setCurrentVideoIndex((prev) => (prev + 1) % videos.length);
-    }, 30000);
+    };
 
-    return () => clearInterval(videoInterval);
-  }, [videos.length]);
+    const handleLoadedMetadata = () => {
+      setVideoDuration(video.duration);
+    };
+
+    const handleTimeUpdate = () => {
+      setCurrentVideoTime(video.currentTime);
+    };
+
+    video.addEventListener('ended', handleVideoEnded);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('timeupdate', handleTimeUpdate);
+
+    return () => {
+      video.removeEventListener('ended', handleVideoEnded);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [videos.length, currentVideoIndex]);
+
+  // Handle YouTube video ending via iframe API (more complex)
+  // For YouTube, we'll use a timer approach as a fallback
+  useEffect(() => {
+    if (videos.length <= 1 || !videos[currentVideoIndex]?.includes('youtube')) return;
+
+    // Clear any existing interval
+    if (videoProgressIntervalRef.current) {
+      clearInterval(videoProgressIntervalRef.current);
+    }
+
+    // For YouTube videos, we can't easily detect when they end without the API
+    // So we'll use a reasonable timeout (e.g., 2 minutes) as fallback
+    // In a production app, you'd want to use the YouTube IFrame API
+    const timeout = setTimeout(() => {
+      setCurrentVideoIndex((prev) => (prev + 1) % videos.length);
+    }, 120000); // 2 minutes timeout
+
+    return () => clearTimeout(timeout);
+  }, [currentVideoIndex, videos]);
+
+  // Rotate videos based on completion (not time-based)
+  // We've removed the interval that rotated every 30 seconds
 
   // Detect mobile screen size
   useEffect(() => {
@@ -196,6 +291,12 @@ export default function FeaturedPost() {
       if (interactionTimeoutRef.current) {
         clearTimeout(interactionTimeoutRef.current);
       }
+      if (volumeTimeoutRef.current) {
+        clearTimeout(volumeTimeoutRef.current);
+      }
+      if (videoProgressIntervalRef.current) {
+        clearInterval(videoProgressIntervalRef.current);
+      }
     };
   }, []);
 
@@ -216,6 +317,9 @@ export default function FeaturedPost() {
     const infiniteImages = [...displayImages, ...displayImages, ...displayImages];
     const currentVideo = getCurrentVideoUrl();
     const isMp4Video = currentVideo.includes('.mp4') || currentVideo.includes('.mov') || currentVideo.includes('.webm');
+
+    // Calculate progress percentage for MP4 videos
+    const progressPercentage = videoDuration > 0 ? (currentVideoTime / videoDuration) * 100 : 0;
 
     return (
       <section className="w-full bg-rose-50 py-8 overflow-hidden">
@@ -251,6 +355,7 @@ export default function FeaturedPost() {
                     src={src}
                     alt={`Featured ${(idx % displayImages.length) + 1}`}
                     fill
+                    unoptimized
                     className="object-cover hover:scale-105 transition-transform duration-700"
                     priority={idx < displayImages.length * 2}
                   />
@@ -267,7 +372,7 @@ export default function FeaturedPost() {
             </div>
           </div>
 
-          {/* Right Side - Video Player (50%) */}
+          {/* Right Side - Video Player (50%) with small controls */}
           <div className="w-1/2 h-full bg-black/5 rounded-2xl overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-l from-rose-500/10 via-transparent to-transparent" />
             
@@ -275,15 +380,18 @@ export default function FeaturedPost() {
             <div className="relative w-full h-full">
               {isMp4Video ? (
                 <video
+                  ref={videoRef}
                   src={currentVideo}
                   autoPlay
-                  muted
-                  loop
+                  muted={isMuted}
+                  loop={false} // Don't loop, let it end naturally
                   playsInline
+                  volume={volume}
                   className="w-full h-full object-cover"
                 />
               ) : (
                 <iframe
+                  ref={iframeRef}
                   src={currentVideo}
                   title="Lovemate Show Video"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -292,16 +400,70 @@ export default function FeaturedPost() {
                 />
               )}
               
-              {/* Overlay Play Button (appears on hover) */}
-              <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                <div className="w-16 h-16 bg-rose-600 rounded-full flex items-center justify-center cursor-pointer hover:scale-110 transition-transform duration-300 shadow-xl">
-                  <Play className="w-6 h-6 text-white ml-1" />
+              {/* Video Progress Bar (only for MP4) */}
+              {isMp4Video && videoDuration > 0 && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/30">
+                  <div 
+                    className="h-full bg-rose-500 transition-all duration-100"
+                    style={{ width: `${progressPercentage}%` }}
+                  />
                 </div>
+              )}
+              
+              {/* Video Controls - Small and positioned at bottom right */}
+              <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">
+                {/* Volume Control */}
+                {showVolumeControl && !isMp4Video && (
+                  <div className="bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={volume}
+                      onChange={handleVolumeChange}
+                      className="w-16 h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                    />
+                  </div>
+                )}
+                
+                {/* Mute/Unmute Button */}
+                <button
+                  onClick={toggleMute}
+                  className="bg-black/60 backdrop-blur-sm rounded-full p-1.5 hover:bg-black/80 transition-colors"
+                  title={isMuted ? "Unmute" : "Mute"}
+                >
+                  {isMuted ? (
+                    <VolumeX className="w-4 h-4 text-white" />
+                  ) : (
+                    <Volume2 className="w-4 h-4 text-white" />
+                  )}
+                </button>
+
+                {/* Fullscreen Button */}
+                <button
+                  onClick={() => {
+                    if (videoRef.current) {
+                      if (videoRef.current.requestFullscreen) {
+                        videoRef.current.requestFullscreen();
+                      }
+                    } else if (iframeRef.current) {
+                      // For iframe, we can try to request fullscreen on the iframe
+                      if (iframeRef.current.requestFullscreen) {
+                        iframeRef.current.requestFullscreen();
+                      }
+                    }
+                  }}
+                  className="bg-black/60 backdrop-blur-sm rounded-full p-1.5 hover:bg-black/80 transition-colors"
+                  title="Fullscreen"
+                >
+                  <Maximize2 className="w-4 h-4 text-white" />
+                </button>
               </div>
 
               {/* Video indicator (shows when multiple videos) */}
               {videos.length > 1 && (
-                <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-md text-white text-xs px-2 py-1 rounded-full">
+                <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-md text-white text-xs px-2 py-1 rounded-full">
                   {currentVideoIndex + 1} / {videos.length}
                 </div>
               )}
@@ -319,6 +481,25 @@ export default function FeaturedPost() {
           
           .infinite-scroll::-webkit-scrollbar {
             display: none;
+          }
+
+          /* Custom range input styling */
+          input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+          }
+          
+          input[type=range]::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
           }
         `}</style>
       </section>
@@ -414,6 +595,7 @@ export default function FeaturedPost() {
                       src={displayImages[index]}
                       alt={`Featured ${index + 1}`}
                       fill
+                      unoptimized
                       className="object-cover pointer-events-none"
                       priority={isActive}
                       draggable={false}

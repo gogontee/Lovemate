@@ -1,4 +1,3 @@
-// components/AdminHeader.js
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabaseClient";
 import { Bell, LogOut } from "lucide-react";
@@ -18,13 +17,15 @@ export default function AdminHeader() {
       setUser(currentUser);
 
       if (currentUser?.id) {
+        // FIXED: Changed from "profiles" to "profile" and from "photo" to "photo_url"
         const { data: profile } = await supabase
-          .from("profiles")
-          .select("photo")
+          .from("profile")  // ✅ Changed from "profiles" to "profile"
+          .select("photo_url")  // ✅ Changed from "photo" to "photo_url"
           .eq("id", currentUser.id)
           .single();
 
-        if (profile?.photo) setAvatarUrl(profile.photo);
+        // FIXED: Check for photo_url instead of photo
+        if (profile?.photo_url) setAvatarUrl(profile.photo_url);  // ✅ Changed from profile.photo to profile.photo_url
       }
     };
     getUser();
@@ -87,4 +88,3 @@ export default function AdminHeader() {
     </header>
   );
 }
-

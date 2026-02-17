@@ -18,9 +18,10 @@ function AdminCandidates() {
     const fetchCandidates = async () => {
       setLoading(true);
 
+      // FIXED: Changed from "profiles" to "profile" and from "photo" to "photo_url"
       let query = supabase
-        .from("profiles")
-        .select("id, full_name, email, photo, role, gender, status, stage, created_at, votes")
+        .from("profile")  // ✅ Changed from "profiles" to "profile"
+        .select("id, full_name, email, photo_url, role, gender, status, stage, created_at, votes")  // ✅ Changed from "photo" to "photo_url"
         .eq("role", "candidate");
 
       if (filters.gender) query = query.eq("gender", filters.gender);
@@ -40,7 +41,7 @@ function AdminCandidates() {
 
   const demoteCandidate = async (id) => {
     const { error } = await supabase
-      .from("profiles")
+      .from("profile")  // ✅ Changed from "profiles" to "profile"
       .update({ role: "fan" })
       .eq("id", id);
 
@@ -51,7 +52,7 @@ function AdminCandidates() {
 
   const promoteCandidate = async (id, nextStage) => {
     const { error } = await supabase
-      .from("profiles")
+      .from("profile")  // ✅ Changed from "profiles" to "profile"
       .update({ stage: nextStage })
       .eq("id", id);
 
@@ -80,37 +81,37 @@ function AdminCandidates() {
 
           {/* Filters */}
           <div className="flex gap-4 mb-6">
-  <select
-    name="gender"
-    onChange={handleFilterChange}
-    className="border px-3 py-2 rounded text-sm bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400"
-  >
-    <option value="">All Genders</option>
-    <option value="male">Male</option>
-    <option value="female">Female</option>
-  </select>
+            <select
+              name="gender"
+              onChange={handleFilterChange}
+              className="border px-3 py-2 rounded text-sm bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400"
+            >
+              <option value="">All Genders</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
 
-  <select
-    name="status"
-    onChange={handleFilterChange}
-    className="border px-3 py-2 rounded text-sm bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400"
-  >
-    <option value="">All Status</option>
-    <option value="active">Active</option>
-    <option value="inactive">Inactive</option>
-  </select>
+            <select
+              name="status"
+              onChange={handleFilterChange}
+              className="border px-3 py-2 rounded text-sm bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400"
+            >
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
 
-  <select
-    name="stage"
-    onChange={handleFilterChange}
-    className="border px-3 py-2 rounded text-sm bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400"
-  >
-    <option value="">All Stages</option>
-    <option value="Top 100">Top 100</option>
-    <option value="Top 20">Top 20</option>
-    <option value="Finalist">Finalist</option>
-  </select>
-</div>
+            <select
+              name="stage"
+              onChange={handleFilterChange}
+              className="border px-3 py-2 rounded text-sm bg-white text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-rose-400"
+            >
+              <option value="">All Stages</option>
+              <option value="Top 100">Top 100</option>
+              <option value="Top 20">Top 20</option>
+              <option value="Finalist">Finalist</option>
+            </select>
+          </div>
 
           {/* Table */}
           {loading ? (
@@ -134,7 +135,7 @@ function AdminCandidates() {
                     <tr key={c.id} className="border-b hover:bg-rose-50 text-sm">
                       <td className="px-4 py-3">
                         <img
-                          src={c.photo || "/avatar.png"}
+                          src={c.photo_url || "/avatar.png"}  // ✅ Changed from c.photo to c.photo_url
                           alt="Candidate"
                           className="w-10 h-10 object-cover rounded-full"
                         />

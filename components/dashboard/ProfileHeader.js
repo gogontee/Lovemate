@@ -29,6 +29,7 @@ export default function ProfileHeader({ profile, avatarUrl, onUpload }) {
               src={avatarUrl || "/default-avatar.png"}
               alt="Profile"
               fill
+              sizes="(max-width: 640px) 64px, (max-width: 768px) 80px, (max-width: 1024px) 96px, 112px"  // ✅ ADDED sizes prop
               className="rounded-xl md:rounded-2xl border-2 md:border-4 border-white/30 object-cover shadow-lg md:shadow-xl"
             />
             

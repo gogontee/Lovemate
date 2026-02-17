@@ -3,17 +3,19 @@ import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 import { motion, AnimatePresence } from "framer-motion";
 
+// This would typically come from your database via a hook
+// For now, keeping it as constant but ideally fetch from vote_packages table
 const VOTE_PACKAGES = [
-  { points: 1, price: 1000, label: "1", popular: false, icon: "🎯" },
-  { points: 5, price: 5000, label: "5", popular: false, icon: "🎯" },
-  { points: 20, price: 20000, label: "20", popular: false, icon: "🎯" },
-  { points: 50, price: 50000, label: "50", popular: false, icon: "🎯" },
-  { points: 100, price: 100000, label: "100", popular: false, icon: "🎯" },
-  { points: 300, price: 300000, label: "300", popular: false, icon: "🎯" },
-  { points: 500, price: 500000, label: "500", popular: false, icon: "⚡" },
-  { points: 1000, price: 950000, label: "THOR", popular: true, icon: "⚡", discount: "5%" },
-  { points: 2000, price: 1800000, label: "WAR", popular: true, icon: "🔥", discount: "10%" },
-  { points: 5000, price: 4500000, label: "GOZZ", popular: true, icon: "🚀", discount: "10%" },
+  { points: 1, price: 1000, label: "1", popular: false, icon: "🎯", packageName: "Basic 1" },
+  { points: 5, price: 5000, label: "5", popular: false, icon: "🎯", packageName: "Basic 5" },
+  { points: 20, price: 20000, label: "20", popular: false, icon: "🎯", packageName: "Basic 20" },
+  { points: 50, price: 50000, label: "50", popular: false, icon: "🎯", packageName: "Basic 50" },
+  { points: 100, price: 100000, label: "100", popular: false, icon: "🎯", packageName: "Basic 100" },
+  { points: 300, price: 300000, label: "300", popular: false, icon: "🎯", packageName: "Basic 300" },
+  { points: 500, price: 475000, label: "500", popular: false, icon: "⚡", packageName: "THOR 500", discount: 5, originalPrice: 500000 },
+  { points: 1000, price: 950000, label: "THOR", popular: true, icon: "⚡", packageName: "THOR 1000", discount: 5, originalPrice: 1000000 },
+  { points: 2000, price: 1800000, label: "WAR", popular: true, icon: "🔥", packageName: "WAR", discount: 10, originalPrice: 2000000 },
+  { points: 5000, price: 4500000, label: "GOZZ", popular: true, icon: "🚀", packageName: "GOZZ", discount: 10, originalPrice: 5000000 },
 ];
 
 // Helper function to format price nicely
@@ -24,6 +26,11 @@ const formatPrice = (price) => {
     return `₦${(price / 1000).toFixed(0)}k`;
   }
   return `₦${price}`;
+};
+
+// Generate a simple reference ID
+const generateReference = () => {
+  return `VOTE_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`.toUpperCase();
 };
 
 export default function VoteSection({ candidate }) {
@@ -45,26 +52,75 @@ export default function VoteSection({ candidate }) {
 
     setIsProcessing(true);
 
-    const { error } = await supabase.rpc("cast_vote", {
-      p_user_id: user.id,
-      p_candidate_id: candidate.id,
-      p_vote_count: selectedPackage.points,
-    });
+    try {
+      // 1. First check wallet balance
+      const { data: wallet, error: walletError } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("user_id", user.id)
+        .single();
 
-    if (error) {
-      console.error("cast_vote error:", error);
-      if (error.message.includes("insufficient_balance")) {
-        alert("Insufficient balance. Please top up your wallet.");
-      } else {
-        alert("Vote failed. Try again.");
+      if (walletError) {
+        throw new Error("Could not fetch wallet balance");
       }
-      setIsProcessing(false);
-      return;
-    }
 
-    setIsProcessing(false);
-    setShowConfirmModal(false);
-    setShowSuccessModal(true);
+      if (!wallet || wallet.balance < selectedPackage.price) {
+        alert("Insufficient balance. Please top up your wallet.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // 2. Use your existing RPC function to cast vote (this handles wallet deduction and vote counting)
+      const { error: voteError } = await supabase.rpc("cast_vote", {
+        p_user_id: user.id,
+        p_candidate_id: candidate.id,
+        p_vote_count: selectedPackage.points,
+      });
+
+      if (voteError) {
+        throw new Error(voteError.message);
+      }
+
+      // 3. Record vote transaction
+      const pricePerVote = Math.round(selectedPackage.price / selectedPackage.points);
+      const reference = generateReference();
+      
+      const { error: transactionError } = await supabase
+        .from("vote_transactions")
+        .insert({
+          user_id: user.id,
+          candidate_id: candidate.id,
+          package_name: selectedPackage.packageName,
+          votes: selectedPackage.points,
+          price_per_vote: pricePerVote,
+          total_amount: selectedPackage.price,
+          discount_percentage: selectedPackage.discount || 0,
+          original_amount: selectedPackage.originalPrice || selectedPackage.price,
+          payment_method: "wallet",
+          status: "completed",
+          reference: reference,
+          metadata: {
+            package_label: selectedPackage.label,
+            candidate_name: candidate.name,
+            timestamp: new Date().toISOString()
+          }
+        });
+
+      if (transactionError) {
+        // Log but don't fail - the vote already succeeded
+        console.error("Failed to record vote transaction:", transactionError);
+      }
+
+      // Success!
+      setIsProcessing(false);
+      setShowConfirmModal(false);
+      setShowSuccessModal(true);
+
+    } catch (error) {
+      console.error("Vote error:", error);
+      alert(error.message || "Vote failed. Try again.");
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -96,7 +152,7 @@ export default function VoteSection({ candidate }) {
               >
                 {pkg.popular && (
                   <span className="absolute -top-1.5 -right-1.5 md:-top-2 md:-right-2 bg-gradient-to-r from-red-500 to-rose-500 text-white text-[8px] md:text-[10px] w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center font-bold shadow-sm">
-                    {pkg.discount}
+                    {pkg.discount}%
                   </span>
                 )}
                 
@@ -169,6 +225,10 @@ export default function VoteSection({ candidate }) {
               
               <div className="bg-gradient-to-br from-rose-50 to-red-50 rounded-xl p-4 mb-4 border border-red-100">
                 <div className="flex items-center justify-between mb-2 text-sm">
+                  <span className="text-gray-600">Package:</span>
+                  <span className="font-bold text-gray-800">{selectedPackage.packageName}</span>
+                </div>
+                <div className="flex items-center justify-between mb-2 text-sm">
                   <span className="text-gray-600">Votes:</span>
                   <span className="font-bold text-gray-800">{selectedPackage.points.toLocaleString()}</span>
                 </div>
@@ -176,6 +236,12 @@ export default function VoteSection({ candidate }) {
                   <span className="text-gray-600">Price per vote:</span>
                   <span className="text-gray-800">₦{Math.round(selectedPackage.price/selectedPackage.points).toLocaleString()}</span>
                 </div>
+                {selectedPackage.discount > 0 && (
+                  <div className="flex items-center justify-between mb-2 text-sm">
+                    <span className="text-gray-600">Discount:</span>
+                    <span className="text-green-600 font-semibold">{selectedPackage.discount}%</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between pt-2 border-t border-red-200 text-base">
                   <span className="font-semibold text-gray-700">Total:</span>
                   <span className="font-bold text-red-600">₦{selectedPackage.price.toLocaleString()}</span>

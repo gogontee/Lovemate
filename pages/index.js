@@ -18,6 +18,8 @@ export default function Home() {
   const router = useRouter();
   const [candidates, setCandidates] = useState([]);
   const [news, setNews] = useState([]);
+  const [topFans, setTopFans] = useState([]);
+  const [loadingFans, setLoadingFans] = useState(true);
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -25,6 +27,65 @@ export default function Home() {
     seconds: 0
   });
   const [hasVotableCandidates, setHasVotableCandidates] = useState(false);
+
+  // Fetch top fans
+  const fetchTopFans = async () => {
+    try {
+      // Get top 3 profiles by points
+      const { data: profiles, error } = await supabase
+        .from('profile')
+        .select('id, full_name, photo_url, points')
+        .order('points', { ascending: false })
+        .limit(3);
+
+      if (error) {
+        console.error("Error fetching top fans:", error);
+        setTopFans([]);
+        setLoadingFans(false);
+        return;
+      }
+
+      if (!profiles || profiles.length === 0) {
+        setTopFans([]);
+        setLoadingFans(false);
+        return;
+      }
+
+      // Get total votes for each fan
+      const fansWithVotes = await Promise.all(
+        profiles.map(async (fan) => {
+          const { data: voteData, error: voteError } = await supabase
+            .from('vote_transactions')
+            .select('votes')
+            .eq('user_id', fan.id);
+
+          if (voteError) {
+            console.error("Error fetching votes for fan:", voteError);
+            return { ...fan, totalVotes: 0 };
+          }
+
+          // Sum up all votes
+          const totalVotes = voteData?.reduce((sum, item) => sum + (item.votes || 0), 0) || 0;
+          
+          return { 
+            ...fan, 
+            totalVotes,
+            // Only include fans with at least 1 point
+            points: fan.points || 0
+          };
+        })
+      );
+
+      // Filter out fans with less than 1 point
+      const qualifiedFans = fansWithVotes.filter(fan => fan.points >= 1);
+      setTopFans(qualifiedFans);
+      setLoadingFans(false);
+    } catch (err) {
+      console.error("Error in fetchTopFans:", err);
+      setTopFans([]);
+      setLoadingFans(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -42,9 +103,34 @@ export default function Home() {
         candidate => candidate.role === "Yes" && candidate.votes > 0
       );
       setHasVotableCandidates(hasVotable);
+
+      // Fetch top fans
+      await fetchTopFans();
     };
 
     fetchData();
+
+    // Set up realtime subscription for points updates
+    const channel = supabase
+      .channel('top-fans-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profile',
+          filter: 'points=gt.0'
+        },
+        () => {
+          // Refetch top fans when points change
+          fetchTopFans();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Registration countdown timer
@@ -151,12 +237,6 @@ export default function Home() {
     "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/sponsors/logo1.png",
     "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/sponsors/logo2.png",
     "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/sponsors/logo3.png",
-  ];
-
-  const topFans = [
-    { name: "Amara", votes: 1200 },
-    { name: "Jake", votes: 1050 },
-    { name: "Lola", votes: 980 },
   ];
 
   const featuredImages = [
@@ -339,7 +419,7 @@ export default function Home() {
         {/* Sponsors - Direct CTA without dark background */}
         <SponsorCarousel />
 
-        {/* Top Fans - Responsive for mobile */}
+        {/* Top Fans - Now with real data */}
         <TopFansCarousel fans={topFans} />
 
         {/* Latest News */}

@@ -13,10 +13,10 @@ function AdminApplicants() {
     const fetchApplicants = async () => {
       setLoading(true);
 
-      // Get applicants from `profiles`
+      // Get applicants from `profile` (FIXED: changed from "profiles" to "profile")
       const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id, full_name, email, phone, role, created_at, photo")
+        .from("profile")  // ✅ Changed from "profiles" to "profile"
+        .select("id, full_name, email, phone, role, created_at, photo_url")  // ✅ Changed from "photo" to "photo_url"
         .eq("role", "applicant")
         .order("created_at", { ascending: false });
 
@@ -38,7 +38,7 @@ function AdminApplicants() {
 
   const promoteToCandidate = async (id) => {
     const { error } = await supabase
-      .from("profiles")
+      .from("profile")  // ✅ Changed from "profiles" to "profile"
       .update({ role: "candidate" })
       .eq("id", id);
 
@@ -49,7 +49,7 @@ function AdminApplicants() {
 
   const rejectApplicant = async (id) => {
     const { error } = await supabase
-      .from("profiles")
+      .from("profile")  // ✅ Changed from "profiles" to "profile"
       .delete()
       .eq("id", id);
 
@@ -73,9 +73,9 @@ function AdminApplicants() {
             <p>Loading applicants...</p>
           ) : (
             <>
-              {/* Applicants from 'profiles' */}
+              {/* Applicants from 'profile' */}
               <div className="mb-10">
-                <h3 className="text-lg font-semibold mb-2 text-rose-600">Profiles Applicants</h3>
+                <h3 className="text-lg font-semibold mb-2 text-rose-600">Profile Applicants</h3>
                 <div className="overflow-x-auto">
                   <table className="min-w-full bg-white shadow rounded-lg">
                     <thead>
@@ -93,7 +93,7 @@ function AdminApplicants() {
                         <tr key={applicant.id} className="border-b hover:bg-rose-50 text-sm">
                           <td className="px-4 py-3">
                             <img
-                              src={applicant.photo || "/avatar.png"}
+                              src={applicant.photo_url || "/avatar.png"}  // ✅ Changed from applicant.photo to applicant.photo_url
                               alt="photo"
                               className="w-10 h-10 object-cover rounded-full"
                             />
@@ -123,7 +123,7 @@ function AdminApplicants() {
                       {profilesApplicants.length === 0 && (
                         <tr>
                           <td colSpan="6" className="text-center text-gray-500 py-6">
-                            No applicants found in profiles.
+                            No applicants found in profile.
                           </td>
                         </tr>
                       )}

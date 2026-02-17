@@ -159,8 +159,8 @@ export default function Contact() {
                 <a href="tel:+2349072646902" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
                   +234 907 264 6902
                 </a>
-                <a href="tel:+447903184051" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
-                  +44 7903 184051
+                <a href="tel:+447424830449" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
+                  +44 742 483 0449
                 </a>
               </div>
             </motion.div>

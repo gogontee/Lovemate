@@ -31,12 +31,15 @@ export default function Header() {
       setUser(currentUser);
 
       if (currentUser) {
+        // FIXED: Changed from "profiles" to "profile" and from "photo" to "photo_url"
         const { data } = await supabase
-          .from("profiles")
-          .select("photo")
+          .from("profile")  // ✅ Changed from "profiles" to "profile"
+          .select("photo_url")  // ✅ Changed from "photo" to "photo_url"
           .eq("id", currentUser.id)
           .single();
-        if (data?.photo) setAvatarUrl(data.photo);
+          
+        // FIXED: Check for photo_url instead of photo
+        if (data?.photo_url) setAvatarUrl(data.photo_url);  // ✅ Changed from data.photo to data.photo_url
       }
     };
 
@@ -91,8 +94,12 @@ export default function Header() {
                 src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/lovemateshow/logo/lovemateicon.png"
                 alt="Lovemate Logo"
                 fill
+                sizes="(max-width: 768px) 44px, 56px"
+                loading="eager"
                 className="object-contain"
                 priority
+                unoptimized
+                quality={85} 
               />
             </div>
           </Link>
@@ -141,6 +148,9 @@ export default function Header() {
                       alt="Profile"
                       width={36}
                       height={36}
+                      sizes="36px"
+                      loading="eager"
+                      unoptimized
                       className="rounded-full border-2 border-rose-300 object-cover"
                     />
                   ) : (

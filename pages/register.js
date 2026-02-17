@@ -7,8 +7,10 @@ import EventSchedule from "../components/EventSchedule";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
+import { useRouter } from "next/router";
 
 export default function Register() {
+  const router = useRouter();
   // Form state
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -38,10 +40,15 @@ export default function Register() {
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [profilePhotoPreview, setProfilePhotoPreview] = useState(null);
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [checkingCandidate, setCheckingCandidate] = useState(true);
+  const [hasCandidatePage, setHasCandidatePage] = useState(false);
+  const [candidateData, setCandidateData] = useState(null);
   const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [galleryPreviews, setGalleryPreviews] = useState([]);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showCandidateModal, setShowCandidateModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [buttonText, setButtonText] = useState("Submit Application");
   const [error, setError] = useState("");
@@ -60,13 +67,56 @@ export default function Register() {
   const profileInputRef = useRef(null);
   const galleryInputRef = useRef(null);
 
-  // Load saved data from localStorage on mount
+  // Check authentication and candidate status on mount
   useEffect(() => {
+    checkAuthAndCandidate();
+  }, []);
+
+  const checkAuthAndCandidate = async () => {
+    setLoading(true);
+    setCheckingCandidate(true);
+    
+    // Get current user
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !authUser) {
+      // User is not authenticated - show login required UI
+      setUser(null);
+      setLoading(false);
+      setCheckingCandidate(false);
+      return;
+    }
+
+    setUser(authUser);
+
+    // Check if user already has a candidate page
+    const { data: candidateData, error: candidateError } = await supabase
+      .from("candidates")
+      .select("*")
+      .eq("user_id", authUser.id)
+      .maybeSingle();
+
+    if (candidateData) {
+      setHasCandidatePage(true);
+      setCandidateData(candidateData);
+      setCheckingCandidate(false);
+      setLoading(false);
+      // Show the candidate modal immediately
+      setShowCandidateModal(true);
+      return;
+    }
+
+    // User is authenticated and doesn't have a candidate page
+    setHasCandidatePage(false);
+    setCheckingCandidate(false);
+    setLoading(false);
+    
+    // Load saved form data if exists
     const savedData = localStorage.getItem('registrationFormData');
     if (savedData) {
       setFormData(JSON.parse(savedData));
     }
-  }, []);
+  };
 
   // Fetch hero content
   useEffect(() => {
@@ -128,10 +178,12 @@ export default function Register() {
     }
   };
 
-  // Save to localStorage whenever formData changes
+  // Save to localStorage whenever formData changes (only for authenticated users without candidate page)
   useEffect(() => {
-    localStorage.setItem('registrationFormData', JSON.stringify(formData));
-  }, [formData]);
+    if (user && !hasCandidatePage) {
+      localStorage.setItem('registrationFormData', JSON.stringify(formData));
+    }
+  }, [formData, user, hasCandidatePage]);
 
   // Calculate progress percentage
   useEffect(() => {
@@ -140,15 +192,6 @@ export default function Register() {
     const calculatedProgress = Math.round((filledFields / totalFields) * 100);
     setProgress(calculatedProgress);
   }, [formData]);
-
-  // Get user on mount
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
-    getUser();
-  }, []);
 
   // Cleanup previews on unmount
   useEffect(() => {
@@ -313,6 +356,11 @@ export default function Register() {
       return;
     }
 
+    if (hasCandidatePage) {
+      setShowCandidateModal(true);
+      return;
+    }
+
     if (!acceptedTerms) {
       setError("You must accept the Terms of Participation");
       return;
@@ -382,6 +430,18 @@ export default function Register() {
     }
   };
 
+  const goToDashboard = () => {
+    router.push('/dashboard');
+  };
+
+  const goToLogin = () => {
+    router.push('/auth/login');
+  };
+
+  const goToSignup = () => {
+    router.push('/auth/signup');
+  };
+
   // Get current hero content
   const currentDesktopHero = desktopHero[currentDesktopIndex] || {
     image: null,
@@ -394,6 +454,154 @@ export default function Register() {
     title: "What is waiting for you in the house?",
     subtitle: "Join the experience"
   };
+
+  // Show loading state
+  if (loading || checkingCandidate) {
+    return (
+      <>
+        <Header />
+        <div className="min-h-screen bg-gradient-to-br from-rose-50 to-white flex items-center justify-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-12 h-12 border-4 border-rose-600 border-t-transparent rounded-full"
+          />
+        </div>
+      </>
+    );
+  }
+
+  // If user is not authenticated, show login required UI
+  if (!user) {
+    return (
+      <>
+        <Header />
+        <main className="min-h-screen bg-gradient-to-br from-rose-50 to-white">
+          {/* Desktop Hero Section */}
+          <div className="hidden md:block w-full h-[200px] relative overflow-hidden bg-rose-100">
+            {currentDesktopHero.image ? (
+              <div className="relative w-full h-full">
+                <Image
+                  src={currentDesktopHero.image}
+                  alt={currentDesktopHero.title}
+                  fill
+                  className="object-cover"
+                  priority
+                  sizes="100vw"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center text-white">
+                  <h2 className="text-3xl font-bold mb-2">{currentDesktopHero.title}</h2>
+                  <p className="text-xl">{currentDesktopHero.subtitle}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-r from-rose-400 to-pink-500 text-white">
+                <h2 className="text-3xl font-bold mb-2 px-4 text-center">{currentDesktopHero.title}</h2>
+                <p className="text-xl">{currentDesktopHero.subtitle}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Hero Section */}
+          <div className="md:hidden w-full relative bg-rose-100" style={{ aspectRatio: '1000/400' }}>
+            {currentMobileHero.image ? (
+              <div className="relative w-full h-full">
+                <Image
+                  src={currentMobileHero.image}
+                  alt={currentMobileHero.title}
+                  fill
+                  className="object-cover"
+                  priority
+                  sizes="100vw"
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col items-center justify-center text-white px-4">
+                  <h2 className="text-2xl font-bold mb-2 text-center">{currentMobileHero.title}</h2>
+                  <p className="text-lg text-center">{currentMobileHero.subtitle}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-r from-rose-400 to-pink-500 text-white px-4">
+                <h2 className="text-2xl font-bold mb-2 text-center">{currentMobileHero.title}</h2>
+                <p className="text-lg text-center">{currentMobileHero.subtitle}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Login Required Message */}
+          <div className="max-w-4xl mx-auto py-12 px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white rounded-2xl shadow-xl overflow-hidden"
+            >
+              <div className="relative h-48 bg-gradient-to-r from-rose-700 to-pink-600">
+                <div 
+                  className="absolute inset-0 opacity-20"
+                  style={{
+                    backgroundImage: `url('/flower.png')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
+                  }}
+                />
+                <div className="relative z-10 h-full flex flex-col items-center justify-center text-white px-4">
+                  <h1 className="text-3xl md:text-4xl font-bold text-center mb-2">Join the Experience</h1>
+                  <p className="text-lg text-center text-rose-100">Be part of Nigeria's most exciting reality show</p>
+                </div>
+              </div>
+              
+              <div className="p-8">
+                <div className="text-center mb-8">
+                  <div className="inline-block p-4 bg-rose-100 rounded-full mb-4">
+                    <svg className="w-12 h-12 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-800 mb-2">Login Required</h2>
+                  <p className="text-gray-600 mb-2">
+                    You need to be logged in to apply as a contestant.
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Don't have an account? Create one in just a few seconds.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    onClick={goToLogin}
+                    className="w-full py-3 bg-gradient-to-r from-red-500 to-red-700 text-white rounded-xl font-semibold hover:from-rose-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl"
+                  >
+                    Log In to Your Account
+                  </button>
+                  
+                  <button
+                    onClick={goToSignup}
+                    className="w-full py-3 bg-white text-rose-600 rounded-xl font-semibold border-2 border-rose-200 hover:bg-rose-50 transition-all"
+                  >
+                    Create New Account
+                  </button>
+                </div>
+
+                <div className="mt-8 text-center">
+                  <p className="text-xs text-gray-500">
+                    By continuing, you agree to our{' '}
+                    <Link href="/termsofparticipation" className="text-rose-600 hover:underline">
+                      Terms of Participation
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // If user has a candidate page, show message but allow them to proceed if they want?
+  // For now, we'll show a modal that they can dismiss to continue
+  // But we'll also show the form
 
   return (
     <>
@@ -1001,7 +1209,7 @@ export default function Register() {
         )}
       </AnimatePresence>
 
-      {/* Login Modal - Mobile optimized */}
+      {/* Login Modal */}
       <AnimatePresence>
         {showLoginModal && (
           <motion.div
@@ -1018,13 +1226,13 @@ export default function Register() {
             >
               <div className="text-center">
                 <div className="text-4xl md:text-5xl mb-3 md:mb-4">🔐</div>
-                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Login Required</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Session Expired</h2>
                 <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">
-                  Please log in to submit your application.
+                  Please log in again to continue your application.
                 </p>
                 <div className="space-y-2 md:space-y-3">
                   <Link
-                    href="/login"
+                    href="/auth/login"
                     className="block w-full px-4 md:px-6 py-2 md:py-3 bg-pink-600 text-white rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:bg-pink-700 transition-all"
                   >
                     Log In
@@ -1034,6 +1242,56 @@ export default function Register() {
                     className="w-full px-4 md:px-6 py-2 md:py-3 bg-gray-100 text-gray-700 rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:bg-gray-200 transition-all"
                   >
                     Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Candidate Already Exists Modal */}
+      <AnimatePresence>
+        {showCandidateModal && candidateData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-xl md:rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center">
+                <div className="text-4xl md:text-5xl mb-3 md:mb-4">🎭</div>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">You're Already a Candidate!</h2>
+                <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">
+                  You currently own a candidacy page. Check your dashboard to see your page.
+                </p>
+                
+                {candidateData && (
+                  <div className="bg-rose-50 rounded-lg p-4 mb-4">
+                    <p className="text-sm text-rose-800 font-medium mb-1">Your Candidate Page:</p>
+                    <p className="text-lg font-bold text-rose-600">{candidateData.name || "Unnamed"}</p>
+                    <p className="text-xs text-rose-500 mt-1">Status: {candidateData.selected_24 ? '🌟 Selected' : candidateData.role === 'Yes' ? '✅ Approved' : '⏳ Pending'}</p>
+                  </div>
+                )}
+                
+                <div className="space-y-2 md:space-y-3">
+                  <button
+                    onClick={goToDashboard}
+                    className="w-full px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-rose-600 to-pink-600 text-white rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:from-rose-700 hover:to-pink-700 transition-all"
+                  >
+                    Go to Dashboard
+                  </button>
+                  <button
+                    onClick={() => setShowCandidateModal(false)}
+                    className="w-full px-4 md:px-6 py-2 md:py-3 bg-gray-100 text-gray-700 rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:bg-gray-200 transition-all"
+                  >
+                    Continue Browsing
                   </button>
                 </div>
               </div>

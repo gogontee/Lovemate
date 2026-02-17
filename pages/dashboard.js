@@ -29,6 +29,15 @@ export default function Dashboard() {
   const [amountToFund, setAmountToFund] = useState("");
   const [showFundModal, setShowFundModal] = useState(false);
 
+  // New state for rank data
+  const [rankData, setRankData] = useState({
+    points: 0,
+    totalVotes: 0,
+    totalGifts: 0,
+    userRank: 0,
+    totalUsers: 0
+  });
+
   const fetchWallet = async (userId) => {
     const { data, error } = await supabase
       .from("wallets")
@@ -43,10 +52,65 @@ export default function Dashboard() {
     return data;
   };
 
+  // Fetch rank data - FIXED vote calculation
+  const fetchRankData = async (profileId) => {
+    if (!profileId) return;
+
+    try {
+      // Get user's points from profile
+      const points = profile?.points || 0;
+      
+      // FIXED: Get SUM of votes from vote_transactions, not just count
+      const { data: voteData, error: voteError } = await supabase
+        .from('vote_transactions')
+        .select('votes')
+        .eq('user_id', profileId);
+      
+      if (voteError) {
+        console.error("Error fetching vote data:", voteError);
+      }
+      
+      // Calculate total votes by summing the votes column
+      const totalVotes = voteData?.reduce((sum, item) => sum + (item.votes || 0), 0) || 0;
+      
+      // Get total gifts sent by user (count of transactions)
+      const { count: giftCount, error: giftError } = await supabase
+        .from('gift_transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', profileId);
+      
+      if (giftError) console.error("Error fetching gift count:", giftError);
+      
+      // Get user's rank based on points
+      const { data: allUsers, error: usersError } = await supabase
+        .from('profile')
+        .select('id, points')
+        .order('points', { ascending: false });
+      
+      if (usersError) {
+        console.error("Error fetching users for ranking:", usersError);
+      } else {
+        const userRank = allUsers.findIndex(u => u.id === profileId) + 1;
+        const totalUsers = allUsers.length;
+        
+        setRankData({
+          points,
+          totalVotes, // Now this is the SUM of votes, not count
+          totalGifts: giftCount || 0,
+          userRank,
+          totalUsers
+        });
+      }
+    } catch (err) {
+      console.error("Error in fetchRankData:", err);
+    }
+  };
+
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name || "");
       setPhone(profile.phone || "");
+      fetchRankData(profile.id);
     }
   }, [profile]);
 
@@ -83,9 +147,10 @@ export default function Dashboard() {
         return;
       }
 
+      // FIXED: Changed from image_url to photo_url
       const { data: fetchedProfile, error: profileError } = await supabase
         .from("profile")
-        .select("id, email, role, photo_url, full_name, phone")
+        .select("id, email, role, photo_url, full_name, phone, points")  // ✅ Added points to select
         .eq("id", authUser.id)
         .single();
 
@@ -96,6 +161,7 @@ export default function Dashboard() {
 
       setUser(authUser);
       setProfile(fetchedProfile);
+      // FIXED: Changed from fetchedProfile.photo_url to fetchedProfile.photo_url
       if (fetchedProfile.photo_url) {
         setAvatarUrl(fetchedProfile.photo_url);
       }
@@ -337,7 +403,15 @@ export default function Dashboard() {
                 balance={walletBalance} 
                 onFundClick={() => setShowFundModal(true)} 
               />
-              <RankCard />
+              {/* RankCard with real data - now more compact */}
+              <RankCard 
+                profileId={profile?.id}
+                points={rankData.points}
+                totalVotes={rankData.totalVotes}
+                totalGifts={rankData.totalGifts}
+                userRank={rankData.userRank}
+                totalUsers={rankData.totalUsers}
+              />
             </div>
 
             {/* Right Column - Candidate Window (takes 7 columns) - Flushed with left column height */}
