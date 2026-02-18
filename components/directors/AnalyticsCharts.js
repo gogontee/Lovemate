@@ -73,32 +73,32 @@ export default function AnalyticsCharts({
   };
 
   const processAllData = () => {
-    console.log("🔄 Processing data from tables:", {
-      vote_transactions: voteTransactions?.length || 0,
-      gift_transactions: giftTransactions?.length || 0,
+    console.log("🔄 Processing analytics data:", {
+      voteTransactions: voteTransactions?.length || 0,
+      giftTransactions: giftTransactions?.length || 0,
       candidates: candidates?.length || 0,
       profiles: profiles?.length || 0
     });
     
     // Process vote data from vote_transactions table
     const voteData = processVoteData();
-    console.log("📈 Vote data processed:", voteData);
+    console.log("📈 Vote analytics:", voteData);
     
     // Process gift data from gift_transactions table
     const giftData = processGiftData();
-    console.log("🎁 Gift data processed:", giftData);
+    console.log("🎁 Gift analytics:", giftData);
     
     // Process revenue data from both tables
     const revenueData = processRevenueData();
-    console.log("💰 Revenue data processed:", revenueData);
+    console.log("💰 Revenue analytics:", revenueData);
     
     // Process registration data from candidates table
     const registrationData = processRegistrationData();
-    console.log("📝 Registration data processed:", registrationData);
+    console.log("📝 Registration analytics:", registrationData);
     
     // Process signup data from profiles table
     const signupData = processSignupData();
-    console.log("👤 Signup data processed:", signupData);
+    console.log("👤 Signup analytics:", signupData);
 
     setChartData({
       vote: voteData,
@@ -117,23 +117,26 @@ export default function AnalyticsCharts({
     const dailyData = {};
     
     voteTransactions.forEach((vote) => {
-      // Use created_at from vote_transactions table
-      if (!vote.created_at) {
-        console.warn("Vote missing created_at:", vote);
+      if (!vote?.created_at) {
+        console.warn("⚠️ Vote missing created_at:", vote?.id);
         return;
       }
       
-      const date = new Date(vote.created_at).toLocaleDateString();
-      if (!dailyData[date]) {
-        dailyData[date] = {
-          participation: 0,
-          revenue: 0,
-          count: 0
-        };
+      try {
+        const date = new Date(vote.created_at).toLocaleDateString();
+        if (!dailyData[date]) {
+          dailyData[date] = {
+            participation: 0,
+            revenue: 0,
+            count: 0
+          };
+        }
+        dailyData[date].participation += 1;
+        dailyData[date].revenue += vote.total_amount || 0;
+        dailyData[date].count += 1;
+      } catch (e) {
+        console.warn("⚠️ Error processing vote date:", vote.created_at, e);
       }
-      dailyData[date].participation += 1; // Count each vote as participation
-      dailyData[date].revenue += vote.total_amount || 0; // Use total_amount from vote_transactions
-      dailyData[date].count += 1;
     });
 
     const sortedDates = Object.keys(dailyData).sort((a, b) => 
@@ -142,8 +145,8 @@ export default function AnalyticsCharts({
 
     return {
       labels: sortedDates,
-      participation: sortedDates.map(date => dailyData[date].participation),
-      revenue: sortedDates.map(date => dailyData[date].revenue / 1000),
+      participation: sortedDates.map(date => dailyData[date]?.participation || 0),
+      revenue: sortedDates.map(date => (dailyData[date]?.revenue || 0) / 1000),
       raw: dailyData
     };
   };
@@ -156,23 +159,26 @@ export default function AnalyticsCharts({
     const dailyData = {};
     
     giftTransactions.forEach((gift) => {
-      // Use created_at from gift_transactions table
-      if (!gift.created_at) {
-        console.warn("Gift missing created_at:", gift);
+      if (!gift?.created_at) {
+        console.warn("⚠️ Gift missing created_at:", gift?.id);
         return;
       }
       
-      const date = new Date(gift.created_at).toLocaleDateString();
-      if (!dailyData[date]) {
-        dailyData[date] = {
-          participation: 0,
-          revenue: 0,
-          count: 0
-        };
+      try {
+        const date = new Date(gift.created_at).toLocaleDateString();
+        if (!dailyData[date]) {
+          dailyData[date] = {
+            participation: 0,
+            revenue: 0,
+            count: 0
+          };
+        }
+        dailyData[date].participation += 1;
+        dailyData[date].revenue += gift.amount || 0;
+        dailyData[date].count += 1;
+      } catch (e) {
+        console.warn("⚠️ Error processing gift date:", gift.created_at, e);
       }
-      dailyData[date].participation += 1; // Count each gift as participation
-      dailyData[date].revenue += gift.amount || 0; // Use amount from gift_transactions
-      dailyData[date].count += 1;
     });
 
     const sortedDates = Object.keys(dailyData).sort((a, b) => 
@@ -181,26 +187,25 @@ export default function AnalyticsCharts({
 
     return {
       labels: sortedDates,
-      participation: sortedDates.map(date => dailyData[date].participation),
-      revenue: sortedDates.map(date => dailyData[date].revenue / 1000),
+      participation: sortedDates.map(date => dailyData[date]?.participation || 0),
+      revenue: sortedDates.map(date => (dailyData[date]?.revenue || 0) / 1000),
       raw: dailyData
     };
   };
 
   const processRevenueData = () => {
-    // Combine data from vote_transactions and gift_transactions tables
     const allData = [
       ...(voteTransactions || []).map(v => ({
-        date: v.created_at,
-        amount: v.total_amount || 0,
+        date: v?.created_at,
+        amount: v?.total_amount || 0,
         type: 'vote'
       })),
       ...(giftTransactions || []).map(g => ({
-        date: g.created_at,
-        amount: g.amount || 0,
+        date: g?.created_at,
+        amount: g?.amount || 0,
         type: 'gift'
       }))
-    ].filter(item => item.date); // Filter out items without dates
+    ].filter(item => item.date);
 
     if (allData.length === 0) {
       return { labels: [], total: [], voteRevenue: [], giftRevenue: [], raw: {} };
@@ -209,22 +214,26 @@ export default function AnalyticsCharts({
     const dailyData = {};
     
     allData.forEach(item => {
-      const date = new Date(item.date).toLocaleDateString();
-      if (!dailyData[date]) {
-        dailyData[date] = {
-          total: 0,
-          voteRevenue: 0,
-          giftRevenue: 0,
-          count: 0
-        };
+      try {
+        const date = new Date(item.date).toLocaleDateString();
+        if (!dailyData[date]) {
+          dailyData[date] = {
+            total: 0,
+            voteRevenue: 0,
+            giftRevenue: 0,
+            count: 0
+          };
+        }
+        dailyData[date].total += item.amount;
+        if (item.type === 'vote') {
+          dailyData[date].voteRevenue += item.amount;
+        } else {
+          dailyData[date].giftRevenue += item.amount;
+        }
+        dailyData[date].count += 1;
+      } catch (e) {
+        console.warn("⚠️ Error processing revenue date:", item.date, e);
       }
-      dailyData[date].total += item.amount;
-      if (item.type === 'vote') {
-        dailyData[date].voteRevenue += item.amount;
-      } else {
-        dailyData[date].giftRevenue += item.amount;
-      }
-      dailyData[date].count += 1;
     });
 
     const sortedDates = Object.keys(dailyData).sort((a, b) => 
@@ -233,9 +242,9 @@ export default function AnalyticsCharts({
 
     return {
       labels: sortedDates,
-      total: sortedDates.map(date => dailyData[date].total / 1000),
-      voteRevenue: sortedDates.map(date => dailyData[date].voteRevenue / 1000),
-      giftRevenue: sortedDates.map(date => dailyData[date].giftRevenue / 1000),
+      total: sortedDates.map(date => (dailyData[date]?.total || 0) / 1000),
+      voteRevenue: sortedDates.map(date => (dailyData[date]?.voteRevenue || 0) / 1000),
+      giftRevenue: sortedDates.map(date => (dailyData[date]?.giftRevenue || 0) / 1000),
       raw: dailyData
     };
   };
@@ -248,16 +257,16 @@ export default function AnalyticsCharts({
     const dailyData = {};
     
     candidates.forEach((candidate) => {
-      // Use created_at from candidates table
-      if (!candidate.created_at) {
-        console.warn("Candidate missing created_at:", candidate);
+      if (!candidate?.created_at) {
+        console.warn("⚠️ Candidate missing created_at:", candidate?.id);
         return;
       }
-      const date = new Date(candidate.created_at).toLocaleDateString();
-      if (!dailyData[date]) {
-        dailyData[date] = 0;
+      try {
+        const date = new Date(candidate.created_at).toLocaleDateString();
+        dailyData[date] = (dailyData[date] || 0) + 1;
+      } catch (e) {
+        console.warn("⚠️ Error processing candidate date:", candidate.created_at, e);
       }
-      dailyData[date] += 1;
     });
 
     const sortedDates = Object.keys(dailyData).sort((a, b) => 
@@ -266,7 +275,7 @@ export default function AnalyticsCharts({
 
     return {
       labels: sortedDates,
-      counts: sortedDates.map(date => dailyData[date]),
+      counts: sortedDates.map(date => dailyData[date] || 0),
       raw: dailyData
     };
   };
@@ -279,16 +288,16 @@ export default function AnalyticsCharts({
     const dailyData = {};
     
     profiles.forEach((profile) => {
-      // Use created_at from profiles table
-      if (!profile.created_at) {
-        console.warn("Profile missing created_at:", profile);
+      if (!profile?.created_at) {
+        console.warn("⚠️ Profile missing created_at:", profile?.id);
         return;
       }
-      const date = new Date(profile.created_at).toLocaleDateString();
-      if (!dailyData[date]) {
-        dailyData[date] = 0;
+      try {
+        const date = new Date(profile.created_at).toLocaleDateString();
+        dailyData[date] = (dailyData[date] || 0) + 1;
+      } catch (e) {
+        console.warn("⚠️ Error processing profile date:", profile.created_at, e);
       }
-      dailyData[date] += 1;
     });
 
     const sortedDates = Object.keys(dailyData).sort((a, b) => 
@@ -297,7 +306,7 @@ export default function AnalyticsCharts({
 
     return {
       labels: sortedDates,
-      counts: sortedDates.map(date => dailyData[date]),
+      counts: sortedDates.map(date => dailyData[date] || 0),
       raw: dailyData
     };
   };
@@ -787,9 +796,13 @@ function getPeakDay(items) {
   
   const dailyCount = {};
   items.forEach(item => {
-    if (!item.created_at) return;
-    const date = new Date(item.created_at).toLocaleDateString();
-    dailyCount[date] = (dailyCount[date] || 0) + 1;
+    if (!item?.created_at) return;
+    try {
+      const date = new Date(item.created_at).toLocaleDateString();
+      dailyCount[date] = (dailyCount[date] || 0) + 1;
+    } catch (e) {
+      console.warn("⚠️ Error in getPeakDay:", e);
+    }
   });
   
   const keys = Object.keys(dailyCount);
@@ -806,10 +819,14 @@ function getPeakRevenueDay(voteTransactions, giftTransactions) {
   const dailyRevenue = {};
   
   [...voteTransactions, ...giftTransactions].forEach(item => {
-    if (!item.created_at) return;
-    const date = new Date(item.created_at).toLocaleDateString();
-    const amount = item.total_amount || item.amount || 0;
-    dailyRevenue[date] = (dailyRevenue[date] || 0) + amount;
+    if (!item?.created_at) return;
+    try {
+      const date = new Date(item.created_at).toLocaleDateString();
+      const amount = item.total_amount || item.amount || 0;
+      dailyRevenue[date] = (dailyRevenue[date] || 0) + amount;
+    } catch (e) {
+      console.warn("⚠️ Error in getPeakRevenueDay:", e);
+    }
   });
   
   const revenueKeys = Object.keys(dailyRevenue);
@@ -835,7 +852,11 @@ function getNewUsersCount(profiles) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   
   return profiles.filter(p => {
-    if (!p.created_at) return false;
-    return new Date(p.created_at) > thirtyDaysAgo;
+    if (!p?.created_at) return false;
+    try {
+      return new Date(p.created_at) > thirtyDaysAgo;
+    } catch (e) {
+      return false;
+    }
   }).length;
 }

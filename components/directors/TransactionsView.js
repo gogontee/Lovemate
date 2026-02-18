@@ -9,10 +9,16 @@ const fadeInUp = {
   animate: { opacity: 1, y: 0 }
 };
 
-export default function TransactionsView({ voteTransactions, giftTransactions }) {
+export default function TransactionsView({ voteTransactions, giftTransactions, profiles = [] }) {
   const [activeTab, setActiveTab] = useState("votes");
   const [transactions, setTransactions] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Create a map of user profiles for quick lookup
+  const profileMap = profiles.reduce((acc, profile) => {
+    acc[profile.id] = profile;
+    return acc;
+  }, {});
 
   // Update transactions when tab changes or data updates
   useEffect(() => {
@@ -24,7 +30,8 @@ export default function TransactionsView({ voteTransactions, giftTransactions })
   const filteredTransactions = transactions.filter(t => {
     if (!searchTerm) return true;
     
-    const userName = t.profile?.full_name?.toLowerCase() || '';
+    const profile = profileMap[t.user_id];
+    const userName = profile?.full_name?.toLowerCase() || '';
     const packageName = t.package_name?.toLowerCase() || '';
     const giftType = t.gift_type?.toLowerCase() || '';
     const searchLower = searchTerm.toLowerCase();
@@ -58,10 +65,18 @@ export default function TransactionsView({ voteTransactions, giftTransactions })
 
   // Format name (first name + first letter of second name)
   const formatName = (fullName) => {
-    if (!fullName) return 'Unknown User';
+    if (!fullName) return null;
     const parts = fullName.trim().split(' ');
     if (parts.length === 1) return parts[0];
     return `${parts[0]} ${parts[1].charAt(0)}.`;
+  };
+
+  // Generate fallback display from user ID
+  const getFallbackDisplay = (userId) => {
+    if (!userId) return 'Unknown User';
+    const start = userId.substring(0, 4);
+    const end = userId.substring(userId.length - 4);
+    return `User ${start}...${end}`;
   };
 
   return (
@@ -180,97 +195,103 @@ export default function TransactionsView({ voteTransactions, giftTransactions })
               )}
             </motion.div>
           ) : (
-            filteredTransactions.map((transaction, index) => (
-              <motion.div
-                key={transaction.id}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ delay: index * 0.02 }}
-                className="p-3 border-b border-rose-50 hover:bg-rose-50/50 transition-colors"
-              >
-                <div className="flex items-start gap-3">
-                  {/* User avatar */}
-                  <div className="relative flex-shrink-0">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-red-100 to-rose-100 border-2 border-white shadow-sm">
-                      {transaction.profile?.photo_url ? (
-                        <Image
-                          src={transaction.profile.photo_url}
-                          alt={transaction.profile.full_name}
-                          width={40}
-                          height={40}
-                          className="object-cover w-full h-full"
-                        />
+            filteredTransactions.map((transaction, index) => {
+              const profile = profileMap[transaction.user_id];
+              const displayName = profile?.full_name ? formatName(profile.full_name) : null;
+              const fallbackName = getFallbackDisplay(transaction.user_id);
+              
+              return (
+                <motion.div
+                  key={transaction.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ delay: index * 0.02 }}
+                  className="p-3 border-b border-rose-50 hover:bg-rose-50/50 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    {/* User avatar */}
+                    <div className="relative flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-red-600 to-rose-600 border-2 border-white shadow-sm">
+                        {profile?.photo_url ? (
+                          <Image
+                            src={profile.photo_url}
+                            alt={profile.full_name || 'User'}
+                            width={40}
+                            height={40}
+                            className="object-cover w-full h-full"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <User className="w-5 h-5 text-white" />
+                          </div>
+                        )}
+                      </div>
+                      {activeTab === "votes" ? (
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                          <CreditCard className="w-2 h-2 text-white" />
+                        </div>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-red-500 font-bold text-sm">
-                          {formatName(transaction.profile?.full_name).charAt(0)}
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                          <Gift className="w-2 h-2 text-white" />
                         </div>
                       )}
                     </div>
-                    {activeTab === "votes" ? (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
-                        <CreditCard className="w-2 h-2 text-white" />
+
+                    {/* Transaction details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold text-sm text-gray-800 truncate">
+                          {displayName || fallbackName}
+                        </h4>
+                        <span className="text-[10px] text-gray-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatDate(transaction.created_at)}
+                        </span>
                       </div>
-                    ) : (
-                      <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                        <Gift className="w-2 h-2 text-white" />
+
+                      <div className="flex items-center gap-2 text-xs">
+                        {activeTab === "votes" ? (
+                          <>
+                            <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full truncate max-w-[120px]">
+                              <Package className="w-3 h-3 inline mr-1" />
+                              {transaction.package_name || 'Vote Package'}
+                            </span>
+                            <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-full whitespace-nowrap">
+                              <DollarSign className="w-3 h-3 inline" />
+                              ₦{transaction.total_amount?.toLocaleString()}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full truncate max-w-[120px]">
+                              <Gift className="w-3 h-3 inline mr-1" />
+                              {transaction.gift_type || 'Gift'}
+                            </span>
+                            <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-full whitespace-nowrap">
+                              <DollarSign className="w-3 h-3 inline" />
+                              ₦{transaction.amount?.toLocaleString()}
+                            </span>
+                          </>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Transaction details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h4 className="font-semibold text-sm text-gray-800 truncate">
-                        {formatName(transaction.profile?.full_name)}
-                      </h4>
-                      <span className="text-[10px] text-gray-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatDate(transaction.created_at)}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-xs">
-                      {activeTab === "votes" ? (
-                        <>
-                          <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full truncate max-w-[120px]">
-                            <Package className="w-3 h-3 inline mr-1" />
-                            {transaction.package_name || 'Vote Package'}
-                          </span>
-                          <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-full whitespace-nowrap">
-                            <DollarSign className="w-3 h-3 inline" />
-                            ₦{transaction.total_amount?.toLocaleString()}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="px-2 py-0.5 bg-purple-50 text-purple-600 rounded-full truncate max-w-[120px]">
-                            <Gift className="w-3 h-3 inline mr-1" />
-                            {transaction.gift_type || 'Gift'}
-                          </span>
-                          <span className="px-2 py-0.5 bg-green-50 text-green-600 rounded-full whitespace-nowrap">
-                            <DollarSign className="w-3 h-3 inline" />
-                            ₦{transaction.amount?.toLocaleString()}
-                          </span>
-                        </>
-                      )}
-                    </div>
-
-                    {/* Additional info */}
-                    <div className="mt-1 flex items-center gap-2 text-[10px] text-gray-400">
-                      <User className="w-3 h-3" />
-                      <span className="truncate">ID: {transaction.user_id?.substring(0, 8)}</span>
-                      {transaction.reference && (
-                        <>
-                          <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                          <span className="truncate">Ref: {transaction.reference}</span>
-                        </>
-                      )}
+                      {/* Additional info */}
+                      <div className="mt-1 flex items-center gap-2 text-[10px] text-gray-400">
+                        <User className="w-3 h-3" />
+                        <span className="truncate">ID: {transaction.user_id?.substring(0, 8)}...</span>
+                        {transaction.reference && (
+                          <>
+                            <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                            <span className="truncate">Ref: {transaction.reference}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            ))
+                </motion.div>
+              );
+            })
           )}
         </AnimatePresence>
       </div>

@@ -116,7 +116,7 @@ export default function DirectorsDashboard() {
     return () => {
       subscriptions.forEach(sub => supabase.removeChannel(sub));
     };
-  }, [user?.id]); // Only re-run when user.id changes
+  }, [user?.id]);
 
   const fetchDashboardData = async (userId) => {
     try {
@@ -138,37 +138,29 @@ export default function DirectorsDashboard() {
 
       if (candidatesError) console.error('Candidates error:', candidatesError);
 
-      // Fetch vote transactions with profile data
+      // Fetch vote transactions - simple select without joins
       const { data: votesData, error: votesError } = await supabase
         .from("vote_transactions")
-        .select(`
-          *,
-          profile:user_id (
-            id,
-            full_name,
-            photo_url
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (votesError) console.error('Votes error:', votesError);
-      console.log('Vote transactions fetched:', votesData?.length || 0);
+      if (votesError) {
+        console.error('Votes error:', votesError);
+      } else {
+        console.log('Vote transactions fetched:', votesData?.length || 0);
+      }
 
-      // Fetch gift transactions with profile data
+      // Fetch gift transactions - simple select without joins
       const { data: giftsData, error: giftsError } = await supabase
         .from("gift_transactions")
-        .select(`
-          *,
-          profile:user_id (
-            id,
-            full_name,
-            photo_url
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (giftsError) console.error('Gifts error:', giftsError);
-      console.log('Gift transactions fetched:', giftsData?.length || 0);
+      if (giftsError) {
+        console.error('Gifts error:', giftsError);
+      } else {
+        console.log('Gift transactions fetched:', giftsData?.length || 0);
+      }
 
       // Fetch user profile
       const { data: userProfile, error: userError } = await supabase
@@ -342,6 +334,7 @@ export default function DirectorsDashboard() {
               <TransactionsView 
                 voteTransactions={voteTransactions}
                 giftTransactions={giftTransactions}
+                profiles={profiles} // Added profiles prop here
               />
             )}
 

@@ -5,8 +5,6 @@ import { motion } from "framer-motion";
 import { Shield } from "lucide-react";
 import { supabase } from "@/utils/supabaseClient";
 
-const DIRECTOR_CODE = "2026";
-
 export default function DirectorAuthGuard({ children, onAccessGranted }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
@@ -14,6 +12,8 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
   const [accessGranted, setAccessGranted] = useState(false);
   const [codeInput, setCodeInput] = useState("");
   const [codeError, setCodeError] = useState("");
+  const [directorCode, setDirectorCode] = useState(null);
+  const [fetchingCode, setFetchingCode] = useState(false);
 
   useEffect(() => {
     checkAccess();
@@ -31,8 +31,12 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
 
     setUser(authUser);
 
+    // First, fetch the director's code from lovemate table
+    await fetchDirectorCode();
+
+    // Check if user has saved code in localStorage
     const savedCode = localStorage.getItem(`director_code_${authUser.id}`);
-    if (savedCode === DIRECTOR_CODE) {
+    if (savedCode && directorCode && savedCode === directorCode) {
       setAccessGranted(true);
       onAccessGranted?.(authUser);
     }
@@ -40,13 +44,43 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
     setLoading(false);
   };
 
+  const fetchDirectorCode = async () => {
+    setFetchingCode(true);
+    try {
+      const { data, error } = await supabase
+        .from("lovemate")
+        .select("directors_code")
+        .eq("id", "ffb2d356-0dc8-4da8-a79c-8676efec0156")
+        .single();
+
+      if (error) {
+        console.error("Error fetching director code:", error);
+        setCodeError("Failed to verify access. Please try again.");
+      } else {
+        setDirectorCode(data?.directors_code || null);
+        console.log("Director code fetched successfully");
+      }
+    } catch (err) {
+      console.error("Error:", err);
+      setCodeError("Failed to verify access. Please try again.");
+    } finally {
+      setFetchingCode(false);
+    }
+  };
+
   const handleCodeSubmit = async (e) => {
     e.preventDefault();
     setCodeError("");
 
-    if (codeInput === DIRECTOR_CODE) {
+    // If we don't have the director code yet, fetch it first
+    if (!directorCode) {
+      await fetchDirectorCode();
+    }
+
+    // Check if the entered code matches
+    if (codeInput === directorCode) {
       setAccessGranted(true);
-      localStorage.setItem(`director_code_${user.id}`, DIRECTOR_CODE);
+      localStorage.setItem(`director_code_${user.id}`, directorCode);
       onAccessGranted?.(user);
     } else {
       setCodeError("Invalid director code. Access denied.");
@@ -91,6 +125,7 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
                   placeholder="Enter director code"
                   className="w-full px-4 py-3 bg-rose-50/50 border border-rose-200 rounded-xl text-gray-800 focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all outline-none"
                   autoFocus
+                  disabled={fetchingCode}
                 />
               </div>
 
@@ -104,11 +139,20 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
                 </motion.div>
               )}
 
+              {fetchingCode && (
+                <div className="flex justify-center">
+                  <div className="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              )}
+
               <button
                 type="submit"
-                className="w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-semibold hover:from-red-700 hover:to-rose-700 transition-all shadow-lg"
+                disabled={fetchingCode}
+                className={`w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-xl font-semibold transition-all shadow-lg ${
+                  fetchingCode ? 'opacity-50 cursor-not-allowed' : 'hover:from-red-700 hover:to-rose-700'
+                }`}
               >
-                Access Dashboard
+                {fetchingCode ? 'Verifying...' : 'Access Dashboard'}
               </button>
             </form>
 
@@ -123,5 +167,5 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
     );
   }
 
-  return children;
+  return children;   
 }
