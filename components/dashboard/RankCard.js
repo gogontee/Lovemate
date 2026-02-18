@@ -53,30 +53,54 @@ export default function RankCard({
   const [milestoneData, setMilestoneData] = useState(null);
   const [showRankTooltip, setShowRankTooltip] = useState(false);
   const [prevRank, setPrevRank] = useState(null);
+  const [achievedRanks, setAchievedRanks] = useState([]); // Track which ranks have been celebrated
 
   // Get current rank based on points
   const currentRank = getRankFromPoints(points);
   const progress = getProgressToNextRank(points, currentRank);
   const pointsToNext = getPointsToNextRank(points, currentRank);
 
-  // Check for milestone achievements on points change
+  // Check for milestone achievements on points change - ONLY ONCE PER RANK
   useEffect(() => {
     if (prevRank && prevRank.name !== currentRank.name) {
-      // User has reached a new milestone
-      setMilestoneData({
-        fromRank: prevRank.name,
-        toRank: currentRank.name,
-        points: points
-      });
-      setShowMilestonePopup(true);
-      
-      // Auto-hide after 5 seconds
-      setTimeout(() => {
-        setShowMilestonePopup(false);
-      }, 5000);
+      // Check if this rank has already been achieved and celebrated
+      if (!achievedRanks.includes(currentRank.name) && currentRank.name !== "New") {
+        // New rank achieved that hasn't been celebrated yet
+        setMilestoneData({
+          fromRank: prevRank.name,
+          toRank: currentRank.name,
+          points: points
+        });
+        setShowMilestonePopup(true);
+        
+        // Add to achieved ranks
+        setAchievedRanks(prev => [...prev, currentRank.name]);
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+          setShowMilestonePopup(false);
+        }, 5000);
+      }
     }
     setPrevRank(currentRank);
-  }, [points]);
+  }, [points, currentRank.name, achievedRanks]);
+
+  // Load achieved ranks from localStorage on mount (optional - to persist across sessions)
+  useEffect(() => {
+    if (profileId) {
+      const storedRanks = localStorage.getItem(`achievedRanks_${profileId}`);
+      if (storedRanks) {
+        setAchievedRanks(JSON.parse(storedRanks));
+      }
+    }
+  }, [profileId]);
+
+  // Save achieved ranks to localStorage when they change
+  useEffect(() => {
+    if (profileId && achievedRanks.length > 0) {
+      localStorage.setItem(`achievedRanks_${profileId}`, JSON.stringify(achievedRanks));
+    }
+  }, [achievedRanks, profileId]);
 
   return (
     <>

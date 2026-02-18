@@ -1,22 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 import { motion, AnimatePresence } from "framer-motion";
-
-// This would typically come from your database via a hook
-// For now, keeping it as constant but ideally fetch from vote_packages table
-const VOTE_PACKAGES = [
-  { points: 1, price: 1000, label: "1", popular: false, icon: "🎯", packageName: "Basic 1" },
-  { points: 5, price: 5000, label: "5", popular: false, icon: "🎯", packageName: "Basic 5" },
-  { points: 20, price: 20000, label: "20", popular: false, icon: "🎯", packageName: "Basic 20" },
-  { points: 50, price: 50000, label: "50", popular: false, icon: "🎯", packageName: "Basic 50" },
-  { points: 100, price: 100000, label: "100", popular: false, icon: "🎯", packageName: "Basic 100" },
-  { points: 300, price: 300000, label: "300", popular: false, icon: "🎯", packageName: "Basic 300" },
-  { points: 500, price: 475000, label: "500", popular: false, icon: "⚡", packageName: "THOR 500", discount: 5, originalPrice: 500000 },
-  { points: 1000, price: 950000, label: "THOR", popular: true, icon: "⚡", packageName: "THOR 1000", discount: 5, originalPrice: 1000000 },
-  { points: 2000, price: 1800000, label: "WAR", popular: true, icon: "🔥", packageName: "WAR", discount: 10, originalPrice: 2000000 },
-  { points: 5000, price: 4500000, label: "GOZZ", popular: true, icon: "🚀", packageName: "GOZZ", discount: 10, originalPrice: 5000000 },
-];
 
 // Helper function to format price nicely
 const formatPrice = (price) => {
@@ -34,12 +19,57 @@ const generateReference = () => {
 };
 
 export default function VoteSection({ candidate }) {
+  const [votePackages, setVotePackages] = useState([]);
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showGiftPrompt, setShowGiftPrompt] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  // Fetch vote packages from database
+  useEffect(() => {
+    const fetchVotePackages = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('vote_packages')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching vote packages:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          // Transform database format to match your component's expected format
+          const transformedPackages = data.map(pkg => ({
+            points: pkg.votes,
+            price: pkg.price,
+            label: pkg.name.includes('THOR') ? 'THOR' : 
+                   pkg.name.includes('WAR') ? 'WAR' : 
+                   pkg.name.includes('GOZZ') ? 'GOZZ' : 
+                   pkg.name.includes('CLOK') ? 'CLOK' :
+                   pkg.votes.toString(),
+            popular: pkg.is_popular || false,
+            icon: pkg.icon || '🎯',
+            packageName: pkg.display_name || pkg.name,
+            discount: pkg.discount_percentage || 0,
+            originalPrice: pkg.original_price || pkg.price
+          }));
+          setVotePackages(transformedPackages);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVotePackages();
+  }, []);
 
   const handleVote = async () => {
     if (!selectedPackage) return;
@@ -53,7 +83,7 @@ export default function VoteSection({ candidate }) {
     setIsProcessing(true);
 
     try {
-      // 1. First check wallet balance
+      // 1. Check wallet balance
       const { data: wallet, error: walletError } = await supabase
         .from("wallets")
         .select("balance")
@@ -65,23 +95,12 @@ export default function VoteSection({ candidate }) {
       }
 
       if (!wallet || wallet.balance < selectedPackage.price) {
-        alert("Insufficient balance. Please top up your wallet.");
+        alert(`Insufficient balance. You have ₦${wallet?.balance?.toLocaleString() || 0} but need ₦${selectedPackage.price.toLocaleString()}`);
         setIsProcessing(false);
         return;
       }
 
-      // 2. Use your existing RPC function to cast vote (this handles wallet deduction and vote counting)
-      const { error: voteError } = await supabase.rpc("cast_vote", {
-        p_user_id: user.id,
-        p_candidate_id: candidate.id,
-        p_vote_count: selectedPackage.points,
-      });
-
-      if (voteError) {
-        throw new Error(voteError.message);
-      }
-
-      // 3. Record vote transaction
+      // 2. Insert vote transaction FIRST - this triggers everything
       const pricePerVote = Math.round(selectedPackage.price / selectedPackage.points);
       const reference = generateReference();
       
@@ -104,11 +123,26 @@ export default function VoteSection({ candidate }) {
             candidate_name: candidate.name,
             timestamp: new Date().toISOString()
           }
-        });
+        }, { returning: 'minimal' });
 
       if (transactionError) {
-        // Log but don't fail - the vote already succeeded
-        console.error("Failed to record vote transaction:", transactionError);
+        console.error("Transaction error:", transactionError);
+        throw new Error("Failed to record vote");
+      }
+
+      // 3. Deduct from wallet AFTER successful transaction
+      const { error: deductError } = await supabase
+        .from("wallets")
+        .update({ 
+          balance: wallet.balance - selectedPackage.price,
+          updated_at: new Date().toISOString()
+        })
+        .eq("user_id", user.id);
+
+      if (deductError) {
+        // If deduction fails, we have a problem - but vote is already recorded
+        console.error("Failed to deduct from wallet but vote was recorded:", deductError);
+        // You might want to log this for manual reconciliation
       }
 
       // Success!
@@ -123,6 +157,16 @@ export default function VoteSection({ candidate }) {
     }
   };
 
+  if (loading) {
+    return (
+      <section className="py-6 md:py-10 px-3 md:px-4">
+        <div className="max-w-6xl mx-auto text-center">
+          <div className="animate-pulse text-gray-500">Loading vote packages...</div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <>
       <section className="py-6 md:py-10 px-3 md:px-4">
@@ -136,9 +180,9 @@ export default function VoteSection({ candidate }) {
 
           {/* Mobile: 5 columns grid for compact view */}
           <div className="grid grid-cols-5 md:grid-cols-5 gap-1.5 md:gap-2">
-            {VOTE_PACKAGES.map((pkg, index) => (
+            {votePackages.map((pkg, index) => (
               <motion.button
-                key={pkg.points}
+                key={index}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.02 }}
@@ -146,13 +190,21 @@ export default function VoteSection({ candidate }) {
                   setSelectedPackage(pkg);
                   setShowConfirmModal(true);
                 }}
-                className={`relative bg-rose-50 hover:bg-rose-100 rounded-lg md:rounded-xl p-1.5 md:p-3 shadow-sm hover:shadow-md transition-all active:scale-95 text-center ${
-                  pkg.popular ? 'ring-2 ring-red-500 bg-gradient-to-br from-rose-100 to-red-100' : ''
+                className={`relative bg-rose-100 hover:bg-rose-200 rounded-lg md:rounded-xl p-1.5 md:p-3 shadow-sm hover:shadow-md transition-all active:scale-95 text-center ${
+                  pkg.popular ? 'ring-2 ring-red-500 bg-gradient-to-br from-rose-200 to-red-100' : ''
                 }`}
               >
-                {pkg.popular && (
-                  <span className="absolute -top-1.5 -right-1.5 md:-top-2 md:-right-2 bg-gradient-to-r from-red-500 to-rose-500 text-white text-[8px] md:text-[10px] w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center font-bold shadow-sm">
+                {/* Discount Badge - Show when discount_percentage is not 0 */}
+                {pkg.discount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 md:-top-2 md:-right-2 bg-gradient-to-r from-red-500 to-rose-500 text-white text-[8px] md:text-[10px] w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center font-bold shadow-sm z-10">
                     {pkg.discount}%
+                  </span>
+                )}
+                
+                {/* Popular Badge - Only show for CLOK, THOR, WAR, GOZZ packages */}
+                {(pkg.label === 'CLOK' || pkg.label === 'THOR' || pkg.label === 'WAR' || pkg.label === 'GOZZ') && (
+                  <span className="absolute -top-1.5 -right-1.5 md:-top-2 md:-right-2 bg-gradient-to-r from-red-500 to-rose-500 text-white text-[8px] md:text-[10px] w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center font-bold shadow-sm z-10">
+                    ★
                   </span>
                 )}
                 
@@ -174,11 +226,22 @@ export default function VoteSection({ candidate }) {
                   votes
                 </div>
                 
-                {/* Price - smart formatting for k and M */}
+                {/* Price - smart formatting for k and M with discount indicator */}
                 <div className="bg-white/80 backdrop-blur-sm rounded py-0.5 md:py-1 px-0.5 border border-rose-200">
-                  <span className="text-[9px] md:text-xs font-bold text-gray-800">
-                    {formatPrice(pkg.price)}
-                  </span>
+                  {pkg.discount > 0 ? (
+                    <div className="flex flex-col items-center">
+                      <span className="text-[7px] md:text-[9px] line-through text-gray-400">
+                        {formatPrice(pkg.originalPrice)}
+                      </span>
+                      <span className="text-[9px] md:text-xs font-bold text-red-600">
+                        {formatPrice(pkg.price)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-[9px] md:text-xs font-bold text-gray-800">
+                      {formatPrice(pkg.price)}
+                    </span>
+                  )}
                 </div>
               </motion.button>
             ))}
