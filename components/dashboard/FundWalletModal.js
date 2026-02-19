@@ -240,12 +240,6 @@ export default function FundWalletModal({ isOpen, onClose, user }) {
                       <p className="text-xs text-gray-500 mt-2">Minimum: ₦1,000</p>
                     )}
 
-                    {/* Color guide */}
-                    {!loading && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        Colors: red {'<'}10k | orange 10k-50k | blue 50k-200k | green 200k+
-                      </p>
-                    )}
                   </div>
 
                   {/* User info - helpful for debugging */}
