@@ -28,7 +28,6 @@ export default function Dashboard() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
-  const [amountToFund, setAmountToFund] = useState("");
   const [showFundModal, setShowFundModal] = useState(false);
   const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   
@@ -536,37 +535,6 @@ export default function Dashboard() {
     });
   };
 
-  const handlePayNow = async () => {
-    if (!amountToFund) {
-      alert("Please enter an amount");
-      return;
-    }
-
-    try {
-      const response = await fetch("/api/fund-wallet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: Number(amountToFund),
-          email: user.email,
-          user_id: user.id,
-          redirect_url: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/wallet/callback`,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data?.authorization_url) {
-        window.location.href = data.authorization_url;
-      } else {
-        alert("Payment initialization failed: " + (data?.error || "Unknown"));
-      }
-    } catch (err) {
-      console.error("Payment error:", err);
-      alert("Something went wrong. Try again later.");
-    }
-  };
-
   const handleUpdate = async (e) => {
     e.preventDefault();
 
@@ -715,14 +683,11 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Fund Wallet Modal */}
+      {/* Fund Wallet Modal - Updated to pass user object directly */}
       <FundWalletModal
         isOpen={showFundModal}
         onClose={() => setShowFundModal(false)}
-        onConfirm={(amount) => {
-          setAmountToFund(amount);
-          handlePayNow();
-        }}
+        user={user} // Pass the user object directly
       />
 
       <Footer />
