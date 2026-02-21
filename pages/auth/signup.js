@@ -141,7 +141,7 @@ export default function SignUp() {
       const { data: urlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
-      image_url = urlData?.publicUrl;
+      photo_url = urlData?.publicUrl;
     }
 
     const { data: existingProfile, error: fetchProfileError } = await supabase
@@ -162,7 +162,7 @@ export default function SignUp() {
         .update({
           full_name: form.fullName,
           email: form.email,
-          image_url,
+          photo_url,
         })
         .eq("id", userId);
 
@@ -178,7 +178,7 @@ export default function SignUp() {
           email: form.email,
           full_name: form.fullName,
           role: "fan",
-          image_url,
+          photo_url,
         },
       ]);
 
