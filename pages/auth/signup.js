@@ -118,7 +118,7 @@ export default function SignUp() {
 
     const userId = userData.user.id;
 
-    let image_url = null;
+    let photo_url = null;
 
     if (form.photo) {
       const fileExt = form.photo.name.split(".").pop();
