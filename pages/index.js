@@ -260,12 +260,12 @@ export default function Home() {
       <Header />
 
       <main className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-20 md:pb-0">
-        {/* Hero Section with Timer */}
+        {/* Hero Section with Timer - Height reduced by 20% */}
         <section className="relative">
           <Slider {...sliderSettings}>
             {heroSlides.map((slide, index) => (
               <div key={index}>
-                <div className="relative h-[240px] sm:h-[400px] overflow-hidden">
+                <div className="relative h-[192px] sm:h-[320px] overflow-hidden">
                   <Image
                     src={slide.image}
                     alt={slide.title}
@@ -407,7 +407,13 @@ export default function Home() {
         <FeaturedPost images={featuredImages} />
 
         {/* Top Candidates - Only render if there are votable candidates */}
-        {hasVotableCandidates && <TopCandidates />}
+        {hasVotableCandidates && (
+          <>
+            <TopCandidates />
+            {/* Add gap after TopCandidates on mobile only */}
+            <div className="block sm:hidden h-16"></div>
+          </>
+        )}
 
         {/* Video Carousel */}
         <VideoCarousel videos={[
@@ -471,6 +477,9 @@ export default function Home() {
                 </span>
               </a>
             </motion.div>
+            
+            {/* Add gap after news button on mobile only */}
+            <div className="block sm:hidden h-16"></div>
           </div>
         </section>
       </main>
