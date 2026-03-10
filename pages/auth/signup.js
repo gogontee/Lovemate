@@ -11,6 +11,8 @@ export default function SignUp() {
   const [form, setForm] = useState({
     fullName: "",
     email: "",
+    phone: "", // Changed from whatsapp to phone
+    country: "",
     password: "",
     confirmPassword: "",
     photo: null,
@@ -30,6 +32,42 @@ export default function SignUp() {
     hasSpecial: false,
     minLength: false,
   });
+
+  // List of countries for dropdown
+  const countries = [
+    "United States", "United Kingdom", "Canada", "Australia", "India", 
+    "Nigeria", "South Africa", "Kenya", "Ghana", "Egypt", "Morocco", 
+    "Tanzania", "Uganda", "Rwanda", "Zambia", "Zimbabwe", "Malawi", 
+    "Botswana", "Namibia", "Mauritius", "Seychelles", "Lesotho", "Eswatini", 
+    "Cameroon", "Senegal", "Côte d'Ivoire", "Burkina Faso", "Mali", "Niger", 
+    "Chad", "Central African Republic", "Republic of the Congo", "DR Congo", 
+    "Gabon", "Equatorial Guinea", "Benin", "Togo", "Sierra Leone", "Liberia", 
+    "Guinea", "Guinea-Bissau", "Gambia", "Cape Verde", "São Tomé and Príncipe", 
+    "Angola", "Mozambique", "Madagascar", "Comoros", "Djibouti", "Eritrea", 
+    "Ethiopia", "Somalia", "South Sudan", "Sudan", "Mauritania", "UAE", 
+    "Saudi Arabia", "Qatar", "Kuwait", "Bahrain", "Oman", "Yemen", "Jordan", 
+    "Lebanon", "Palestine", "Iraq", "Syria", "Turkey", "Israel", "Cyprus", 
+    "Greece", "Italy", "Spain", "Portugal", "France", "Germany", "Netherlands", 
+    "Belgium", "Switzerland", "Austria", "Sweden", "Norway", "Denmark", "Finland", 
+    "Iceland", "Ireland", "Luxembourg", "Monaco", "Liechtenstein", "Malta", 
+    "Andorra", "San Marino", "Vatican City", "Albania", "Bosnia and Herzegovina", 
+    "Croatia", "Serbia", "Montenegro", "Kosovo", "North Macedonia", "Bulgaria", 
+    "Romania", "Hungary", "Slovakia", "Slovenia", "Czech Republic", "Poland", 
+    "Lithuania", "Latvia", "Estonia", "Belarus", "Ukraine", "Moldova", "Russia", 
+    "Georgia", "Armenia", "Azerbaijan", "Kazakhstan", "Uzbekistan", "Turkmenistan", 
+    "Kyrgyzstan", "Tajikistan", "Mongolia", "China", "Taiwan", "Hong Kong", 
+    "Macau", "Japan", "South Korea", "North Korea", "Vietnam", "Laos", "Cambodia", 
+    "Thailand", "Myanmar", "Malaysia", "Singapore", "Brunei", "Philippines", 
+    "Indonesia", "Timor-Leste", "Nepal", "Bhutan", "Bangladesh", "Sri Lanka", 
+    "Pakistan", "Afghanistan", "Iran", "Mexico", "Guatemala", "Belize", 
+    "El Salvador", "Honduras", "Nicaragua", "Costa Rica", "Panama", "Cuba", 
+    "Jamaica", "Haiti", "Dominican Republic", "Puerto Rico", "Bahamas", 
+    "Barbados", "Trinidad and Tobago", "Antigua and Barbuda", "Dominica", 
+    "Saint Lucia", "Saint Vincent and the Grenadines", "Grenada", 
+    "Saint Kitts and Nevis", "Brazil", "Argentina", "Chile", "Uruguay", 
+    "Paraguay", "Bolivia", "Peru", "Ecuador", "Colombia", "Venezuela", 
+    "Guyana", "Suriname", "French Guiana", "Falkland Islands"
+  ];
 
   // Check password strength - updated to 6 characters
   const checkPasswordStrength = (password) => {
@@ -69,6 +107,19 @@ export default function SignUp() {
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Validate all mandatory fields
+    if (!form.fullName || !form.email || !form.phone || !form.country) {
+      setError("All fields are mandatory. Please fill in all required information.");
+      return;
+    }
+
+    // Validate phone number format (basic validation)
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/; // E.164 format or simple international format
+    if (!phoneRegex.test(form.phone.replace(/\s/g, ''))) {
+      setError("Please enter a valid phone number (e.g., +1234567890)");
+      return;
+    }
 
     if (!acceptedTerms) {
       setError("You must accept the Terms of Participation to continue.");
@@ -162,6 +213,8 @@ export default function SignUp() {
         .update({
           full_name: form.fullName,
           email: form.email,
+          phone: form.phone, // Changed from whatsapp to phone
+          country: form.country,
           photo_url,
         })
         .eq("id", userId);
@@ -177,6 +230,8 @@ export default function SignUp() {
           id: userId,
           email: form.email,
           full_name: form.fullName,
+          phone: form.phone, // Changed from whatsapp to phone
+          country: form.country,
           role: "fan",
           photo_url,
         },
@@ -190,7 +245,9 @@ export default function SignUp() {
     }
 
     setLoading(false);
-    router.push("/auth/login");
+    
+    // Redirect directly to dashboard instead of login page
+    router.push("/dashboard");
   };
 
   // Get password strength color - updated for 6 chars
@@ -361,7 +418,7 @@ export default function SignUp() {
                 transition={{ delay: 0.5 }}
               >
                 <label htmlFor="fullName" className="block text-xs font-medium text-gray-600 mb-1 ml-1">
-                  Full Name
+                  Full Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -382,7 +439,7 @@ export default function SignUp() {
                 transition={{ delay: 0.6 }}
               >
                 <label htmlFor="email" className="block text-xs font-medium text-gray-600 mb-1 ml-1">
-                  Email Address
+                  Email Address <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
@@ -396,11 +453,66 @@ export default function SignUp() {
                 />
               </motion.div>
 
-              {/* Profile Photo Upload */}
+              {/* Phone Number - Without icon, saving to profile.phone */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.7 }}
+              >
+                <label htmlFor="phone" className="block text-xs font-medium text-gray-600 mb-1 ml-1">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  placeholder="+2349056780090"
+                  className="w-full px-3.5 py-2.5 md:px-4 md:py-3 bg-rose-50/50 border border-rose-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-red-700 focus:border-transparent transition-all outline-none placeholder:text-gray-400"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  required
+                />
+                <p className="text-[10px] text-gray-500 mt-1 ml-1">
+                  Include country code (e.g., +1 for US, +44 for UK)
+                </p>
+              </motion.div>
+
+              {/* Country - Combobox with datalist for both dropdown and free typing */}
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.75 }}
+              >
+                <label htmlFor="country" className="block text-xs font-medium text-gray-600 mb-1 ml-1">
+                  Country <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="country"
+                  name="country"
+                  list="countries-list"
+                  placeholder="Select or type your country"
+                  className="w-full px-3.5 py-2.5 md:px-4 md:py-3 bg-rose-50/50 border border-rose-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-red-700 focus:border-transparent transition-all outline-none placeholder:text-gray-400"
+                  value={form.country}
+                  onChange={(e) => setForm({ ...form, country: e.target.value })}
+                  required
+                  autoComplete="off"
+                />
+                <datalist id="countries-list">
+                  {countries.map((country, index) => (
+                    <option key={index} value={country} />
+                  ))}
+                </datalist>
+                <p className="text-[10px] text-gray-500 mt-1 ml-1">
+                  Start typing or select from dropdown
+                </p>
+              </motion.div>
+
+              {/* Profile Photo Upload */}
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.8 }}
               >
                 <label htmlFor="photo-upload" className="block text-xs font-medium text-gray-600 mb-1 ml-1">
                   Profile Picture
@@ -459,10 +571,10 @@ export default function SignUp() {
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.8 }}
+                transition={{ delay: 0.9 }}
               >
                 <label htmlFor="password" className="block text-xs font-medium text-gray-600 mb-1 ml-1">
-                  Password
+                  Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -552,10 +664,10 @@ export default function SignUp() {
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.9 }}
+                transition={{ delay: 1.0 }}
               >
                 <label htmlFor="confirmPassword" className="block text-xs font-medium text-gray-600 mb-1 ml-1">
-                  Confirm Password
+                  Confirm Password <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
@@ -605,7 +717,7 @@ export default function SignUp() {
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 1.0 }}
+                transition={{ delay: 1.1 }}
               >
                 <label htmlFor="terms" className="flex items-start gap-2 cursor-pointer group">
                   <div className="relative flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -634,6 +746,7 @@ export default function SignUp() {
                     >
                       Terms of Participation
                     </Link>
+                    <span className="text-red-500"> *</span>
                   </span>
                 </label>
               </motion.div>
@@ -695,7 +808,7 @@ export default function SignUp() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1.1 }}
+                transition={{ delay: 1.2 }}
                 className="text-center pt-1"
               >
                 <p className="text-[11px] text-gray-500">
@@ -713,7 +826,7 @@ export default function SignUp() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 1.2 }}
+                transition={{ delay: 1.3 }}
                 className="flex items-center justify-center gap-1 pt-1"
               >
                 <Shield className="w-3 h-3 text-gray-400" />

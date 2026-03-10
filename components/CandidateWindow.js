@@ -703,7 +703,7 @@ export default function CandidateWindow({ profileId }) {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-5 border border-purple-500/30 overflow-hidden w-full"
+          className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full"
         >
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:20px_20px]"></div>
           
@@ -711,38 +711,36 @@ export default function CandidateWindow({ profileId }) {
             <motion.div
               animate={{ y: [0, -5, 0] }}
               transition={{ duration: 2, repeat: Infinity }}
-              className="flex justify-center mb-3"
+              className="flex justify-center mb-4"
             >
-              <Bot className="w-14 h-14 text-purple-400" />
+              <Bot className="w-16 h-16 text-purple-400" />
             </motion.div>
             
-            <h3 className="text-lg font-bold text-white mb-3 text-center font-mono">
+            <h3 className="text-lg font-bold text-white mb-4 text-center font-mono">
               🔮 ARE YOU HERE TO...
             </h3>
             
-            <div className="space-y-3 sm:space-y-2">
+            <div className="space-y-3">
+              {/* Support a Favorite Candidate Button - FULL TEXT */}
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setShowCodeInput(true)}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg py-2 px-3 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1.5"
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl py-3 px-4 text-sm font-bold flex items-center justify-center gap-2"
               >
-                <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                <span className="truncate">CHEER</span>
-                <span className="hidden xs:inline sm:hidden">FAV</span>
-                <span className="hidden sm:inline">A FAVORITE CANDIDATE</span>
+                <Heart className="w-5 h-5" />
+                <span>SUPPORT YOUR FAVORITE CANDIDATE</span>
               </motion.button>
               
+              {/* Become a Candidate Button - FULL TEXT */}
               <motion.a
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 href="/register"
-                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg py-2 px-3 text-[10px] sm:text-xs font-semibold flex items-center justify-center gap-1.5"
+                className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl py-3 px-4 text-sm font-bold flex items-center justify-center gap-2"
               >
-                <UserPlus className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
-                <span className="truncate">JOIN</span>
-                <span className="hidden xs:inline sm:hidden">AS</span>
-                <span className="hidden sm:inline">PARTICIPATE AS CANDIDATE</span>
+                <UserPlus className="w-5 h-5" />
+                <span>BECOME A CANDIDATE</span>
               </motion.a>
             </div>
 
@@ -753,10 +751,10 @@ export default function CandidateWindow({ profileId }) {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className="mt-4 bg-purple-900/50 rounded-lg p-3 border border-purple-500/30"
+                  className="mt-4 bg-purple-900/50 rounded-xl p-4 border border-purple-500/30"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-purple-300 text-[10px] font-mono">ENTER CANDIDATE CODE</p>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-purple-300 text-xs font-mono">ENTER CANDIDATE CODE</p>
                     <button
                       onClick={() => {
                         setShowCodeInput(false);
@@ -765,24 +763,24 @@ export default function CandidateWindow({ profileId }) {
                       }}
                       className="p-1 hover:bg-purple-800 rounded"
                     >
-                      <X className="w-3 h-3 text-purple-300" />
+                      <X className="w-4 h-4 text-purple-300" />
                     </button>
                   </div>
                   
-                  <div className="flex gap-1 mb-2">
+                  <div className="flex gap-2 mb-3">
                     <input
                       type="text"
                       value={candidateCode}
                       onChange={(e) => setCandidateCode(e.target.value.toUpperCase())}
                       placeholder="e.g. A1B2"
                       maxLength={4}
-                      className="flex-1 bg-gray-900 text-white text-xs rounded-lg px-2 py-1.5 border border-purple-500/30 focus:outline-none focus:border-purple-400"
+                      className="flex-1 bg-gray-900 text-white text-sm rounded-lg px-3 py-2 border border-purple-500/30 focus:outline-none focus:border-purple-400"
                     />
                     <button
                       onClick={handleSearchCandidate}
-                      className="bg-purple-600 text-white px-2 py-1.5 rounded-lg text-xs font-semibold"
+                      className="bg-purple-600 text-white px-3 py-2 rounded-lg text-sm font-semibold"
                     >
-                      <Search className="w-3 h-3" />
+                      <Search className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -793,10 +791,10 @@ export default function CandidateWindow({ profileId }) {
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 5 }}
-                        className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20"
+                        className="bg-gray-900/50 rounded-lg p-3 border border-purple-500/20"
                       >
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
                             {foundCandidate.image_url ? (
                               <img 
                                 src={foundCandidate.image_url.startsWith("http") 
@@ -807,18 +805,18 @@ export default function CandidateWindow({ profileId }) {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <Bot className="w-4 h-4 text-purple-400 m-auto" />
+                              <Bot className="w-6 h-6 text-purple-400 m-auto" />
                             )}
                           </div>
                           <div className="flex-1">
-                            <p className="text-white text-xs font-bold">{foundCandidate.name}</p>
-                            <p className="text-purple-300 text-[8px]">{foundCandidate.country}</p>
+                            <p className="text-white text-sm font-bold">{foundCandidate.name}</p>
+                            <p className="text-purple-300 text-xs">{foundCandidate.country}</p>
                           </div>
                           <button
                             onClick={handleAddFavorite}
-                            className="bg-green-600 text-white px-2 py-1 rounded text-[8px] font-semibold flex items-center gap-1"
+                            className="bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1"
                           >
-                            <ThumbsUp className="w-2 h-2" />
+                            <ThumbsUp className="w-3 h-3" />
                             ADD
                           </button>
                         </div>
@@ -837,14 +835,14 @@ export default function CandidateWindow({ profileId }) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-3"
+            className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-0"
           >
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:15px_15px]"></div>
             
             <div className="relative z-10">
-              <div className="flex items-center gap-1.5 mb-3">
-                <Award className="w-4 h-4 text-yellow-400" />
-                <h3 className="text-white text-xs font-bold">YOUR FAVORITE CANDIDATES</h3>
+              <div className="flex items-center gap-2 mb-4">
+                <Award className="w-5 h-5 text-yellow-400" />
+                <h3 className="text-white text-sm font-bold">YOUR FAVORITE CANDIDATES</h3>
               </div>
 
               {loadingFavorites ? (
@@ -853,24 +851,24 @@ export default function CandidateWindow({ profileId }) {
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   >
-                    <RefreshCw className="w-4 h-4 text-purple-400" />
+                    <RefreshCw className="w-5 h-5 text-purple-400" />
                   </motion.div>
                 </div>
               ) : favorites.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-3">
                   {favorites.map((fav) => (
                     <motion.div
                       key={fav.id}
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 relative group"
+                      className="bg-gray-900/50 rounded-lg p-3 border border-purple-500/20 relative group"
                     >
                       <button
                         onClick={() => handleRemoveFavorite(fav.id, fav.name)}
                         className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                       >
-                        <Trash2 className="w-2.5 h-2.5 text-white" />
+                        <Trash2 className="w-3 h-3 text-white" />
                       </button>
                       <a
                         href={`/candidate/${fav.id}`}
@@ -879,7 +877,7 @@ export default function CandidateWindow({ profileId }) {
                         className="block"
                       >
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
+                          <div className="w-10 h-10 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
                             {fav.image_url ? (
                               <img 
                                 src={fav.image_url.startsWith("http") 
@@ -890,15 +888,15 @@ export default function CandidateWindow({ profileId }) {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <Bot className="w-4 h-4 text-purple-400 m-auto" />
+                              <Bot className="w-5 h-5 text-purple-400 m-auto" />
                             )}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
-                            <p className="text-purple-300 text-[7px] truncate">{fav.country}</p>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
-                              <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                            <p className="text-white text-xs font-bold truncate">{fav.name}</p>
+                            <p className="text-purple-300 text-[9px] truncate">{fav.country}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-yellow-400 text-[9px]">⭐ {fav.votes || 0}</span>
+                              <span className="text-pink-400 text-[9px]">🎁 {fav.gifts || 0}</span>
                             </div>
                           </div>
                         </div>
@@ -907,11 +905,11 @@ export default function CandidateWindow({ profileId }) {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-3">
-                  <p className="text-purple-300 text-[10px] mb-2">No favorite candidates yet</p>
+                <div className="text-center py-4">
+                  <p className="text-purple-300 text-xs mb-3">No favorite candidates yet</p>
                   <button
                     onClick={() => setShowCodeInput(true)}
-                    className="text-[8px] bg-purple-600 text-white px-2 py-1 rounded-full font-semibold"
+                    className="text-xs bg-purple-600 text-white px-4 py-2 rounded-full font-semibold"
                   >
                     + ADD FAVORITE
                   </button>
@@ -938,7 +936,7 @@ export default function CandidateWindow({ profileId }) {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-3 md:p-4 border border-purple-500/30 overflow-hidden w-full"
+        className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mb-0"
       >
         {/* Animated background grid - smaller pattern */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:15px_15px]"></div>
@@ -962,25 +960,25 @@ export default function CandidateWindow({ profileId }) {
         />
 
         {/* Orakul Header - more compact */}
-        <div className="relative z-10 flex items-start justify-between mb-2">
-          <div className="flex items-center space-x-1.5">
+        <div className="relative z-10 flex items-start justify-between mb-3">
+          <div className="flex items-center gap-2">
             <motion.div
               animate={{ rotate: [0, 5, -5, 0] }}
               transition={{ duration: 4, repeat: Infinity }}
               className="relative"
             >
-              <Bot className="w-6 h-6 text-purple-400" />
+              <Bot className="w-8 h-8 text-purple-400" />
               <motion.div
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
-                className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-purple-400 rounded-full"
+                className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-purple-400 rounded-full"
               />
             </motion.div>
             <div>
-              <p className="text-purple-300 text-[10px] font-mono">
+              <p className="text-purple-300 text-xs font-mono">
                 {greeting}, <span className="text-white font-semibold">{candidate.name}</span>
               </p>
-              <h2 className="text-white font-bold text-xs">Candidate Portal</h2>
+              <h2 className="text-white font-bold text-sm">Candidate Portal</h2>
             </div>
           </div>
           
@@ -997,17 +995,17 @@ export default function CandidateWindow({ profileId }) {
                 ? 'from-green-500 to-emerald-600' 
                 : 'from-purple-600 to-pink-600'
             } rounded-full opacity-75 group-hover:opacity-100 blur-[2px] transition duration-300`}></div>
-            <div className={`relative px-2 py-1 ${
+            <div className={`relative px-3 py-1.5 ${
               candidate?.selected_24 ? 'bg-green-600' : 'bg-gray-900'
-            } text-white rounded-full text-[8px] md:text-[10px] font-semibold flex items-center gap-1`}>
+            } text-white rounded-full text-xs font-semibold flex items-center gap-1`}>
               {isThinking ? (
                 <>
-                  <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                  <RefreshCw className="w-3 h-3 animate-spin" />
                   <span>...</span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-2.5 h-2.5" />
+                  <Sparkles className="w-3 h-3" />
                   <span>{candidate?.selected_24 ? "CONGRAT!" : "CHECK STATUS"}</span>
                 </>
               )}
@@ -1021,55 +1019,55 @@ export default function CandidateWindow({ profileId }) {
             initial={{ opacity: 0, y: -5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
-            className="relative z-10 mb-2 bg-purple-900/50 rounded-lg p-1.5 border border-purple-500/30 flex items-center gap-1"
+            className="relative z-10 mb-3 bg-purple-900/50 rounded-lg p-2 border border-purple-500/30 flex items-center gap-1"
           >
             {orakulMessage.icon}
-            <span className="text-purple-200 text-[9px]">{orakulMessage.text}</span>
+            <span className="text-purple-200 text-xs">{orakulMessage.text}</span>
           </motion.div>
         )}
 
         {/* Status Indicator - smaller */}
-        <div className="relative z-10 mb-2">
+        <div className="relative z-10 mb-3">
           <motion.div 
             animate={{ scale: [1, 1.02, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className={`flex items-center justify-center gap-1.5 p-1.5 rounded-lg bg-gray-900/50 border ${status.glow}`}
+            className={`flex items-center justify-center gap-2 p-2 rounded-lg bg-gray-900/50 border ${status.glow}`}
           >
             <div className={`w-2 h-2 rounded-full ${status.color} animate-pulse`} />
-            <span className="text-white text-[9px] font-bold">{status.text}</span>
+            <span className="text-white text-xs font-bold">{status.text}</span>
             <span className="scale-75">{status.icon}</span>
           </motion.div>
         </div>
 
         {/* Candidate Stats Dashboard - smaller */}
-        <div className="relative z-10 grid grid-cols-3 gap-1 mb-2">
+        <div className="relative z-10 grid grid-cols-3 gap-2 mb-3">
           <motion.div 
             whileHover={{ scale: 1.02 }}
-            className="bg-purple-900/30 rounded-lg p-1.5 text-center border border-purple-500/20"
+            className="bg-purple-900/30 rounded-lg p-2 text-center border border-purple-500/20"
           >
-            <div className="text-sm font-bold text-white">{stats.votes.toLocaleString()}</div>
-            <div className="text-[8px] text-purple-300">VOTES</div>
+            <div className="text-lg font-bold text-white">{stats.votes.toLocaleString()}</div>
+            <div className="text-[10px] text-purple-300">VOTES</div>
           </motion.div>
           <motion.div 
             whileHover={{ scale: 1.02 }}
-            className="bg-pink-900/30 rounded-lg p-1.5 text-center border border-pink-500/20"
+            className="bg-pink-900/30 rounded-lg p-2 text-center border border-pink-500/20"
           >
-            <div className="text-sm font-bold text-white">{stats.gifts.toLocaleString()}</div>
-            <div className="text-[8px] text-pink-300">GIFTS</div>
+            <div className="text-lg font-bold text-white">{stats.gifts.toLocaleString()}</div>
+            <div className="text-[10px] text-pink-300">GIFTS</div>
           </motion.div>
           <motion.div 
             whileHover={{ scale: 1.02 }}
-            className="bg-rose-900/30 rounded-lg p-1.5 text-center border border-rose-500/20"
+            className="bg-rose-900/30 rounded-lg p-2 text-center border border-rose-500/20"
           >
-            <div className="text-sm font-bold text-white">₦{stats.giftWorth.toLocaleString()}</div>
-            <div className="text-[8px] text-rose-300">WORTH</div>
+            <div className="text-lg font-bold text-white">₦{stats.giftWorth.toLocaleString()}</div>
+            <div className="text-[10px] text-rose-300">WORTH</div>
           </motion.div>
         </div>
 
         {/* Candidate Card - compact version */}
-        <div className="relative z-10 mb-2">
-          <div className="flex items-center gap-2 bg-gray-900/50 rounded-lg p-2 border border-purple-500/20">
-            <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 bg-purple-900/30 flex items-center justify-center">
+        <div className="relative z-10 mb-3">
+          <div className="flex items-center gap-3 bg-gray-900/50 rounded-lg p-3 border border-purple-500/20">
+            <div className="w-14 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-purple-900/30 flex items-center justify-center">
               {imageUrl ? (
                 <img 
                   src={imageUrl} 
@@ -1077,32 +1075,32 @@ export default function CandidateWindow({ profileId }) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <Bot className="w-6 h-6 text-purple-400" />
+                <Bot className="w-8 h-8 text-purple-400" />
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-white text-sm font-bold truncate">{candidate.name}</h3>
-              <p className="text-purple-300 text-[10px] truncate">{candidate.country}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-yellow-400 text-[10px] font-semibold">⭐ {stats.votes}</span>
-                <span className="text-pink-400 text-[10px] font-semibold">🎁 {stats.gifts}</span>
+              <h3 className="text-white text-base font-bold truncate">{candidate.name}</h3>
+              <p className="text-purple-300 text-xs truncate">{candidate.country}</p>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-yellow-400 text-xs font-semibold">⭐ {stats.votes}</span>
+                <span className="text-pink-400 text-xs font-semibold">🎁 {stats.gifts}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Action Buttons with Share */}
-        <div className="relative z-10 flex flex-row gap-1 mb-3">
+        <div className="relative z-10 flex flex-row gap-2 mb-0">
           <motion.a
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             href={`https://www.lovemateshow.com/candidate/${candidate.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg py-1.5 px-2 text-[9px] font-semibold flex items-center justify-center gap-1 group"
+            className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg py-2 px-3 text-xs font-semibold flex items-center justify-center gap-1 group"
           >
-            <span>VIEW</span>
-            <ExternalLink className="w-2.5 h-2.5" />
+            <span>VIEW PROFILE</span>
+            <ExternalLink className="w-3 h-3" />
           </motion.a>
           
           <div className="flex-1 relative">
@@ -1110,9 +1108,9 @@ export default function CandidateWindow({ profileId }) {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setShowShareOptions(!showShareOptions)}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg py-1.5 px-2 text-[9px] font-semibold flex items-center justify-center gap-1"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg py-2 px-3 text-xs font-semibold flex items-center justify-center gap-1"
             >
-              <Share2 className="w-2.5 h-2.5" />
+              <Share2 className="w-3 h-3" />
               <span>SHARE</span>
             </motion.button>
             
@@ -1123,64 +1121,64 @@ export default function CandidateWindow({ profileId }) {
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -5 }}
-                  className="absolute bottom-full mb-1 left-0 right-0 bg-gray-900 rounded-lg p-1 border border-purple-500/30 shadow-xl z-20"
+                  className="absolute bottom-full mb-1 left-0 right-0 bg-gray-900 rounded-lg p-2 border border-purple-500/30 shadow-xl z-20"
                 >
-                  <div className="grid grid-cols-4 gap-0.5">
+                  <div className="grid grid-cols-4 gap-1">
                     <button
                       onClick={() => handleShare('whatsapp')}
-                      className="p-1 hover:bg-purple-900/50 rounded transition-colors"
+                      className="p-2 hover:bg-purple-900/50 rounded transition-colors"
                       title="WhatsApp"
                     >
-                      <MessageCircle className="w-3 h-3 text-green-400 mx-auto" />
+                      <MessageCircle className="w-4 h-4 text-green-400 mx-auto" />
                     </button>
                     <button
                       onClick={() => handleShare('telegram')}
-                      className="p-1 hover:bg-purple-900/50 rounded transition-colors"
+                      className="p-2 hover:bg-purple-900/50 rounded transition-colors"
                       title="Telegram"
                     >
-                      <Send className="w-3 h-3 text-blue-400 mx-auto" />
+                      <Send className="w-4 h-4 text-blue-400 mx-auto" />
                     </button>
                     <button
                       onClick={() => handleShare('instagram')}
-                      className="p-1 hover:bg-purple-900/50 rounded transition-colors"
+                      className="p-2 hover:bg-purple-900/50 rounded transition-colors"
                       title="Instagram"
                     >
-                      <Instagram className="w-3 h-3 text-pink-400 mx-auto" />
+                      <Instagram className="w-4 h-4 text-pink-400 mx-auto" />
                     </button>
                     <button
                       onClick={() => handleShare('facebook')}
-                      className="p-1 hover:bg-purple-900/50 rounded transition-colors"
+                      className="p-2 hover:bg-purple-900/50 rounded transition-colors"
                       title="Facebook"
                     >
-                      <Facebook className="w-3 h-3 text-blue-400 mx-auto" />
+                      <Facebook className="w-4 h-4 text-blue-400 mx-auto" />
                     </button>
                     <button
                       onClick={() => handleShare('twitter')}
-                      className="p-1 hover:bg-purple-900/50 rounded transition-colors"
+                      className="p-2 hover:bg-purple-900/50 rounded transition-colors"
                       title="Twitter"
                     >
-                      <Twitter className="w-3 h-3 text-sky-400 mx-auto" />
+                      <Twitter className="w-4 h-4 text-sky-400 mx-auto" />
                     </button>
                     <button
                       onClick={() => handleShare('messenger')}
-                      className="p-1 hover:bg-purple-900/50 rounded transition-colors"
+                      className="p-2 hover:bg-purple-900/50 rounded transition-colors"
                       title="Messenger"
                     >
-                      <MessageCircle className="w-3 h-3 text-blue-400 mx-auto" />
+                      <MessageCircle className="w-4 h-4 text-blue-400 mx-auto" />
                     </button>
                     <button
                       onClick={() => handleShare('copy')}
-                      className="p-1 hover:bg-purple-900/50 rounded transition-colors"
+                      className="p-2 hover:bg-purple-900/50 rounded transition-colors"
                       title="Copy Link"
                     >
-                      <Link2 className="w-3 h-3 text-gray-400 mx-auto" />
+                      <Link2 className="w-4 h-4 text-gray-400 mx-auto" />
                     </button>
                     <button
                       onClick={() => setShowShareOptions(false)}
-                      className="p-1 hover:bg-purple-900/50 rounded transition-colors"
+                      className="p-2 hover:bg-purple-900/50 rounded transition-colors"
                       title="Close"
                     >
-                      <MoreHorizontal className="w-3 h-3 text-gray-400 mx-auto" />
+                      <MoreHorizontal className="w-4 h-4 text-gray-400 mx-auto" />
                     </button>
                   </div>
                 </motion.div>
@@ -1190,7 +1188,7 @@ export default function CandidateWindow({ profileId }) {
         </div>
 
         {/* Animation Container - Small and after buttons */}
-        <div className="relative z-10 mt-1 flex justify-center items-center h-12">
+        <div className="relative z-10 mt-2 flex justify-center items-center h-12">
           <AnimatePresence mode="wait">
             {showLoveduck && (
               <motion.div
@@ -1246,7 +1244,7 @@ export default function CandidateWindow({ profileId }) {
         </div>
 
         {/* System Status - ultra compact */}
-        <div className="relative z-10 mt-1 text-[7px] text-purple-500 font-mono flex items-center justify-between">
+        <div className="relative z-10 mt-2 text-[8px] text-purple-500 font-mono flex items-center justify-between">
           <span>$ ORAKUL v2.0</span>
           <span className="flex items-center gap-1">
             <span className="w-1 h-1 bg-purple-400 rounded-full animate-pulse"></span>
@@ -1261,14 +1259,14 @@ export default function CandidateWindow({ profileId }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-3"
+          className="relative bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 rounded-xl shadow-lg p-4 border border-purple-500/30 overflow-hidden w-full mt-0"
         >
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:15px_15px]"></div>
           
           <div className="relative z-10">
-            <div className="flex items-center gap-1.5 mb-3">
-              <Award className="w-4 h-4 text-yellow-400" />
-              <h3 className="text-white text-xs font-bold">YOUR FAVORITE CANDIDATES</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <Award className="w-5 h-5 text-yellow-400" />
+              <h3 className="text-white text-sm font-bold">YOUR FAVORITE CANDIDATES</h3>
             </div>
 
             {loadingFavorites ? (
@@ -1277,24 +1275,24 @@ export default function CandidateWindow({ profileId }) {
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                 >
-                  <RefreshCw className="w-4 h-4 text-purple-400" />
+                  <RefreshCw className="w-5 h-5 text-purple-400" />
                 </motion.div>
               </div>
             ) : favorites.length > 0 ? (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {favorites.map((fav) => (
                   <motion.div
                     key={fav.id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="bg-gray-900/50 rounded-lg p-2 border border-purple-500/20 relative group"
+                    className="bg-gray-900/50 rounded-lg p-3 border border-purple-500/20 relative group"
                   >
                     <button
                       onClick={() => handleRemoveFavorite(fav.id, fav.name)}
                       className="absolute -top-1 -right-1 bg-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                     >
-                      <Trash2 className="w-2.5 h-2.5 text-white" />
+                      <Trash2 className="w-3 h-3 text-white" />
                     </button>
                     <a
                       href={`/candidate/${fav.id}`}
@@ -1303,7 +1301,7 @@ export default function CandidateWindow({ profileId }) {
                       className="block"
                     >
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
+                        <div className="w-10 h-10 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
                           {fav.image_url ? (
                             <img 
                               src={fav.image_url.startsWith("http") 
@@ -1314,15 +1312,15 @@ export default function CandidateWindow({ profileId }) {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <Bot className="w-4 h-4 text-purple-400 m-auto" />
+                            <Bot className="w-5 h-5 text-purple-400 m-auto" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-white text-[9px] font-bold truncate">{fav.name}</p>
-                          <p className="text-purple-300 text-[7px] truncate">{fav.country}</p>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <span className="text-yellow-400 text-[7px]">⭐ {fav.votes || 0}</span>
-                            <span className="text-pink-400 text-[7px]">🎁 {fav.gifts || 0}</span>
+                          <p className="text-white text-xs font-bold truncate">{fav.name}</p>
+                          <p className="text-purple-300 text-[9px] truncate">{fav.country}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-yellow-400 text-[9px]">⭐ {fav.votes || 0}</span>
+                            <span className="text-pink-400 text-[9px]">🎁 {fav.gifts || 0}</span>
                           </div>
                         </div>
                       </div>
@@ -1331,11 +1329,11 @@ export default function CandidateWindow({ profileId }) {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-3">
-                <p className="text-purple-300 text-[10px] mb-2">No favorite candidates yet</p>
+              <div className="text-center py-4">
+                <p className="text-purple-300 text-xs mb-3">No favorite candidates yet</p>
                 <button
                   onClick={() => setShowCodeInput(true)}
-                  className="text-[8px] bg-purple-600 text-white px-2 py-1 rounded-full font-semibold"
+                  className="text-xs bg-purple-600 text-white px-4 py-2 rounded-full font-semibold"
                 >
                   + ADD FAVORITE
                 </button>

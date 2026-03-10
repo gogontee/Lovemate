@@ -160,7 +160,7 @@ export default function FundWalletModal({ isOpen, onClose, user }) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4"
+            className="fixed inset-0 flex items-center justify-center z-50 p-1"
             onClick={onClose}
           >
             {/* Clickable backdrop area */}
@@ -168,41 +168,41 @@ export default function FundWalletModal({ isOpen, onClose, user }) {
             
             {/* Modal Content */}
             <div 
-              className="relative bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-sm sm:max-w-md mx-auto overflow-hidden"
+              className="relative bg-white rounded-lg shadow-2xl w-full max-w-sm mx-auto overflow-hidden"
               onClick={(e) => e.stopPropagation()}
               style={{
-                maxHeight: 'calc(100vh - 80px)',
+                maxHeight: 'calc(100vh - 20px)',
                 marginTop: 'auto',
                 marginBottom: 'auto'
               }}
             >
               {/* Header */}
-              <div className="bg-gradient-to-r from-rose-600 to-pink-600 p-4 sm:p-5 text-white relative">
+              <div className="bg-gradient-to-r from-rose-600 to-pink-600 p-2 text-white relative">
                 <button
                   onClick={onClose}
-                  className="absolute top-3 right-3 p-1 hover:bg-white/20 rounded-full transition-colors z-10"
+                  className="absolute top-1 right-1 p-1 hover:bg-white/20 rounded-full transition-colors z-10"
                 >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <X className="w-3 h-3" />
                 </button>
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg sm:rounded-xl">
-                    <CreditCard className="w-4 h-4 sm:w-5 sm:h-5" />
+                <div className="flex items-center gap-1">
+                  <div className="p-1 bg-white/20 rounded">
+                    <CreditCard className="w-3 h-3" />
                   </div>
-                  <h2 className="text-base sm:text-lg font-bold">Fund Your Wallet</h2>
+                  <h2 className="text-sm font-bold">Fund Wallet</h2>
                 </div>
-                <p className="text-xs sm:text-sm text-rose-100 mt-1">Add funds to vote and support contestants</p>
+                <p className="text-[10px] text-rose-100">Add funds to vote</p>
               </div>
 
               {/* Body */}
-              <div className="p-4 sm:p-5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
-                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+              <div className="p-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 80px)' }}>
+                <form onSubmit={handleSubmit} className="space-y-2">
                   {/* Amount Input */}
                   <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      Enter Amount
+                    <label className="block text-[10px] font-medium text-gray-700 mb-0.5">
+                      Amount
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-sm">₦</span>
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 font-medium text-xs">₦</span>
                       <input
                         type="number"
                         value={amount}
@@ -211,7 +211,7 @@ export default function FundWalletModal({ isOpen, onClose, user }) {
                         min="1000"
                         step="100"
                         disabled={loading}
-                        className={`w-full pl-7 pr-3 py-3 sm:py-4 border-2 rounded-xl focus:ring-1 transition-all text-base sm:text-lg font-medium ${getInputBorderColor()} ${getInputTextColor()} ${
+                        className={`w-full pl-5 pr-2 py-1.5 border rounded-lg focus:ring-1 transition-all text-sm font-medium ${getInputBorderColor()} ${getInputTextColor()} ${
                           error ? 'border-red-500 focus:border-red-500' : ''
                         } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       />
@@ -222,7 +222,7 @@ export default function FundWalletModal({ isOpen, onClose, user }) {
                       <motion.p
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-xs text-red-500 mt-2 flex items-center gap-1"
+                        className="text-[8px] text-red-500 mt-1 flex items-center gap-0.5"
                       >
                         <span>⚠️</span> {error}
                       </motion.p>
@@ -230,50 +230,49 @@ export default function FundWalletModal({ isOpen, onClose, user }) {
                     
                     {/* Amount display */}
                     {amount && Number(amount) >= 1000 && !error && !loading && (
-                      <p className="text-xs text-gray-500 mt-2">
-                        You'll add ₦{Number(amount).toLocaleString()} to your wallet
+                      <p className="text-[8px] text-gray-500 mt-1">
+                        Add ₦{Number(amount).toLocaleString()}
                       </p>
                     )}
                     
                     {/* Minimum amount notice */}
                     {(!amount || Number(amount) < 1000) && !error && !loading && (
-                      <p className="text-xs text-gray-500 mt-2">Minimum: ₦1,000</p>
+                      <p className="text-[8px] text-gray-500 mt-1">Min: ₦1,000</p>
                     )}
-
                   </div>
 
                   {/* User info - helpful for debugging */}
                   {user && !loading && (
-                    <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded-lg">
-                      Funding as: {user.email}
+                    <div className="text-[8px] text-gray-500 bg-gray-50 p-1 rounded">
+                      {user.email}
                     </div>
                   )}
 
                   {/* Benefits Section */}
-                  <div className="bg-gray-50 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Zap className="w-4 h-4 text-rose-600" />
-                      <span className="text-sm font-medium text-gray-700">Why fund your wallet?</span>
+                  <div className="bg-gray-50 rounded-lg p-1.5">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Zap className="w-3 h-3 text-rose-600" />
+                      <span className="text-[9px] font-medium text-gray-700">Benefits</span>
                     </div>
-                    <ul className="space-y-2 text-xs text-gray-600">
-                      <li className="flex items-center gap-2">
-                        <div className="w-1 h-1 bg-rose-600 rounded-full"></div>
-                        Vote for your favorite contestants
+                    <ul className="space-y-0.5 text-[8px] text-gray-600">
+                      <li className="flex items-center gap-1">
+                        <div className="w-0.5 h-0.5 bg-rose-600 rounded-full"></div>
+                        Vote for favorites
                       </li>
-                      <li className="flex items-center gap-2">
-                        <div className="w-1 h-1 bg-rose-600 rounded-full"></div>
-                        Send gifts to support contestants
+                      <li className="flex items-center gap-1">
+                        <div className="w-0.5 h-0.5 bg-rose-600 rounded-full"></div>
+                        Send gifts
                       </li>
-                      <li className="flex items-center gap-2">
-                        <div className="w-1 h-1 bg-rose-600 rounded-full"></div>
-                        Unlock exclusive fan rewards
+                      <li className="flex items-center gap-1">
+                        <div className="w-0.5 h-0.5 bg-rose-600 rounded-full"></div>
+                        Unlock rewards
                       </li>
                     </ul>
                   </div>
 
                   {/* Security Badge */}
-                  <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500">
-                    <Shield className="w-3 h-3" />
+                  <div className="flex items-center justify-center gap-1 text-[8px] text-gray-500">
+                    <Shield className="w-2 h-2" />
                     <span>Secured by Paystack</span>
                   </div>
 
@@ -283,22 +282,22 @@ export default function FundWalletModal({ isOpen, onClose, user }) {
                     whileHover={{ scale: loading ? 1 : 1.01 }}
                     whileTap={{ scale: loading ? 1 : 0.99 }}
                     disabled={loading || !user?.id}
-                    className="w-full bg-gradient-to-r from-rose-600 to-pink-600 text-white py-3 sm:py-4 rounded-xl font-semibold text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-shadow flex items-center justify-center gap-2"
+                    className="w-full bg-gradient-to-r from-rose-600 to-pink-600 text-white py-1.5 rounded-lg font-medium text-xs disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-shadow flex items-center justify-center gap-1"
                   >
                     {loading ? (
                       <>
-                        <Loader className="w-5 h-5 animate-spin" />
+                        <Loader className="w-3 h-3 animate-spin" />
                         Processing...
                       </>
                     ) : (
-                      "Continue to Payment"
+                      "Pay"
                     )}
                   </motion.button>
 
                   {/* Login reminder */}
                   {!user && !loading && (
-                    <p className="text-xs text-center text-gray-500 mt-2">
-                      Please log in to fund your wallet
+                    <p className="text-[8px] text-center text-gray-500 mt-1">
+                      Log in to fund wallet
                     </p>
                   )}
                 </form>

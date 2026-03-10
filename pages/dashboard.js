@@ -13,7 +13,6 @@ import ProfileHeader from "../components/dashboard/ProfileHeader";
 import WalletCard from "../components/dashboard/WalletCard";
 import RankCard from "../components/dashboard/RankCard";
 import TransactionsList from "../components/dashboard/TransactionsList";
-import NotificationsPanel from "../components/dashboard/NotificationsPanel";
 import SettingsPanel from "../components/dashboard/SettingsPanel";
 import FundWalletModal from "../components/dashboard/FundWalletModal";
 
@@ -29,7 +28,6 @@ export default function Dashboard() {
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
   const [showFundModal, setShowFundModal] = useState(false);
-  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(0);
   
   // New state for director access
   const [isDirector, setIsDirector] = useState(false);
@@ -87,44 +85,6 @@ export default function Dashboard() {
       setIsDirector(false);
     } finally {
       setCheckingDirector(false);
-    }
-  };
-
-  // Function to create notification
-  const createNotification = async (userId, notificationData) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .insert([{
-          user_id: userId,
-          type: notificationData.type,
-          title: notificationData.title,
-          message: notificationData.message,
-          data: notificationData.data || {}
-        }]);
-
-      if (error) {
-        console.error('Error creating notification:', error);
-      }
-    } catch (err) {
-      console.error('Failed to create notification:', err);
-    }
-  };
-
-  // Function to fetch unread notifications count
-  const fetchUnreadCount = async (userId) => {
-    try {
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('read', false)
-        .eq('dismissed', false);
-
-      if (error) throw error;
-      setUnreadNotificationsCount(count || 0);
-    } catch (err) {
-      console.error('Error fetching unread count:', err);
     }
   };
 
@@ -263,60 +223,6 @@ export default function Dashboard() {
     }
   };
 
-  // Listen for real-time notifications
-  useEffect(() => {
-    if (!profile?.id) return;
-
-    // Subscribe to new notifications
-    const notificationChannel = supabase
-      .channel('notifications-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${profile.id}`
-        },
-        (payload) => {
-          console.log('🔔 New notification received:', payload);
-          // Update unread count
-          setUnreadNotificationsCount(prev => prev + 1);
-          
-          // Show browser notification if permitted
-          if (Notification.permission === 'granted') {
-            new Notification(payload.new.title, {
-              body: payload.new.message,
-              icon: '/notification-icon.png'
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    // Request notification permission
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-
-    return () => {
-      supabase.removeChannel(notificationChannel);
-    };
-  }, [profile?.id]);
-
-  // Fetch unread count periodically
-  useEffect(() => {
-    if (!profile?.id) return;
-
-    fetchUnreadCount(profile.id);
-    
-    const interval = setInterval(() => {
-      fetchUnreadCount(profile.id);
-    }, 30000); // Update every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [profile?.id]);
-
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name || "");
@@ -379,18 +285,6 @@ export default function Dashboard() {
       // Check if user is a director
       await checkDirectorStatus(authUser.id);
 
-      // Create welcome notification for new users (check if first login)
-      const lastLogin = localStorage.getItem(`last_login_${authUser.id}`);
-      if (!lastLogin) {
-        createNotification(authUser.id, {
-          type: 'alert',
-          title: 'Welcome to the Platform! 🎉',
-          message: 'Thanks for joining! Start by exploring candidates and casting your votes.',
-          data: { action: 'explore' }
-        });
-        localStorage.setItem(`last_login_${authUser.id}`, new Date().toISOString());
-      }
-
       setLoading(false);
     };
 
@@ -428,14 +322,6 @@ export default function Dashboard() {
       fetchWallet(user.id).then((data) => {
         if (data) {
           setWalletBalance(data.balance || 0);
-          
-          // Create notification for successful funding
-          createNotification(user.id, {
-            type: 'promo',
-            title: 'Wallet Funded Successfully! 💰',
-            message: `Your wallet has been funded with ₦${data.balance?.toLocaleString() || '0'}`,
-            data: { action: 'view_wallet' }
-          });
         }
       });
       localStorage.removeItem("wallet_updated");
@@ -525,14 +411,6 @@ export default function Dashboard() {
     }
 
     setAvatarUrl(publicUrl);
-    
-    // Create notification for profile update
-    createNotification(profile.id, {
-      type: 'alert',
-      title: 'Profile Updated',
-      message: 'Your profile photo has been successfully updated!',
-      data: { action: 'view_profile' }
-    });
   };
 
   const handleUpdate = async (e) => {
@@ -568,14 +446,6 @@ export default function Dashboard() {
           full_name: fullName,
           phone: phone,
         }));
-        
-        // Create notification for profile update
-        createNotification(user.id, {
-          type: 'alert',
-          title: 'Profile Updated',
-          message: 'Your profile information has been successfully updated!',
-          data: { action: 'view_profile' }
-        });
       }
     } catch (err) {
       console.error("Unexpected update error:", err);
@@ -604,22 +474,25 @@ export default function Dashboard() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-rose-50 py-6 md:py-8 lg:py-12 px-4">
+      <main className="min-h-screen bg-gradient-to-br from-gray-50 to-rose-50 py-0 px-4">
         <div className="max-w-7xl mx-auto">
+          {/* Reduced space between Header and Dashboard Content */}
+          <div className="w-full h-2 md:h-3"></div>
+
           {/* Director's Dashboard Link - Show if user is a director */}
           {isDirector && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="mb-4"
+              className="mb-3 md:mb-4"
             >
               <Link
                 href="/directors"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-lg shadow-md hover:from-red-700 hover:to-rose-700 transition-all group"
+                className="inline-flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-lg shadow-md hover:from-red-700 hover:to-rose-700 transition-all group"
               >
-                <Shield className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-semibold">Go To Director's Dashboard</span>
+                <Shield className="w-3 h-3 md:w-4 md:h-4 group-hover:scale-110 transition-transform" />
+                <span className="text-xs md:text-sm font-semibold">Go To Director's Dashboard</span>
               </Link>
             </motion.div>
           )}
@@ -632,10 +505,19 @@ export default function Dashboard() {
             stats={profileStats}
           />
 
+          {/* Mobile Layout: Candidate Window after Profile with reduced spacing */}
+          <div className="lg:hidden">
+            {/* Spacer between Profile and Candidate Window */}
+            <div className="w-full h-3"></div>
+            <div className="h-auto min-h-[400px]">
+              <CandidateWindow profileId={profile?.id} />
+            </div>
+          </div>
+
           {/* Desktop Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mt-4 md:mt-8">
+          <div className="hidden lg:grid lg:grid-cols-12 gap-4 md:gap-6 mt-2 md:mt-3">
             {/* Left Column - Wallet & Rank stacked */}
-            <div className="lg:col-span-5 space-y-4 md:space-y-6">
+            <div className="lg:col-span-5 space-y-3 md:space-y-4">
               <WalletCard 
                 balance={walletBalance} 
                 onFundClick={() => setShowFundModal(true)} 
@@ -650,7 +532,7 @@ export default function Dashboard() {
               />
             </div>
 
-            {/* Right Column - Candidate Window */}
+            {/* Right Column - Candidate Window (Desktop only) */}
             <div className="lg:col-span-7">
               <div className="h-full flex items-stretch">
                 <CandidateWindow profileId={profile?.id} />
@@ -658,18 +540,33 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Bottom Grid - 2 columns */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mt-4 md:mt-6">
+          {/* Mobile Layout: Wallet & Rank after Candidate Window with small gap */}
+          <div className="lg:hidden">
+            {/* Small spacer between Candidate Window and Wallet */}
+            <div className="w-full h-2"></div>
+            <div className="space-y-3">
+              <WalletCard 
+                balance={walletBalance} 
+                onFundClick={() => setShowFundModal(true)} 
+              />
+              <RankCard 
+                profileId={profile?.id}
+                points={rankData.points}
+                totalVotes={rankData.totalVotes}
+                totalGifts={rankData.totalGifts}
+                userRank={rankData.userRank}
+                totalUsers={rankData.totalUsers}
+              />
+            </div>
+          </div>
+
+          {/* Bottom Grid - Transactions List only */}
+          <div className="grid grid-cols-1 lg:grid-cols-1 gap-3 md:gap-4 mt-3 md:mt-4">
             <TransactionsList transactions={transactions} />
-            {/* Pass userId and unread count to NotificationsPanel */}
-            <NotificationsPanel 
-              userId={profile?.id}
-              initialUnreadCount={unreadNotificationsCount}
-            />
           </div>
 
           {/* Settings Panel */}
-          <div className="mt-4 md:mt-6">
+          <div className="mt-3 md:mt-4">
             <SettingsPanel
               fullName={fullName}
               setFullName={setFullName}
@@ -683,11 +580,11 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* Fund Wallet Modal - Updated to pass user object directly */}
+      {/* Fund Wallet Modal */}
       <FundWalletModal
         isOpen={showFundModal}
         onClose={() => setShowFundModal(false)}
-        user={user} // Pass the user object directly
+        user={user}
       />
 
       <Footer />

@@ -7,8 +7,8 @@
 
 /* Global base styles */
 body {
-  background-color: #485765; /* custom dark background */
-  color: #f9fafb; /* light gray for better contrast */
+  background-color: #485765;
+  color: #f9fafb;
   font-family: 'Inter', sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -32,11 +32,11 @@ button {
 
 /* Link styles */
 a {
-  color: #e11d48; /* rose-600 */
+  color: #e11d48;
 }
 
 a:hover {
-  color: #f43f5e; /* rose-500 for slightly brighter hover */
+  color: #f43f5e;
 }
 
 @keyframes fadeInUp {
@@ -54,66 +54,37 @@ a:hover {
   animation: fadeInUp 0.4s ease-out forwards;
 }
 
-/* Mobile-first spacing fixes */
+/* Mobile spacing fixes - More targeted approach */
 @media (max-width: 768px) {
-  /* Remove all gaps between header and content */
+  /* Only target header spacing issues */
   header {
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
+    margin-bottom: 0;
+    padding-bottom: 0;
   }
   
-  main,
-  .main-content,
-  [class*="container"],
-  [class*="wrapper"] {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
+  /* Only target top-level containers */
+  main > div:first-child,
+  .main-content > div:first-child {
+    margin-top: 0;
+    padding-top: 0;
   }
   
-  /* Remove default section spacing */
-  section {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-  }
-  
-  /* Force remove any top margins from first elements */
-  main > *:first-child,
-  .main-content > *:first-child,
-  section > *:first-child {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-  }
-  
-  /* Remove gap from any layout containers */
-  .max-w-7xl,
-  .max-w-6xl,
-  .max-w-5xl,
-  .max-w-4xl {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-  }
-  
-  /* Override Tailwind's default spacing */
-  .py-1, .py-2, .py-3, .py-4, .py-5, .py-6, .py-8, .py-10, .py-12, .py-16,
-  .pt-1, .pt-2, .pt-3, .pt-4, .pt-5, .pt-6, .pt-8, .pt-10, .pt-12, .pt-16,
-  .my-1, .my-2, .my-3, .my-4, .my-5, .my-6, .my-8, .my-10, .my-12, .my-16,
-  .mt-1, .mt-2, .mt-3, .mt-4, .mt-5, .mt-6, .mt-8, .mt-10, .mt-12, .mt-16 {
-    margin-top: 0 !important;
-    padding-top: 0 !important;
-  }
+  /* Don't override ALL spacing classes - let Tailwind do its job */
+  /* This was the problem - remove this entire block */
 }
 
-/* Optional: If you want to keep some spacing only for desktop */
+/* Keep desktop spacing */
 @media (min-width: 769px) {
-  /* Keep your desktop spacing here */
   .desktop-spacing {
     margin-top: 1rem;
     padding-top: 1rem;
   }
-} 
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
