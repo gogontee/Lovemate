@@ -26,6 +26,7 @@ export default function Home() {
     minutes: 0,
     seconds: 0
   });
+  const [registrationStatus, setRegistrationStatus] = useState('not_started'); // 'not_started', 'open', 'closed'
   const [hasVotableCandidates, setHasVotableCandidates] = useState(false);
 
   // Fetch top fans
@@ -133,24 +134,51 @@ export default function Home() {
     };
   }, []);
 
-  // Registration countdown timer
+  // Registration countdown timer - First to opening, then to closure
   useEffect(() => {
-    const targetDate = new Date("2025-08-01T00:00:00").getTime();
+    const registrationOpenDate = new Date("2026-04-20T00:00:00").getTime();
+    const registrationCloseDate = new Date("2026-05-10T23:59:59").getTime();
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
-      const distance = targetDate - now;
-
-      if (distance < 0) {
+      
+      // Check if registration hasn't started yet
+      if (now < registrationOpenDate) {
+        setRegistrationStatus('not_started');
+        const distance = registrationOpenDate - now;
+        
+        if (distance < 0) {
+          setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        } else {
+          setTimeLeft({
+            days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+            hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+            minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+            seconds: Math.floor((distance % (1000 * 60)) / 1000)
+          });
+        }
+      } 
+      // Check if registration is open
+      else if (now >= registrationOpenDate && now < registrationCloseDate) {
+        setRegistrationStatus('open');
+        const distance = registrationCloseDate - now;
+        
+        if (distance < 0) {
+          setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        } else {
+          setTimeLeft({
+            days: Math.floor(distance / (1000 * 60 * 60 * 24)),
+            hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+            minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
+            seconds: Math.floor((distance % (1000 * 60)) / 1000)
+          });
+        }
+      }
+      // Registration closed
+      else {
+        setRegistrationStatus('closed');
         clearInterval(timer);
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-      } else {
-        setTimeLeft({
-          days: Math.floor(distance / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-          minutes: Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)),
-          seconds: Math.floor((distance % (1000 * 60)) / 1000)
-        });
       }
     }, 1000);
 
@@ -247,6 +275,17 @@ export default function Home() {
     "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero10.jpg",
   ];
 
+  // Get timer label based on registration status
+  const getTimerLabel = () => {
+    if (registrationStatus === 'not_started') {
+      return "Registration Starts In";
+    } else if (registrationStatus === 'open') {
+      return "Registration Closes In";
+    } else {
+      return "Registration Closed";
+    }
+  };
+
   return (
     <>
       <Head>
@@ -300,55 +339,98 @@ export default function Home() {
                         the spotlight in this thrilling reality show.
                       </motion.p>
                       
-                      <motion.a
-                        href="/register"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 }}
-                        className="relative group"
-                      >
-                        <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500 to-rose-600 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300" />
-                        <span className="relative inline-block bg-gray-900 text-white px-4 sm:px-8 py-2 sm:py-3 rounded-full text-xs sm:text-base font-semibold">
-                          Register Now
-                        </span>
-                      </motion.a>
+                      {registrationStatus !== 'closed' && (
+                        <motion.a
+                          href={registrationStatus === 'open' ? "/register" : "#"}
+                          onClick={(e) => {
+                            if (registrationStatus === 'not_started') {
+                              e.preventDefault();
+                              alert(`Registration will open on April 20, 2026. Stay tuned!`);
+                            }
+                          }}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 }}
+                          className="relative group"
+                        >
+                          <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500 to-rose-600 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300" />
+                          <span className="relative inline-block bg-gray-900 text-white px-4 sm:px-8 py-2 sm:py-3 rounded-full text-xs sm:text-base font-semibold">
+                            {registrationStatus === 'open' ? 'Register Now' : 'Register Opens Soon'}
+                          </span>
+                        </motion.a>
+                      )}
+
+                      {registrationStatus === 'closed' && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 }}
+                          className="relative group"
+                        >
+                          <div className="absolute -inset-0.5 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full opacity-75 blur transition duration-300" />
+                          <span className="relative inline-block bg-gray-900 text-gray-400 px-4 sm:px-8 py-2 sm:py-3 rounded-full text-xs sm:text-base font-semibold cursor-not-allowed">
+                            Registration Closed
+                          </span>
+                        </motion.div>
+                      )}
                     </div>
                   </div>
 
                   {/* Timer - Bottom Right */}
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.4 }}
-                    className="absolute bottom-4 right-4 sm:bottom-8 sm:right-8 z-20"
-                  >
-                    <div className="bg-black/40 backdrop-blur-md rounded-xl sm:rounded-2xl p-2 sm:p-4 border border-rose-500/30">
-                      <div className="text-[8px] sm:text-xs text-rose-300/80 uppercase tracking-wider mb-1 sm:mb-2 text-center">
-                        Registration Closes In
+                  {registrationStatus !== 'closed' && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="absolute bottom-4 right-4 sm:bottom-8 sm:right-8 z-20"
+                    >
+                      <div className="bg-black/40 backdrop-blur-md rounded-xl sm:rounded-2xl p-2 sm:p-4 border border-rose-500/30">
+                        <div className="text-[8px] sm:text-xs text-rose-300/80 uppercase tracking-wider mb-1 sm:mb-2 text-center">
+                          {getTimerLabel()}
+                        </div>
+                        <div className="flex gap-1 sm:gap-3">
+                          <div className="text-center">
+                            <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.days}</div>
+                            <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Days</div>
+                          </div>
+                          <div className="text-rose-500/50 text-xs sm:text-base">:</div>
+                          <div className="text-center">
+                            <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.hours}</div>
+                            <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Hrs</div>
+                          </div>
+                          <div className="text-rose-500/50 text-xs sm:text-base">:</div>
+                          <div className="text-center">
+                            <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.minutes}</div>
+                            <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Min</div>
+                          </div>
+                          <div className="text-rose-500/50 text-xs sm:text-base">:</div>
+                          <div className="text-center">
+                            <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.seconds}</div>
+                            <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Sec</div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex gap-1 sm:gap-3">
-                        <div className="text-center">
-                          <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.days}</div>
-                          <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Days</div>
+                    </motion.div>
+                  )}
+
+                  {/* Registration Closed Message */}
+                  {registrationStatus === 'closed' && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="absolute bottom-4 right-4 sm:bottom-8 sm:right-8 z-20"
+                    >
+                      <div className="bg-black/60 backdrop-blur-md rounded-xl sm:rounded-2xl p-2 sm:p-4 border border-gray-500/30">
+                        <div className="text-[8px] sm:text-xs text-gray-300/80 uppercase tracking-wider mb-1 sm:mb-2 text-center">
+                          Registration Closed
                         </div>
-                        <div className="text-rose-500/50 text-xs sm:text-base">:</div>
-                        <div className="text-center">
-                          <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.hours}</div>
-                          <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Hrs</div>
-                        </div>
-                        <div className="text-rose-500/50 text-xs sm:text-base">:</div>
-                        <div className="text-center">
-                          <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.minutes}</div>
-                          <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Min</div>
-                        </div>
-                        <div className="text-rose-500/50 text-xs sm:text-base">:</div>
-                        <div className="text-center">
-                          <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.seconds}</div>
-                          <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Sec</div>
+                        <div className="text-[10px] sm:text-sm text-gray-400 text-center whitespace-nowrap">
+                          See you next season!
                         </div>
                       </div>
-                    </div>
-                  </motion.div>
+                    </motion.div>
+                  )}
                 </div>
               </div>
             ))}

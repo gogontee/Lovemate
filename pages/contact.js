@@ -19,10 +19,13 @@ import {
   Send,
   Heart,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
+import { supabase } from "@/utils/supabaseClient";
 
 export default function Contact() {
   const [openIndex, setOpenIndex] = useState(null);
@@ -34,6 +37,7 @@ export default function Contact() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
+  const [submitMessage, setSubmitMessage] = useState("");
 
   const faqs = [
     {
@@ -74,19 +78,124 @@ export default function Contact() {
     });
   };
 
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      setSubmitStatus("error");
+      setSubmitMessage("Please enter your name");
+      return false;
+    }
+    
+    if (!formData.email.trim()) {
+      setSubmitStatus("error");
+      setSubmitMessage("Please enter your email address");
+      return false;
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setSubmitStatus("error");
+      setSubmitMessage("Please enter a valid email address");
+      return false;
+    }
+    
+    if (!formData.subject.trim()) {
+      setSubmitStatus("error");
+      setSubmitMessage("Please enter a subject");
+      return false;
+    }
+    
+    if (!formData.message.trim()) {
+      setSubmitStatus("error");
+      setSubmitMessage("Please enter your message");
+      return false;
+    }
+    
+    if (formData.message.trim().length < 10) {
+      setSubmitStatus("error");
+      setSubmitMessage("Message must be at least 10 characters");
+      return false;
+    }
+    
+    return true;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSubmitting(true);
     
-    // Simulate form submission
-    setTimeout(() => {
-      setSubmitStatus("success");
-      setIsSubmitting(false);
-      setFormData({ name: "", email: "", subject: "", message: "" });
+    if (!validateForm()) {
+      setTimeout(() => {
+        setSubmitStatus(null);
+        setSubmitMessage("");
+      }, 3000);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setSubmitStatus("loading");
+    setSubmitMessage("Sending your message...");
+    
+    try {
+      // Insert data into contact_messages table
+      const { data, error } = await supabase
+        .from('contact_messages')
+        .insert([
+          {
+            name: formData.name.trim(),
+            email: formData.email.trim().toLowerCase(),
+            subject: formData.subject.trim(),
+            message: formData.message.trim(),
+            status: 'unread',
+            created_at: new Date().toISOString(),
+            ip_address: null, // Can be added if needed
+            user_agent: navigator.userAgent,
+          }
+        ])
+        .select();
       
-      // Reset status after 3 seconds
-      setTimeout(() => setSubmitStatus(null), 3000);
-    }, 1500);
+      if (error) {
+        console.error("Supabase error:", error);
+        setSubmitStatus("error");
+        setSubmitMessage("Failed to send message. Please try again later.");
+        setIsSubmitting(false);
+        
+        setTimeout(() => {
+          setSubmitStatus(null);
+          setSubmitMessage("");
+        }, 5000);
+        return;
+      }
+      
+      // Success
+      setSubmitStatus("success");
+      setSubmitMessage("Message sent successfully! We'll get back to you within 24 hours.");
+      
+      // Reset form
+      setFormData({
+        name: "",
+        email: "",
+        subject: "",
+        message: ""
+      });
+      
+      setIsSubmitting(false);
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setSubmitStatus(null);
+        setSubmitMessage("");
+      }, 5000);
+      
+    } catch (err) {
+      console.error("Submission error:", err);
+      setSubmitStatus("error");
+      setSubmitMessage("An unexpected error occurred. Please try again.");
+      setIsSubmitting(false);
+      
+      setTimeout(() => {
+        setSubmitStatus(null);
+        setSubmitMessage("");
+      }, 5000);
+    }
   };
 
   return (
@@ -231,41 +340,45 @@ export default function Contact() {
                 <input
                   type="text"
                   name="name"
-                  placeholder="Full Name"
+                  placeholder="Full Name *"
                   value={formData.name}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 md:px-4 py-2 md:py-3 text-xs md:text-base bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition text-gray-900"
+                  disabled={isSubmitting}
+                  className="w-full px-3 md:px-4 py-2 md:py-3 text-xs md:text-base bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <input
                   type="email"
                   name="email"
-                  placeholder="Email Address"
+                  placeholder="Email Address *"
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 md:px-4 py-2 md:py-3 text-xs md:text-base bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition text-gray-900"
+                  disabled={isSubmitting}
+                  className="w-full px-3 md:px-4 py-2 md:py-3 text-xs md:text-base bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
               </div>
               
               <input
                 type="text"
                 name="subject"
-                placeholder="Subject"
+                placeholder="Subject *"
                 value={formData.subject}
                 onChange={handleChange}
                 required
-                className="w-full px-3 md:px-4 py-2 md:py-3 text-xs md:text-base bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition text-gray-900"
+                disabled={isSubmitting}
+                className="w-full px-3 md:px-4 py-2 md:py-3 text-xs md:text-base bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               
               <textarea
                 rows="4"
                 name="message"
-                placeholder="Your Message"
+                placeholder="Your Message * (Minimum 10 characters)"
                 value={formData.message}
                 onChange={handleChange}
                 required
-                className="w-full px-3 md:px-4 py-2 md:py-3 text-xs md:text-base bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition text-gray-900"
+                disabled={isSubmitting}
+                className="w-full px-3 md:px-4 py-2 md:py-3 text-xs md:text-base bg-gray-50 border border-gray-200 rounded-lg md:rounded-xl focus:outline-none focus:border-rose-400 focus:ring-1 focus:ring-rose-400 transition text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               
               <button
@@ -274,7 +387,10 @@ export default function Contact() {
                 className="w-full bg-gradient-to-r from-rose-500 to-red-600 text-white px-4 md:px-6 py-2.5 md:py-4 rounded-lg md:rounded-xl text-sm md:text-base font-semibold hover:from-rose-600 hover:to-red-700 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1 md:gap-2"
               >
                 {isSubmitting ? (
-                  "Sending..."
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Sending...
+                  </>
                 ) : (
                   <>
                     Send Message <Send className="w-3 h-3 md:w-4 md:h-4" />
@@ -282,13 +398,37 @@ export default function Contact() {
                 )}
               </button>
 
+              {/* Status Messages */}
               {submitStatus === "success" && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-green-50 text-green-700 px-3 md:px-4 py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-base text-center"
+                  className="flex items-center gap-2 bg-green-50 text-green-700 px-3 md:px-4 py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-base"
                 >
-                  Message sent successfully! We'll get back to you soon.
+                  <CheckCircle className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span>{submitMessage}</span>
+                </motion.div>
+              )}
+
+              {submitStatus === "error" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 bg-red-50 text-red-700 px-3 md:px-4 py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-base"
+                >
+                  <XCircle className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+                  <span>{submitMessage}</span>
+                </motion.div>
+              )}
+
+              {submitStatus === "loading" && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 md:px-4 py-2 md:py-3 rounded-lg md:rounded-xl text-xs md:text-base"
+                >
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span>{submitMessage}</span>
                 </motion.div>
               )}
             </form>

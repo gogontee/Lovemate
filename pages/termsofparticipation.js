@@ -160,10 +160,10 @@ export default function TermsOfParticipation() {
               {/* Section 10 - Post-Show */}
               <Section 
                 number="10" 
-                title="Post-Show Obligations"
+                title="In-Show/Post-Show Obligations"
                 icon="📅"
               >
-                <li>Selected participants may be required for promotional activities (interviews, events, social media)</li>
+                <li>Selected participants/winners may be required for promotional activities (interviews, events, social media)</li>
                 <li>Exclusive media rights apply for 12 months after broadcast</li>
                 <li>Cannot participate in competing reality shows for 12 months</li>
                 <li>Must maintain confidentiality about unaired content</li>

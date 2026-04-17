@@ -143,7 +143,7 @@ export default function TopFansCarousel({ fans = [] }) {
 
             <div className="bg-gradient-to-r from-rose-100 to-red-100 rounded-lg p-3 mb-4">
               <p className="text-xs text-gray-700">
-                Support your favorite Mate with votes and gifts to earn points and climb the ranks. 
+                Get ready to support your favorite Mate with votes and gifts to earn lovepoints and climb the ranks. 
                 The top 4 fans will be crowned here for all to see! 👑
               </p>
             </div>
