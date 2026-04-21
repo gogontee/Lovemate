@@ -3,7 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../utils/supabaseClient";
-import { Menu, X, UserCircle, Home, Heart, Eye } from "lucide-react";
+import { Menu, X, UserCircle, Home, Heart, Eye, LayoutDashboard } from "lucide-react";
 
 export default function Header() {
   const router = useRouter();
@@ -31,15 +31,13 @@ export default function Header() {
       setUser(currentUser);
 
       if (currentUser) {
-        // FIXED: Changed from "profiles" to "profile" and from "photo" to "photo_url"
         const { data } = await supabase
-          .from("profile")  // ✅ Changed from "profiles" to "profile"
-          .select("photo_url")  // ✅ Changed from "photo" to "photo_url"
+          .from("profile")
+          .select("photo_url")
           .eq("id", currentUser.id)
           .single();
           
-        // FIXED: Check for photo_url instead of photo
-        if (data?.photo_url) setAvatarUrl(data.photo_url);  // ✅ Changed from data.photo to data.photo_url
+        if (data?.photo_url) setAvatarUrl(data.photo_url);
       }
     };
 
@@ -87,7 +85,7 @@ export default function Header() {
     <>
       <header className="bg-gradient-to-r from-rose-50 to-pink-50 shadow-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4">
-          {/* Logo - Reduced by 30% */}
+          {/* Logo */}
           <Link href="/" className="block leading-none">
             <div className="relative w-11 h-11 md:w-14 md:h-14">
               <Image
@@ -123,7 +121,7 @@ export default function Header() {
 
           {/* Right Side */}
           <div className="flex items-center space-x-3 relative">
-            {/* Live */}
+            {/* Live - Desktop */}
             <Link
               href="/gallery?tab=stream#livestream"
               className="hidden md:flex px-4 py-1 rounded-md bg-gradient-to-r from-rose-100 to-pink-100 text-rose-700 hover:from-red-600 hover:to-rose-600 hover:text-white font-semibold transition-all duration-300 items-center gap-1"
@@ -133,6 +131,18 @@ export default function Header() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
               </span>
               📻 Live
+            </Link>
+
+            {/* Live - Mobile Header */}
+            <Link
+              href="/gallery?tab=stream#livestream"
+              className="md:hidden flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-rose-600 text-white font-semibold text-sm shadow-md"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-300 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-200"></span>
+              </span>
+              Live
             </Link>
 
             {/* Auth Area */}
@@ -222,6 +232,21 @@ export default function Header() {
                   </Link>
                 ))}
                 
+                {/* Live link in mobile menu */}
+                <Link
+                  href="/gallery?tab=stream#livestream"
+                  className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                    </span>
+                    Live TV
+                  </span>
+                </Link>
+                
                 <div className="border-t border-rose-100 my-4 pt-4">
                   {user ? (
                     <>
@@ -243,13 +268,22 @@ export default function Header() {
                       </button>
                     </>
                   ) : (
-                    <Link
-                      href="/auth/login"
-                      onClick={() => setMenuOpen(false)}
-                      className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
-                    >
-                      Login
-                    </Link>
+                    <>
+                      <Link
+                        href="/auth/login"
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
+                      >
+                        Login
+                      </Link>
+                      <Link
+                        href="/auth/signup"
+                        onClick={() => setMenuOpen(false)}
+                        className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
+                      >
+                        Sign Up
+                      </Link>
+                    </>
                   )}
                 </div>
               </div>
@@ -324,20 +358,26 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* Watch - Right */}
+          {/* Dashboard - Right */}
           <Link
-            href="/gallery?tab=stream#livestream"
+            href={user ? "/dashboard" : "/auth/login"}
+            onClick={(e) => {
+              if (!user) {
+                e.preventDefault();
+                router.push("/auth/login");
+              }
+            }}
             className={`
               flex flex-col items-center justify-center py-2 px-3 rounded-xl
               transition-all duration-300 group relative
-              ${router.pathname === "/gallery" ? 'bg-gradient-to-r from-red-50 to-rose-50' : ''}
+              ${router.pathname === "/dashboard" ? 'bg-gradient-to-r from-red-50 to-rose-50' : ''}
             `}
           >
-            <Eye 
+            <LayoutDashboard 
               size={24} 
               className={`
                 transition-all duration-300
-                ${router.pathname === "/gallery" 
+                ${router.pathname === "/dashboard" 
                   ? 'text-red-600' 
                   : 'text-gray-500 group-hover:text-red-500'
                 }
@@ -345,14 +385,14 @@ export default function Header() {
             />
             <span className={`
               text-xs mt-1 font-medium transition-all duration-300
-              ${router.pathname === "/gallery" 
+              ${router.pathname === "/dashboard" 
                 ? 'text-red-600 font-semibold' 
                 : 'text-gray-500 group-hover:text-red-500'
               }
             `}>
-              Watch
+              Dashboard
             </span>
-            {router.pathname === "/gallery" && (
+            {router.pathname === "/dashboard" && (
               <div className="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-red-500"></div>
             )}
           </Link>

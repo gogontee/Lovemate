@@ -266,7 +266,7 @@ export default function Contact() {
               <h3 className="text-xs md:text-xl font-bold text-gray-900 mb-1 md:mb-2">Call Us</h3>
               <div className="space-y-1">
                 <a href="tel:+2349072646902" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
-                  +234 907 264 6902
+                  +234 8153093402
                 </a>
                 <a href="tel:+447424830449" className="text-[8px] md:text-base text-rose-600 font-semibold hover:text-rose-700 transition-colors block truncate px-1">
                   +44 742 483 0449
@@ -288,7 +288,7 @@ export default function Contact() {
               <h3 className="text-xs md:text-xl font-bold text-white mb-0.5 md:mb-2">WhatsApp</h3>
               <p className="text-[8px] md:text-sm text-green-100 mb-1 md:mb-3">Quick response, 24/7</p>
               <a 
-                href="https://wa.me/2349072646902" 
+                href="https://wa.me/2348153093402" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-0.5 md:gap-2 bg-white text-green-600 px-1.5 md:px-4 py-0.5 md:py-2 rounded-full text-[8px] md:text-base font-semibold hover:bg-green-50 transition-all"

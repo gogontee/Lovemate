@@ -243,7 +243,7 @@ export default function Home() {
     },
     {
       image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero9.jpg",
-      title: "it is hot and spicy",
+      title: "Hot and spicy Mates",
       highlight: "On Lovemate Show",
       subtitle: "coming to your screen.",
     },
