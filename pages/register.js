@@ -47,12 +47,16 @@ export default function Register() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showCandidateModal, setShowCandidateModal] = useState(false);
+  const [showProcessingModal, setShowProcessingModal] = useState(false);
+  const [showNetworkErrorModal, setShowNetworkErrorModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [buttonText, setButtonText] = useState("Submit Application");
   const [error, setError] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [progress, setProgress] = useState(0);
   const [submittedCandidateCode, setSubmittedCandidateCode] = useState("");
+  const [processingStep, setProcessingStep] = useState(1);
+  const [processingMessage, setProcessingMessage] = useState("");
   
   // Countdown timer state
   const [timeLeft, setTimeLeft] = useState({
@@ -61,7 +65,7 @@ export default function Register() {
     minutes: 0,
     seconds: 0
   });
-  const [registrationStatus, setRegistrationStatus] = useState('not_started'); // 'not_started', 'open', 'closed'
+  const [registrationStatus, setRegistrationStatus] = useState('not_started');
   
   // Hero section state
   const [desktopHero, setDesktopHero] = useState([]);
@@ -88,11 +92,9 @@ export default function Register() {
     setLoading(true);
     setCheckingCandidate(true);
     
-    // Get current user
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !authUser) {
-      // User is not authenticated - show login required UI
       setUser(null);
       setLoading(false);
       setCheckingCandidate(false);
@@ -101,7 +103,6 @@ export default function Register() {
 
     setUser(authUser);
 
-    // Check if user already has a candidate page
     const { data: candidateData, error: candidateError } = await supabase
       .from("candidates")
       .select("*")
@@ -113,17 +114,14 @@ export default function Register() {
       setCandidateData(candidateData);
       setCheckingCandidate(false);
       setLoading(false);
-      // Show the candidate modal immediately
       setShowCandidateModal(true);
       return;
     }
 
-    // User is authenticated and doesn't have a candidate page
     setHasCandidatePage(false);
     setCheckingCandidate(false);
     setLoading(false);
     
-    // Load saved form data if exists (only if registration is open)
     if (registrationStatus === 'open') {
       const savedData = localStorage.getItem('registrationFormData');
       if (savedData) {
@@ -141,7 +139,6 @@ export default function Register() {
     };
   }, []);
 
-  // Auto-slide for desktop hero
   useEffect(() => {
     if (desktopHero.length > 1) {
       desktopIntervalRef.current = setInterval(() => {
@@ -153,7 +150,6 @@ export default function Register() {
     };
   }, [desktopHero]);
 
-  // Auto-slide for mobile hero
   useEffect(() => {
     if (mobileHero.length > 1) {
       mobileIntervalRef.current = setInterval(() => {
@@ -170,7 +166,6 @@ export default function Register() {
     const timer = setInterval(() => {
       const now = new Date().getTime();
       
-      // Check if registration hasn't started yet
       if (now < registrationOpenDate) {
         setRegistrationStatus('not_started');
         const distance = registrationOpenDate - now;
@@ -186,11 +181,9 @@ export default function Register() {
           });
         }
       } 
-      // Check if registration is open
       else if (now >= registrationOpenDate && now < registrationCloseDate) {
         if (registrationStatus !== 'open') {
           setRegistrationStatus('open');
-          // Load saved form data when registration opens
           const savedData = localStorage.getItem('registrationFormData');
           if (savedData && user && !hasCandidatePage) {
             setFormData(JSON.parse(savedData));
@@ -209,7 +202,6 @@ export default function Register() {
           });
         }
       }
-      // Registration closed
       else {
         setRegistrationStatus('closed');
         clearInterval(timer);
@@ -229,13 +221,11 @@ export default function Register() {
 
       if (error) throw error;
 
-      // Parse desktop hero - ratio 1000:200
       if (data?.form_hero) {
         const desktopHeroes = Array.isArray(data.form_hero) ? data.form_hero : [data.form_hero];
         setDesktopHero(desktopHeroes);
       }
 
-      // Parse mobile hero - ratio 1000:400
       if (data?.mobile_form_hero) {
         const mobileHeroes = Array.isArray(data.mobile_form_hero) ? data.mobile_form_hero : [data.mobile_form_hero];
         setMobileHero(mobileHeroes);
@@ -245,14 +235,12 @@ export default function Register() {
     }
   };
 
-  // Save to localStorage whenever formData changes (only when registration is open)
   useEffect(() => {
     if (user && !hasCandidatePage && registrationStatus === 'open') {
       localStorage.setItem('registrationFormData', JSON.stringify(formData));
     }
   }, [formData, user, hasCandidatePage, registrationStatus]);
 
-  // Calculate progress percentage
   useEffect(() => {
     const totalFields = Object.keys(formData).length;
     const filledFields = Object.values(formData).filter(value => value && value.toString().trim() !== '').length;
@@ -260,7 +248,6 @@ export default function Register() {
     setProgress(calculatedProgress);
   }, [formData]);
 
-  // Cleanup previews on unmount
   useEffect(() => {
     return () => {
       if (profilePhotoPreview) URL.revokeObjectURL(profilePhotoPreview);
@@ -279,7 +266,6 @@ export default function Register() {
     const file = e.target.files[0];
     if (file) {
       setProfilePhoto(file);
-      // Create preview
       if (profilePhotoPreview) URL.revokeObjectURL(profilePhotoPreview);
       setProfilePhotoPreview(URL.createObjectURL(file));
     }
@@ -295,7 +281,6 @@ export default function Register() {
       return;
     }
 
-    // Create previews for new files
     const newPreviews = files.map(file => URL.createObjectURL(file));
     
     setGalleryPhotos(prev => [...prev, ...files]);
@@ -305,7 +290,6 @@ export default function Register() {
   const removeGalleryImage = (index) => {
     if (registrationStatus !== 'open') return;
     setGalleryPhotos(prev => prev.filter((_, i) => i !== index));
-    // Revoke the object URL to avoid memory leaks
     URL.revokeObjectURL(galleryPreviews[index]);
     setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
   };
@@ -384,7 +368,7 @@ export default function Register() {
       (file, index) => `gallery/${Date.now()}-${index}-${file.name}`
     );
 
-    // Upload profile photo
+    setProcessingMessage("Uploading profile photo...");
     const { error: profileUploadError } = await supabase.storage
       .from("asset")
       .upload(profilePath, profilePhoto);
@@ -397,9 +381,9 @@ export default function Register() {
       .from("asset")
       .getPublicUrl(profilePath);
 
-    // Upload gallery photos
     const galleryUrls = [];
     for (let i = 0; i < galleryPhotos.length; i++) {
+      setProcessingMessage(`Uploading gallery image ${i + 1} of ${galleryPhotos.length}...`);
       const file = galleryPhotos[i];
       const path = galleryPaths[i];
 
@@ -445,11 +429,21 @@ export default function Register() {
       return;
     }
 
+    // Show processing modal
+    setShowProcessingModal(true);
+    setProcessingStep(1);
+    setProcessingMessage("Preparing your application...");
     setIsSubmitting(true);
     setButtonText("Submitting Application...");
 
     try {
+      // Step 1: Upload files
+      setProcessingStep(1);
       const { profileUrl, galleryUrls } = await handleUploads();
+
+      // Step 2: Save to database
+      setProcessingStep(2);
+      setProcessingMessage("Saving your information...");
 
       const { data: insertedData, error: insertError } = await supabase
         .from("candidates")
@@ -479,21 +473,23 @@ export default function Register() {
         .select("code");
 
       if (insertError) {
-        console.error("Insert error:", insertError);
-        setError("Failed to save your data. Please try again.");
-        setButtonText("Submit Application");
-        setIsSubmitting(false);
-        return;
+        throw new Error(insertError.message);
       }
 
-      // Get the generated code from the inserted data
+      // Step 3: Complete
+      setProcessingStep(3);
+      setProcessingMessage("Finalizing your registration...");
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const candidateCode = insertedData?.[0]?.code || "N/A";
       setSubmittedCandidateCode(candidateCode);
 
-      // Clear localStorage after successful submission
       localStorage.removeItem('registrationFormData');
       
+      // Close processing modal and show success
+      setShowProcessingModal(false);
       setShowSuccessModal(true);
+      
       setFormData({
         name: "", full_name: "", email: "", phone: "", country: "", age: "",
         occupation: "", instagram_handle: "", tiktok_handle: "", gender: "",
@@ -507,7 +503,17 @@ export default function Register() {
       setButtonText("Submitted! ✅");
     } catch (err) {
       console.error("Submission error:", err);
-      setError("Something went wrong. Please try again.");
+      
+      // Close processing modal
+      setShowProcessingModal(false);
+      
+      // Check if it's a network error
+      if (err.message?.includes("fetch") || err.message?.includes("network") || err.message?.includes("Failed to fetch")) {
+        setShowNetworkErrorModal(true);
+      } else {
+        setError(err.message || "Something went wrong. Please try again.");
+      }
+      
       setButtonText("Submit Application");
     } finally {
       setIsSubmitting(false);
@@ -534,7 +540,12 @@ export default function Register() {
     window.open(whatsappUrl, '_blank');
   };
 
-  // Get timer label based on registration status
+  const retrySubmission = () => {
+    setShowNetworkErrorModal(false);
+    // Re-trigger submission
+    handleSubmit(new Event('submit'));
+  };
+
   const getTimerLabel = () => {
     if (registrationStatus === 'not_started') {
       return "Registration Starts In";
@@ -545,7 +556,6 @@ export default function Register() {
     }
   };
 
-  // Get current hero content
   const currentDesktopHero = desktopHero[currentDesktopIndex] || {
     image: null,
     title: "What is waiting for you in the house?",
@@ -558,7 +568,6 @@ export default function Register() {
     subtitle: "Join the experience"
   };
 
-  // Format date for display
   const formatDate = (timestamp) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-US', {
@@ -571,7 +580,6 @@ export default function Register() {
     });
   };
 
-  // Show loading state
   if (loading || checkingCandidate) {
     return (
       <>
@@ -597,7 +605,7 @@ export default function Register() {
       <Header />
       
       <main className="bg-gradient-to-br from-pink-50 via-white to-rose-50 min-h-screen pb-20 md:pb-0">
-        {/* Desktop Hero Section - Hidden on mobile, ratio 1000:200 */}
+        {/* Desktop Hero Section */}
         <div className="hidden md:block w-full h-[200px] relative overflow-hidden bg-rose-100">
           {currentDesktopHero.image ? (
             <div className="relative w-full h-full">
@@ -621,7 +629,6 @@ export default function Register() {
             </div>
           )}
           
-          {/* Slide indicators */}
           {desktopHero.length > 1 && (
             <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
               {desktopHero.map((_, index) => (
@@ -636,7 +643,6 @@ export default function Register() {
             </div>
           )}
 
-          {/* Timer - Bottom Right for Desktop */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -686,7 +692,7 @@ export default function Register() {
           </motion.div>
         </div>
 
-        {/* Mobile Hero Section - Hidden on desktop, ratio 1000:400 */}
+        {/* Mobile Hero Section */}
         <div className="md:hidden w-full relative bg-rose-100" style={{ aspectRatio: '1000/400' }}>
           {currentMobileHero.image ? (
             <div className="relative w-full h-full">
@@ -710,7 +716,6 @@ export default function Register() {
             </div>
           )}
           
-          {/* Slide indicators for mobile */}
           {mobileHero.length > 1 && (
             <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
               {mobileHero.map((_, index) => (
@@ -725,7 +730,6 @@ export default function Register() {
             </div>
           )}
 
-          {/* Timer - Bottom Right for Mobile */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -775,11 +779,9 @@ export default function Register() {
           </motion.div>
         </div>
 
-        {/* Gap between hero and content - only on mobile */}
         <div className="md:hidden h-4"></div>
 
         <div className="max-w-4xl mx-auto py-8 md:py-12 px-4">
-          {/* Registration Status Message */}
           {registrationStatus !== 'open' && (
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -823,7 +825,6 @@ export default function Register() {
             </motion.div>
           )}
 
-          {/* Login Required for Unauthenticated Users */}
           {!user && registrationStatus === 'open' && (
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -854,7 +855,6 @@ export default function Register() {
             </motion.div>
           )}
 
-          {/* Progress Bar - Only show when registration is open and user is authenticated */}
           {registrationStatus === 'open' && user && !hasCandidatePage && (
             <div className="bg-white rounded-lg md:rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
               <div className="flex justify-between items-center mb-2">
@@ -872,7 +872,6 @@ export default function Register() {
             </div>
           )}
 
-          {/* Step Indicators - Only show when registration is open */}
           {registrationStatus === 'open' && user && !hasCandidatePage && (
             <div className="flex justify-between items-center mb-6 md:mb-8">
               {[1, 2, 3].map((step) => (
@@ -895,7 +894,6 @@ export default function Register() {
             </div>
           )}
 
-          {/* Privacy Assurance - Only show when registration is open */}
           {registrationStatus === 'open' && user && !hasCandidatePage && (
             <div className="mb-4 md:mb-6 bg-white/80 backdrop-blur-sm rounded-lg md:rounded-xl p-3 md:p-6 border border-pink-100 shadow-sm">
               <div className="flex items-start gap-2 md:gap-4">
@@ -911,11 +909,9 @@ export default function Register() {
             </div>
           )}
 
-          {/* Form - Only shown when registration is open and user is authenticated */}
           {registrationStatus === 'open' && user && !hasCandidatePage && (
             <form onSubmit={handleSubmit} className="bg-white rounded-xl md:rounded-2xl shadow-xl p-4 md:p-8">
               <AnimatePresence mode="wait">
-                {/* Step 1: Personal Information */}
                 {currentStep === 1 && (
                   <motion.div
                     key="step1"
@@ -1019,7 +1015,6 @@ export default function Register() {
                   </motion.div>
                 )}
 
-                {/* Step 2: Media Upload & Social */}
                 {currentStep === 2 && (
                   <motion.div
                     key="step2"
@@ -1085,7 +1080,6 @@ export default function Register() {
                       </div>
                     </div>
 
-                    {/* Profile Photo Upload with Preview */}
                     <div className="space-y-2 pt-2 md:pt-4">
                       <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Profile Photo *</label>
                       
@@ -1131,13 +1125,11 @@ export default function Register() {
                       />
                     </div>
 
-                    {/* Gallery Photos with Previews */}
                     <div className="space-y-2 pt-2 md:pt-4">
                       <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
                         Gallery Photos (Minimum 4, Maximum 6) *
                       </label>
                       
-                      {/* Gallery Previews Grid */}
                       <div className="grid grid-cols-3 gap-2 mb-3">
                         {galleryPreviews.map((preview, index) => (
                           <div key={index} className="relative aspect-square">
@@ -1158,7 +1150,6 @@ export default function Register() {
                           </div>
                         ))}
                         
-                        {/* Add More Button */}
                         {galleryPhotos.length < 6 && (
                           <div 
                             onClick={() => registrationStatus === 'open' && galleryInputRef.current?.click()}
@@ -1191,7 +1182,6 @@ export default function Register() {
                   </motion.div>
                 )}
 
-                {/* Step 3: Application Questions */}
                 {currentStep === 3 && (
                   <motion.div
                     key="step3"
@@ -1262,7 +1252,6 @@ export default function Register() {
                       </p>
                     </div>
 
-                    {/* Terms Acceptance */}
                     <div className="mt-4 md:mt-6 p-3 md:p-4 bg-pink-50 rounded-lg md:rounded-xl">
                       <label className="flex items-start gap-2 cursor-pointer">
                         <input
@@ -1285,14 +1274,12 @@ export default function Register() {
                 )}
               </AnimatePresence>
 
-              {/* Error Message */}
               {error && (
                 <div className="mt-3 md:mt-4 p-3 md:p-4 bg-red-50 border border-red-200 rounded-lg md:rounded-xl text-red-600 text-xs md:text-sm text-center">
                   {error}
                 </div>
               )}
 
-              {/* Navigation Buttons */}
               <div className="flex justify-between mt-4 md:mt-8 gap-2">
                 {currentStep > 1 && (
                   <button
@@ -1334,7 +1321,118 @@ export default function Register() {
         </div>
       </main>
 
-      {/* Success Modal with WhatsApp Button */}
+      {/* Processing Modal */}
+      <AnimatePresence>
+        {showProcessingModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-80 z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-xl md:rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center">
+                <div className="mb-4">
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                    className="w-16 h-16 border-4 border-rose-600 border-t-transparent rounded-full mx-auto"
+                  />
+                </div>
+                
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-3">
+                  Processing Your Application
+                </h2>
+                
+                <p className="text-sm md:text-base text-gray-600 mb-4">
+                  {processingMessage}
+                </p>
+                
+                <div className="bg-rose-50 rounded-lg p-3 mb-4">
+                  <div className="flex items-center justify-between gap-2 text-xs md:text-sm">
+                    <span className={`${processingStep >= 1 ? 'text-rose-600 font-semibold' : 'text-gray-400'}`}>
+                      📸 Uploading
+                    </span>
+                    <span className={`${processingStep >= 2 ? 'text-rose-600 font-semibold' : 'text-gray-400'}`}>
+                      💾 Saving
+                    </span>
+                    <span className={`${processingStep >= 3 ? 'text-rose-600 font-semibold' : 'text-gray-400'}`}>
+                      ✅ Finalizing
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                    <motion.div 
+                      className="bg-gradient-to-r from-pink-500 to-rose-500 h-1.5 rounded-full"
+                      initial={{ width: "0%" }}
+                      animate={{ width: `${processingStep * 33.33}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </div>
+                
+                <p className="text-xs text-gray-500">
+                  Please do not close or refresh this page.
+                </p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Network Error Modal */}
+      <AnimatePresence>
+        {showNetworkErrorModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white rounded-xl md:rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl"
+            >
+              <div className="text-center">
+                <div className="text-5xl md:text-6xl mb-3 md:mb-4">🌐</div>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Network Issue Detected</h2>
+                <p className="text-sm md:text-base text-gray-600 mb-4">
+                  We're having trouble connecting. Please check your internet connection and try again.
+                </p>
+                
+                <div className="bg-amber-50 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-amber-800">
+                    💡 Tip: Make sure you're connected to the internet and try again.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <button
+                    onClick={retrySubmission}
+                    className="w-full px-4 md:px-6 py-2 md:py-3 bg-rose-600 text-white rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:bg-rose-700 transition-all"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={() => setShowNetworkErrorModal(false)}
+                    className="w-full px-4 md:px-6 py-2 md:py-3 bg-gray-100 text-gray-700 rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:bg-gray-200 transition-all"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Success Modal */}
       <AnimatePresence>
         {showSuccessModal && (
           <motion.div
@@ -1350,27 +1448,41 @@ export default function Register() {
               className="bg-white rounded-xl md:rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl"
             >
               <div className="text-center">
-                <div className="text-4xl md:text-6xl mb-3 md:mb-4">🎉</div>
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
+                  className="text-5xl md:text-6xl mb-3 md:mb-4"
+                >
+                  🎉
+                </motion.div>
                 <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Application Received!</h2>
                 <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">
                   Thank you for applying to Lovemate Show!
                 </p>
                 
                 {submittedCandidateCode && (
-                  <div className="bg-rose-50 rounded-lg p-3 mb-4">
+                  <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                    className="bg-rose-50 rounded-lg p-3 mb-4"
+                  >
                     <p className="text-xs text-rose-600 mb-1">Your Unique Code:</p>
                     <p className="text-2xl font-bold text-rose-700 tracking-wider">{submittedCandidateCode}</p>
                     <p className="text-xs text-gray-500 mt-2">Save this code for future reference</p>
-                  </div>
+                  </motion.div>
                 )}
                 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={sendWhatsAppMessage}
                   className="w-full px-4 md:px-6 py-3 bg-green-600 text-white rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:bg-green-700 transition-all flex items-center justify-center gap-2 mb-3"
                 >
                   <span>📱</span>
                   Click Here to Finish
-                </button>
+                </motion.button>
                 
                 <button
                   onClick={() => setShowSuccessModal(false)}
@@ -1475,7 +1587,6 @@ export default function Register() {
         )}
       </AnimatePresence>
 
-      {/* Footer - Hidden on mobile */}
       <div className="hidden md:block">
         <Footer />
       </div>
@@ -1483,7 +1594,6 @@ export default function Register() {
   );
 }
 
-// Reusable Input Component
 function InputField({ label, name, type = "text", value, onChange, placeholder, disabled, ...props }) {
   return (
     <div>
