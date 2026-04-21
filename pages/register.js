@@ -31,7 +31,6 @@ export default function Register() {
     
     // Application Questions (Step 3)
     why_here: "",
-    intention: "",
     would_propose: "",
     bio: "",
   });
@@ -53,6 +52,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [submittedCandidateCode, setSubmittedCandidateCode] = useState("");
   
   // Countdown timer state
   const [timeLeft, setTimeLeft] = useState({
@@ -451,30 +451,32 @@ export default function Register() {
     try {
       const { profileUrl, galleryUrls } = await handleUploads();
 
-      const { error: insertError } = await supabase.from("candidates").insert([
-        {
-          user_id: user.id,
-          name: formData.name,
-          full_name: formData.full_name,
-          email: formData.email,
-          phone: formData.phone,
-          country: formData.country,
-          age: formData.age,
-          occupation: formData.occupation,
-          instagram_handle: formData.instagram_handle,
-          tiktok_handle: formData.tiktok_handle,
-          gender: formData.gender,
-          ever_married: formData.ever_married,
-          reality_show: formData.reality_show,
-          why_here: formData.why_here,
-          intention: formData.intention,
-          would_propose: formData.would_propose,
-          bio: formData.bio,
-          image_url: profileUrl,
-          gallery: galleryUrls,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const { data: insertedData, error: insertError } = await supabase
+        .from("candidates")
+        .insert([
+          {
+            user_id: user.id,
+            name: formData.name,
+            full_name: formData.full_name,
+            email: formData.email,
+            phone: formData.phone,
+            country: formData.country,
+            age: formData.age,
+            occupation: formData.occupation,
+            instagram_handle: formData.instagram_handle,
+            tiktok_handle: formData.tiktok_handle,
+            gender: formData.gender,
+            ever_married: formData.ever_married,
+            reality_show: formData.reality_show,
+            why_here: formData.why_here,
+            would_propose: formData.would_propose,
+            bio: formData.bio,
+            image_url: profileUrl,
+            gallery: galleryUrls,
+            created_at: new Date().toISOString(),
+          },
+        ])
+        .select("code");
 
       if (insertError) {
         console.error("Insert error:", insertError);
@@ -484,6 +486,10 @@ export default function Register() {
         return;
       }
 
+      // Get the generated code from the inserted data
+      const candidateCode = insertedData?.[0]?.code || "N/A";
+      setSubmittedCandidateCode(candidateCode);
+
       // Clear localStorage after successful submission
       localStorage.removeItem('registrationFormData');
       
@@ -491,8 +497,7 @@ export default function Register() {
       setFormData({
         name: "", full_name: "", email: "", phone: "", country: "", age: "",
         occupation: "", instagram_handle: "", tiktok_handle: "", gender: "",
-        ever_married: "", reality_show: "", why_here: "", intention: "",
-        would_propose: "", bio: "",
+        ever_married: "", reality_show: "", why_here: "", would_propose: "", bio: "",
       });
       setProfilePhoto(null);
       setProfilePhotoPreview(null);
@@ -519,6 +524,14 @@ export default function Register() {
 
   const goToSignup = () => {
     router.push('/auth/signup');
+  };
+
+  const sendWhatsAppMessage = () => {
+    const phoneNumber = "2348153093402";
+    const message = `I have completed my registration process. My profile code is ${submittedCandidateCode}. I truly wish to be enlisted among the 24 housemate on Lovemate Show. What next?`;
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   // Get timer label based on registration status
@@ -1211,22 +1224,6 @@ export default function Register() {
                     </div>
 
                     <div>
-                      <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">
-                        Here to find Love, Fun or Break hearts? *
-                      </label>
-                      <input
-                        name="intention"
-                        type="text"
-                        value={formData.intention}
-                        onChange={handleChange}
-                        placeholder="e.g. I'm here for genuine connection"
-                        required
-                        disabled={registrationStatus !== 'open'}
-                        className="w-full px-3 md:px-4 py-2 md:py-3 text-sm md:text-base rounded-lg md:rounded-xl border border-gray-300 text-gray-800 focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
-                      />
-                    </div>
-
-                    <div>
                       <label className="block text-xs md:text-sm font-medium text-gray-700 mb-1">Would you propose? *</label>
                       <select
                         name="would_propose"
@@ -1337,7 +1334,7 @@ export default function Register() {
         </div>
       </main>
 
-      {/* Success Modal */}
+      {/* Success Modal with WhatsApp Button */}
       <AnimatePresence>
         {showSuccessModal && (
           <motion.div
@@ -1356,16 +1353,28 @@ export default function Register() {
                 <div className="text-4xl md:text-6xl mb-3 md:mb-4">🎉</div>
                 <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-2">Application Received!</h2>
                 <p className="text-sm md:text-base text-gray-600 mb-4 md:mb-6">
-                  Thank you for applying. We'll contact you if selected.
+                  Thank you for applying to Lovemate Show!
                 </p>
-                <div className="bg-pink-50 rounded-lg md:rounded-xl p-3 md:p-4 mb-4 md:mb-6">
-                  <p className="text-xs md:text-sm text-pink-800">
-                    📱 Follow us on social media for updates
-                  </p>
-                </div>
+                
+                {submittedCandidateCode && (
+                  <div className="bg-rose-50 rounded-lg p-3 mb-4">
+                    <p className="text-xs text-rose-600 mb-1">Your Unique Code:</p>
+                    <p className="text-2xl font-bold text-rose-700 tracking-wider">{submittedCandidateCode}</p>
+                    <p className="text-xs text-gray-500 mt-2">Save this code for future reference</p>
+                  </div>
+                )}
+                
+                <button
+                  onClick={sendWhatsAppMessage}
+                  className="w-full px-4 md:px-6 py-3 bg-green-600 text-white rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:bg-green-700 transition-all flex items-center justify-center gap-2 mb-3"
+                >
+                  <span>📱</span>
+                  Click Here to Finish
+                </button>
+                
                 <button
                   onClick={() => setShowSuccessModal(false)}
-                  className="w-full px-4 md:px-6 py-2 md:py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:from-pink-700 hover:to-rose-700 transition-all"
+                  className="w-full px-4 md:px-6 py-2 bg-gray-100 text-gray-700 rounded-lg md:rounded-xl font-semibold text-sm md:text-base hover:bg-gray-200 transition-all"
                 >
                   Close
                 </button>
