@@ -21,7 +21,7 @@ export default function UpdatePasswordPage() {
   const [validToken, setValidToken] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  // Verify token with proper timezone handling
+  // ✅ Fixed token verification with UTC handling
   useEffect(() => {
     const verifyToken = async () => {
       console.log("Token from URL:", token);
@@ -34,36 +34,31 @@ export default function UpdatePasswordPage() {
       }
 
       try {
-        // Use ISO string for current time to match database format
-        const currentTimeUTC = new Date().toISOString();
-        
-        // Query with database-side expiration check
+        // Fetch the token without any time filter first
         const { data, error } = await supabase
           .from('password_resets')
           .select('*')
           .eq('token', token)
           .eq('email', email)
           .eq('used', false)
-          .gte('expires_at', currentTimeUTC) // Compare using UTC
           .single();
 
-        console.log("Current time (UTC):", currentTimeUTC);
-        console.log("Query result:", { data, error });
-
         if (error || !data) {
-          // Check if token exists but is expired
-          const { data: tokenExists } = await supabase
-            .from('password_resets')
-            .select('expires_at')
-            .eq('token', token)
-            .single();
-          
-          if (tokenExists) {
-            console.log("Token exists but expired. Expires at:", tokenExists.expires_at);
-            setError("This reset link has expired. Please request a new one.");
-          } else {
-            setError("Invalid reset link. Please request a new one.");
-          }
+          setError("Invalid reset link. Please request a new one.");
+          setChecking(false);
+          return;
+        }
+
+        // 🔥 FIX: Append 'Z' to treat the database timestamp as UTC
+        const expiryUTC = new Date(data.expires_at + 'Z');
+        const nowUTC = new Date();
+        
+        console.log("Expiry (UTC):", expiryUTC.toISOString());
+        console.log("Now (UTC):", nowUTC.toISOString());
+        console.log("Is expired?", nowUTC > expiryUTC);
+
+        if (nowUTC > expiryUTC) {
+          setError("This reset link has expired. Please request a new one.");
           setChecking(false);
           return;
         }

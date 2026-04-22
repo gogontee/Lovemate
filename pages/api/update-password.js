@@ -17,32 +17,36 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Get current time in UTC ISO format
-    const currentTimeUTC = new Date().toISOString();
-    
-    // Verify token exists, is not used, and not expired (database-side check)
+    // Fetch the token without any time filter
     const { data: tokenData, error: tokenError } = await supabase
       .from('password_resets')
       .select('*')
       .eq('token', token)
       .eq('email', email)
       .eq('used', false)
-      .gte('expires_at', currentTimeUTC) // Compare using UTC
       .single();
 
     if (tokenError || !tokenData) {
-      // Check if token exists but is expired
-      const { data: expiredToken } = await supabase
+      // Check if token exists but is used or invalid
+      const { data: existingToken } = await supabase
         .from('password_resets')
-        .select('expires_at')
+        .select('expires_at, used')
         .eq('token', token)
         .eq('email', email)
         .single();
       
-      if (expiredToken) {
-        return res.status(400).json({ error: "Reset link has expired. Please request a new one." });
+      if (existingToken && existingToken.used) {
+        return res.status(400).json({ error: "This reset link has already been used." });
       }
       return res.status(400).json({ error: "Invalid or expired reset link" });
+    }
+
+    // 🔥 Fix: Append 'Z' to treat database timestamp as UTC
+    const expiryUTC = new Date(tokenData.expires_at + 'Z');
+    const nowUTC = new Date();
+    
+    if (nowUTC > expiryUTC) {
+      return res.status(400).json({ error: "Reset link has expired. Please request a new one." });
     }
 
     // Get user by email using admin API
