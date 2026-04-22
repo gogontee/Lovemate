@@ -21,33 +21,52 @@ export default function UpdatePasswordPage() {
   const [validToken, setValidToken] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  // Verify token
+  // Verify token - this part can stay as is
   useEffect(() => {
     const verifyToken = async () => {
+      console.log("Token from URL:", token);
+      console.log("Email from URL:", email);
+      
       if (!token || !email) {
         setError("Invalid reset link. Please request a new one.");
         setChecking(false);
         return;
       }
 
-      // Check token in your database
-      const { data, error } = await supabase
-        .from('password_resets')
-        .select('*')
-        .eq('token', token)
-        .eq('email', email)
-        .eq('used', false)
-        .gte('expires_at', new Date().toISOString())
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from('password_resets')
+          .select('*')
+          .eq('token', token)
+          .eq('email', email)
+          .eq('used', false)
+          .single();
 
-      if (error || !data) {
-        setError("This reset link is invalid or has expired. Please request a new one.");
+        if (error || !data) {
+          console.log("No valid token found");
+          setError("This reset link is invalid or has expired.");
+          setChecking(false);
+          return;
+        }
+
+        // Check if expired
+        const now = new Date();
+        const expiry = new Date(data.expires_at);
+        if (now > expiry) {
+          setError("This reset link has expired.");
+          setChecking(false);
+          return;
+        }
+
+        console.log("Token is valid!");
+        setValidToken(true);
         setChecking(false);
-        return;
+        
+      } catch (err) {
+        console.error("Verification error:", err);
+        setError("An error occurred. Please try again.");
+        setChecking(false);
       }
-
-      setValidToken(true);
-      setChecking(false);
     };
 
     verifyToken();
@@ -70,33 +89,25 @@ export default function UpdatePasswordPage() {
 
     setLoading(true);
 
-    // Update password in Supabase using admin API
     try {
-      // First, get the user by email
-      const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
-      
-      if (userError) throw userError;
-      
-      const user = users.find(u => u.email === email);
-      
-      if (!user) {
-        setError("User not found");
-        return;
+      // Call the API route instead of using admin directly
+      const response = await fetch('/api/update-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update password");
       }
-
-      // Update the password
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
-        user.id,
-        { password: password }
-      );
-
-      if (updateError) throw updateError;
-
-      // Mark token as used
-      await supabase
-        .from('password_resets')
-        .update({ used: true })
-        .eq('token', token);
 
       setMessage("✅ Password updated successfully!");
 
@@ -105,6 +116,7 @@ export default function UpdatePasswordPage() {
       }, 2000);
       
     } catch (err) {
+      console.error("Update error:", err);
       setError(err.message || "Failed to update password");
     } finally {
       setLoading(false);
