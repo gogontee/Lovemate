@@ -1,130 +1,218 @@
-// pages/auth/reset.js
-import { useState } from "react";
-import { motion } from "framer-motion";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "../../utils/supabaseClient";
+import { Eye, EyeOff, Shield } from "lucide-react";
 import Image from "next/image";
 
-export default function ResetPassword() {
-  const [email, setEmail] = useState("");
+export default function UpdatePasswordPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+  const email = searchParams.get("email");
+
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [validToken, setValidToken] = useState(false);
+  const [checking, setChecking] = useState(true);
 
-  const handleReset = async (e) => {
+  // Verify token
+  useEffect(() => {
+    const verifyToken = async () => {
+      if (!token || !email) {
+        setError("Invalid reset link. Please request a new one.");
+        setChecking(false);
+        return;
+      }
+
+      // Check token in your database
+      const { data, error } = await supabase
+        .from('password_resets')
+        .select('*')
+        .eq('token', token)
+        .eq('email', email)
+        .eq('used', false)
+        .gte('expires_at', new Date().toISOString())
+        .single();
+
+      if (error || !data) {
+        setError("This reset link is invalid or has expired. Please request a new one.");
+        setChecking(false);
+        return;
+      }
+
+      setValidToken(true);
+      setChecking(false);
+    };
+
+    verifyToken();
+  }, [token, email]);
+
+  const handleUpdatePassword = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
     setMessage("");
 
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    if (password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+
+    // Update password in Supabase using admin API
     try {
-      const response = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setMessage(data.message);
-        setEmail("");
-      } else {
-        setError(data.error || "Failed to send reset email");
+      // First, get the user by email
+      const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
+      
+      if (userError) throw userError;
+      
+      const user = users.find(u => u.email === email);
+      
+      if (!user) {
+        setError("User not found");
+        return;
       }
+
+      // Update the password
+      const { error: updateError } = await supabase.auth.admin.updateUserById(
+        user.id,
+        { password: password }
+      );
+
+      if (updateError) throw updateError;
+
+      // Mark token as used
+      await supabase
+        .from('password_resets')
+        .update({ used: true })
+        .eq('token', token);
+
+      setMessage("✅ Password updated successfully!");
+
+      setTimeout(() => {
+        router.push("/auth/login");
+      }, 2000);
+      
     } catch (err) {
-      setError("Network error. Please try again.");
+      setError(err.message || "Failed to update password");
     } finally {
       setLoading(false);
     }
   };
 
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-700 via-rose-100 to-red-800">
+        <div className="text-white">Verifying reset link...</div>
+      </div>
+    );
+  }
+
+  if (!validToken) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-700 via-rose-100 to-red-800 p-4">
+        <div className="max-w-md w-full bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 text-center">
+          <h2 className="text-xl font-bold text-red-600 mb-4">Invalid Reset Link</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <a href="/auth/reset" className="inline-block px-6 py-2 bg-gradient-to-r from-red-700 to-rose-600 text-white rounded-xl">
+            Request New Link
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <section className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-50 flex items-center justify-center px-4 py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8"
-      >
-        {/* Logo Section */}
-        <div className="flex justify-center mb-6">
-          <div className="relative w-16 h-16">
+    <div className="min-h-screen bg-gradient-to-br from-red-700 via-rose-100 to-red-800 flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden">
+        <div className="bg-gradient-to-r from-red-700 to-rose-600 flex justify-center py-6">
+          <div className="relative w-32 h-32">
             <Image
-              src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/logo/lovemateshow.png"
-              alt="Lovemate Show Logo"
+              src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/lovemateshow/logo/lovemateicon.png"
+              alt="Lovemate Show"
               fill
               className="object-contain"
-              sizes="64px"
-              priority
-              unoptimized
             />
           </div>
         </div>
 
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-4">🔐</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Reset Password</h2>
-          <p className="text-sm text-gray-600">
-            Enter your email address and we'll send you a link to reset your password.
-          </p>
-        </div>
+        <div className="p-8">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-red-700 to-rose-600 bg-clip-text text-transparent">
+              Create New Password
+            </h1>
+            <p className="text-gray-600 text-sm mt-2">
+              Enter your new password below
+            </p>
+          </div>
 
-        <form onSubmit={handleReset} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
-            </label>
+          <form onSubmit={handleUpdatePassword} className="space-y-4">
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="New password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-red-700 outline-none pr-10"
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-3 text-gray-500"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+
             <input
-              type="email"
-              placeholder="you@example.com"
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl text-gray-800 focus:ring-2 focus:ring-rose-500 focus:border-transparent transition-all"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type="password"
+              placeholder="Confirm password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
               required
+              className="w-full px-4 py-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-red-700 outline-none"
             />
-          </div>
 
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="p-3 bg-red-50 border border-red-200 rounded-lg"
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full py-3 rounded-xl font-semibold text-white transition ${
+                loading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-gradient-to-r from-red-700 to-rose-600 hover:opacity-90"
+              }`}
             >
-              <p className="text-sm text-red-600">{error}</p>
-            </motion.div>
-          )}
+              {loading ? "Updating..." : "Update Password"}
+            </button>
+          </form>
 
           {message && (
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="p-3 bg-green-50 border border-green-200 rounded-lg"
-            >
-              <p className="text-sm text-green-700">{message}</p>
-            </motion.div>
+            <p className="mt-4 text-center text-sm text-green-600">{message}</p>
+          )}
+          {error && (
+            <p className="mt-4 text-center text-sm text-red-600">{error}</p>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white py-3 rounded-xl font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Sending...
-              </span>
-            ) : (
-              "Send Reset Link"
-            )}
-          </button>
-
-          <p className="text-sm text-center mt-4">
-            <a href="/auth/login" className="text-rose-600 font-semibold hover:underline">
-              ← Back to login
-            </a>
-          </p>
-        </form>
-      </motion.div>
-    </section>
+          <div className="flex justify-center items-center gap-1 mt-6 pt-4 border-t border-rose-100">
+            <Shield className="w-3 h-3 text-gray-400" />
+            <span className="text-[10px] text-gray-400">
+              Secure • Encrypted
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
