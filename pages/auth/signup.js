@@ -11,7 +11,7 @@ export default function SignUp() {
   const [form, setForm] = useState({
     fullName: "",
     email: "",
-    phone: "", // Changed from whatsapp to phone
+    phone: "",
     country: "",
     password: "",
     confirmPassword: "",
@@ -114,10 +114,13 @@ export default function SignUp() {
       return;
     }
 
-    // Validate phone number format (basic validation)
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/; // E.164 format or simple international format
-    if (!phoneRegex.test(form.phone.replace(/\s/g, ''))) {
-      setError("Please enter a valid phone number (e.g., +1234567890)");
+    // 🟢 NEW: Flexible phone validation – country code optional
+    // Remove all spaces and dashes before validation
+    const cleanPhone = form.phone.replace(/[\s\-]/g, '');
+    // Regex: optional '+' followed by 5 to 15 digits
+    const phoneRegex = /^\+?[0-9]{5,15}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      setError("Please enter a valid phone number (5–15 digits, country code optional). Example: 08012345678 or +2348012345678");
       return;
     }
 
@@ -213,7 +216,7 @@ export default function SignUp() {
         .update({
           full_name: form.fullName,
           email: form.email,
-          phone: form.phone, // Changed from whatsapp to phone
+          phone: form.phone,
           country: form.country,
           photo_url,
         })
@@ -230,7 +233,7 @@ export default function SignUp() {
           id: userId,
           email: form.email,
           full_name: form.fullName,
-          phone: form.phone, // Changed from whatsapp to phone
+          phone: form.phone,
           country: form.country,
           role: "fan",
           photo_url,
@@ -246,7 +249,7 @@ export default function SignUp() {
 
     setLoading(false);
     
-    // Redirect directly to dashboard instead of login page
+    // Redirect directly to dashboard
     router.push("/dashboard");
   };
 
@@ -270,14 +273,14 @@ export default function SignUp() {
     return "Strong";
   };
 
-  // FIXED: Floating hearts animation variants with deterministic values
+  // Floating hearts animation
   const floatingHearts = Array.from({ length: 15 }, (_, i) => ({
     id: i,
-    x: (i * 13) % 90 + 5,      // Range: 5-95%
-    y: (i * 17) % 90 + 5,      // Range: 5-95%
-    size: (i % 3) * 8 + 12,    // Values: 12, 20, or 28
-    duration: (i % 5) * 2 + 12, // Values: 12, 14, 16, 18, or 20
-    delay: (i % 4) * 0.4,       // Values: 0, 0.4, 0.8, or 1.2
+    x: (i * 13) % 90 + 5,
+    y: (i * 17) % 90 + 5,
+    size: (i % 3) * 8 + 12,
+    duration: (i % 5) * 2 + 12,
+    delay: (i % 4) * 0.4,
   }));
 
   return (
@@ -338,7 +341,6 @@ export default function SignUp() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-[340px] md:max-w-md"
       >
-        {/* Futuristic Card */}
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -362,7 +364,7 @@ export default function SignUp() {
             }}
           />
 
-          {/* Header with Logo - Letterhead Style - No padding/gaps */}
+          {/* Header with Logo */}
           <div className="relative bg-gradient-to-r from-red-700 to-rose-600 flex items-center justify-center">
             <motion.div
               initial={{ y: -20, opacity: 0 }}
@@ -370,7 +372,6 @@ export default function SignUp() {
               transition={{ delay: 0.3 }}
               className="relative"
             >
-              {/* Logo - Doubled size with no padding */}
               <div className="relative w-32 h-32 md:w-36 md:h-36">
                 <Image
                   src="https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/lovemateshow/logo/lovemateicon.png"
@@ -380,8 +381,6 @@ export default function SignUp() {
                   priority
                 />
               </div>
-              
-              {/* Sparkles animation - positioned absolutely relative to logo */}
               <motion.div
                 animate={{ scale: [1, 1.1, 1] }}
                 transition={{ duration: 2, repeat: Infinity }}
@@ -390,13 +389,11 @@ export default function SignUp() {
                 <Sparkles className="w-5 h-5 text-rose-200" />
               </motion.div>
             </motion.div>
-            
-            {/* Decorative Elements - Adjusted for flush design */}
             <div className="absolute top-0 left-0 w-24 h-24 bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
             <div className="absolute bottom-0 right-0 w-24 h-24 bg-white/5 rounded-full translate-x-1/2 translate-y-1/2" />
           </div>
 
-          {/* Form Content - Same size as before */}
+          {/* Form Content */}
           <div className="p-5 md:p-6 space-y-4">
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -411,7 +408,7 @@ export default function SignUp() {
             </motion.div>
 
             <form onSubmit={handleSignUp} className="space-y-3.5">
-              {/* Full Name - FIXED with id, name, and htmlFor */}
+              {/* Full Name */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -432,7 +429,7 @@ export default function SignUp() {
                 />
               </motion.div>
 
-              {/* Email - FIXED with id, name, and htmlFor */}
+              {/* Email */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -453,7 +450,7 @@ export default function SignUp() {
                 />
               </motion.div>
 
-              {/* Phone Number - Without icon, saving to profile.phone */}
+              {/* Phone Number - flexible, country code optional */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -466,18 +463,18 @@ export default function SignUp() {
                   type="tel"
                   id="phone"
                   name="phone"
-                  placeholder="+2349056780090"
+                  placeholder="08012345678 or +1234567890"
                   className="w-full px-3.5 py-2.5 md:px-4 md:py-3 bg-rose-50/50 border border-rose-200 rounded-xl text-sm text-gray-800 focus:ring-2 focus:ring-red-700 focus:border-transparent transition-all outline-none placeholder:text-gray-400"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                   required
                 />
                 <p className="text-[10px] text-gray-500 mt-1 ml-1">
-                  Include country code (e.g., +1 for US, +44 for UK)
+                  Enter your phone number (country code optional, e.g., 08012345678 or +234...)
                 </p>
               </motion.div>
 
-              {/* Country - Combobox with datalist for both dropdown and free typing */}
+              {/* Country - Combobox */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -567,7 +564,7 @@ export default function SignUp() {
                 )}
               </motion.div>
 
-              {/* Password - FIXED with id, name, and htmlFor */}
+              {/* Password */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -606,7 +603,6 @@ export default function SignUp() {
                       exit={{ opacity: 0, height: 0 }}
                       className="mt-2 space-y-1.5"
                     >
-                      {/* Strength Bar */}
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1 bg-rose-200 rounded-full overflow-hidden">
                           <motion.div
@@ -619,8 +615,6 @@ export default function SignUp() {
                           {getStrengthText()}
                         </span>
                       </div>
-
-                      {/* Requirements Grid */}
                       <div className="grid grid-cols-2 gap-1 text-[10px]">
                         <div className="flex items-center gap-1">
                           {passwordStrength.minLength ? (
@@ -660,7 +654,7 @@ export default function SignUp() {
                 </AnimatePresence>
               </motion.div>
 
-              {/* Confirm Password - FIXED with id, name, and htmlFor */}
+              {/* Confirm Password */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -692,7 +686,6 @@ export default function SignUp() {
                   </button>
                 </div>
 
-                {/* Password Match Indicator */}
                 <AnimatePresence>
                   {form.confirmPassword && (
                     <motion.div
@@ -713,7 +706,7 @@ export default function SignUp() {
                 </AnimatePresence>
               </motion.div>
 
-              {/* Terms Acceptance - FIXED with id, name, and htmlFor */}
+              {/* Terms Acceptance */}
               <motion.div
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -777,7 +770,6 @@ export default function SignUp() {
                     : 'bg-gradient-to-r from-red-700 to-rose-600 hover:from-red-800 hover:to-rose-700'
                 }`}
               >
-                {/* Button Glow Effect */}
                 <motion.div
                   className="absolute inset-0 bg-white/20"
                   animate={{
