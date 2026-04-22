@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // Only use service role here, in API route
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 export default async function handler(req, res) {
@@ -17,30 +17,39 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Verify token exists and is valid
+    // Get current time in UTC ISO format
+    const currentTimeUTC = new Date().toISOString();
+    
+    // Verify token exists, is not used, and not expired (database-side check)
     const { data: tokenData, error: tokenError } = await supabase
       .from('password_resets')
       .select('*')
       .eq('token', token)
       .eq('email', email)
       .eq('used', false)
+      .gte('expires_at', currentTimeUTC) // Compare using UTC
       .single();
 
     if (tokenError || !tokenData) {
+      // Check if token exists but is expired
+      const { data: expiredToken } = await supabase
+        .from('password_resets')
+        .select('expires_at')
+        .eq('token', token)
+        .eq('email', email)
+        .single();
+      
+      if (expiredToken) {
+        return res.status(400).json({ error: "Reset link has expired. Please request a new one." });
+      }
       return res.status(400).json({ error: "Invalid or expired reset link" });
     }
 
-    // Check if expired
-    const now = new Date();
-    const expiry = new Date(tokenData.expires_at);
-    if (now > expiry) {
-      return res.status(400).json({ error: "Reset link has expired" });
-    }
-
-    // Get user by email
+    // Get user by email using admin API
     const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
     
     if (userError) {
+      console.error("User lookup error:", userError);
       return res.status(500).json({ error: "Error finding user" });
     }
     
@@ -57,6 +66,7 @@ export default async function handler(req, res) {
     );
 
     if (updateError) {
+      console.error("Update error:", updateError);
       return res.status(500).json({ error: updateError.message });
     }
 
