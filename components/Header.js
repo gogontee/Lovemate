@@ -209,23 +209,27 @@ export default function Header() {
         {menuOpen && (
           <div className="fixed inset-0 bg-black/50 z-40 md:hidden" onClick={() => setMenuOpen(false)}>
             <div 
-              className="absolute right-0 top-0 h-full w-64 bg-white shadow-2xl"
+              className="absolute right-0 top-0 h-full w-64 bg-white shadow-2xl flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex justify-end p-4 border-b border-rose-100">
+              {/* Header with Menu title and Close button */}
+              <div className="flex justify-between items-center p-4 border-b border-rose-100">
+                <span className="text-base font-semibold text-rose-700">Menu</span>
                 <button
                   onClick={() => setMenuOpen(false)}
-                  className="p-2 rounded-lg text-rose-700 hover:bg-rose-100"
+                  className="p-1 rounded-lg text-rose-700 hover:bg-rose-100 transition"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
-              <div className="p-4 space-y-2">
+
+              {/* Scrollable Menu Items with bottom padding to avoid bottom nav */}
+              <div className="flex-1 overflow-y-auto py-2 pb-24">
                 {navLinks.map((link) => (
                   <Link
                     key={link.path}
                     href={link.path}
-                    className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
                     onClick={() => setMenuOpen(false)}
                   >
                     {link.name}
@@ -235,7 +239,7 @@ export default function Header() {
                 {/* Live link in mobile menu */}
                 <Link
                   href="/gallery?tab=stream#livestream"
-                  className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
                   onClick={() => setMenuOpen(false)}
                 >
                   <span className="flex items-center gap-2">
@@ -247,13 +251,13 @@ export default function Header() {
                   </span>
                 </Link>
                 
-                <div className="border-t border-rose-100 my-4 pt-4">
+                <div className="border-t border-rose-100 my-2 pt-2">
                   {user ? (
                     <>
                       <Link
                         href="/dashboard"
                         onClick={() => setMenuOpen(false)}
-                        className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
                       >
                         Dashboard
                       </Link>
@@ -262,7 +266,7 @@ export default function Header() {
                           handleLogout();
                           setMenuOpen(false);
                         }}
-                        className="w-full text-left px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
                       >
                         Logout
                       </button>
@@ -272,14 +276,14 @@ export default function Header() {
                       <Link
                         href="/auth/login"
                         onClick={() => setMenuOpen(false)}
-                        className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
                       >
                         Login
                       </Link>
                       <Link
                         href="/auth/signup"
                         onClick={() => setMenuOpen(false)}
-                        className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition"
                       >
                         Sign Up
                       </Link>
