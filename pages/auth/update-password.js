@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "../../utils/supabaseClient";
 import { Eye, EyeOff, Shield } from "lucide-react";
 import Image from "next/image";
 
@@ -21,12 +20,9 @@ export default function UpdatePasswordPage() {
   const [validToken, setValidToken] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  // ✅ Fixed token verification with UTC handling
+  // Verify token via API – no direct Supabase call
   useEffect(() => {
     const verifyToken = async () => {
-      console.log("Token from URL:", token);
-      console.log("Email from URL:", email);
-      
       if (!token || !email) {
         setError("Invalid reset link. Please request a new one.");
         setChecking(false);
@@ -34,42 +30,24 @@ export default function UpdatePasswordPage() {
       }
 
       try {
-        // Fetch the token without any time filter first
-        const { data, error } = await supabase
-          .from('password_resets')
-          .select('*')
-          .eq('token', token)
-          .eq('email', email)
-          .eq('used', false)
-          .single();
+        const res = await fetch('/api/verify-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, email }),
+        });
+        const data = await res.json();
 
-        if (error || !data) {
-          setError("Invalid reset link. Please request a new one.");
-          setChecking(false);
-          return;
+        if (res.ok && data.valid) {
+          setValidToken(true);
+          setError(""); // Clear any previous error
+        } else {
+          setError(data.error || "Invalid reset link");
+          setValidToken(false);
         }
-
-        // 🔥 FIX: Append 'Z' to treat the database timestamp as UTC
-        const expiryUTC = new Date(data.expires_at + 'Z');
-        const nowUTC = new Date();
-        
-        console.log("Expiry (UTC):", expiryUTC.toISOString());
-        console.log("Now (UTC):", nowUTC.toISOString());
-        console.log("Is expired?", nowUTC > expiryUTC);
-
-        if (nowUTC > expiryUTC) {
-          setError("This reset link has expired. Please request a new one.");
-          setChecking(false);
-          return;
-        }
-
-        console.log("Token is valid!");
-        setValidToken(true);
-        setChecking(false);
-        
       } catch (err) {
-        console.error("Verification error:", err);
-        setError("An error occurred. Please try again.");
+        setError("Unable to verify reset link. Please try again.");
+        setValidToken(false);
+      } finally {
         setChecking(false);
       }
     };
@@ -97,14 +75,8 @@ export default function UpdatePasswordPage() {
     try {
       const response = await fetch('/api/update-password', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          token,
-          email,
-          password,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, email, password }),
       });
 
       const data = await response.json();
@@ -118,9 +90,7 @@ export default function UpdatePasswordPage() {
       setTimeout(() => {
         router.push("/auth/login");
       }, 2000);
-      
     } catch (err) {
-      console.error("Update error:", err);
       setError(err.message || "Failed to update password");
     } finally {
       setLoading(false);
