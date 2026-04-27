@@ -12,7 +12,7 @@ import TopFansSection from "../../components/directors/TopFansSection";
 import TopCandidatesSection from "../../components/directors/TopCandidatesSection";
 import CandidatesTable from "../../components/directors/CandidatesTable";
 import FansTable from "../../components/directors/FansTable";
-import ProfilesTable from "../../components/directors/ProfilesTable"; // NEW import
+import ProfilesTable from "../../components/directors/ProfilesTable";
 import AnalyticsCharts from "../../components/directors/AnalyticsCharts";
 import TransactionsView from "../../components/directors/TransactionsView";
 
@@ -25,17 +25,28 @@ const staggerContainer = {
   }
 };
 
+// Helper to get initial active tab from sessionStorage
+const getInitialActiveTab = () => {
+  if (typeof window !== "undefined") {
+    const savedTab = sessionStorage.getItem("director_active_tab");
+    if (savedTab && ["overview", "candidates", "fans", "profiles", "transactions", "analytics"].includes(savedTab)) {
+      return savedTab;
+    }
+  }
+  return "overview";
+};
+
 export default function DirectorsDashboard() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(getInitialActiveTab);
   
   // Data states
   const [profiles, setProfiles] = useState([]);
   const [candidates, setCandidates] = useState([]);
-  const [wallets, setWallets] = useState([]); // NEW: wallets data
+  const [wallets, setWallets] = useState([]);
   const [voteTransactions, setVoteTransactions] = useState([]);
   const [giftTransactions, setGiftTransactions] = useState([]);
   const [topFans, setTopFans] = useState([]);
@@ -52,6 +63,11 @@ export default function DirectorsDashboard() {
     approvedCandidates: 0,
     pendingCandidates: 0
   });
+
+  // Persist active tab to sessionStorage whenever it changes
+  useEffect(() => {
+    sessionStorage.setItem("director_active_tab", activeTab);
+  }, [activeTab]);
 
   const checkWeeklyPopup = (userId) => {
     const lastPopup = localStorage.getItem(`director_welcome_${userId}`);
@@ -202,7 +218,7 @@ export default function DirectorsDashboard() {
       setProfile(userProfile);
       setProfiles(profilesData || []);
       setCandidates(candidatesData || []);
-      setWallets(walletsData || []); // NEW
+      setWallets(walletsData || []);
       setVoteTransactions(votesData || []);
       setGiftTransactions(giftsData || []);
 
@@ -301,6 +317,8 @@ export default function DirectorsDashboard() {
     localStorage.removeItem(`director_code_${user?.id}`);
     sessionStorage.removeItem("director_auth_verified");
     sessionStorage.removeItem("director_user");
+    // Clear active tab persistence on logout (optional)
+    sessionStorage.removeItem("director_active_tab");
   };
 
   // Log data for debugging
@@ -361,7 +379,7 @@ export default function DirectorsDashboard() {
               <FansTable profiles={profiles} candidates={candidates} />
             )}
 
-            {activeTab === "profiles" && (  // NEW TAB: All Users (Detailed)
+            {activeTab === "profiles" && (
               <ProfilesTable 
                 profiles={profiles} 
                 candidates={candidates} 
