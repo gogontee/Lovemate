@@ -299,6 +299,8 @@ export default function DirectorsDashboard() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     localStorage.removeItem(`director_code_${user?.id}`);
+    sessionStorage.removeItem("director_auth_verified");
+    sessionStorage.removeItem("director_user");
   };
 
   // Log data for debugging

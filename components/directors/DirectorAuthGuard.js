@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { motion } from "framer-motion";
-import { Shield } from "lucide-react";
+import { Shield, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/utils/supabaseClient";
 
 export default function DirectorAuthGuard({ children, onAccessGranted }) {
@@ -14,6 +14,7 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
   const [codeError, setCodeError] = useState("");
   const [directorCode, setDirectorCode] = useState(null);
   const [fetchingCode, setFetchingCode] = useState(false);
+  const [showCode, setShowCode] = useState(false);
 
   useEffect(() => {
     checkAccess();
@@ -22,6 +23,26 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
   const checkAccess = async () => {
     setLoading(true);
     
+    // 1. Check sessionStorage first
+    const sessionVerified = sessionStorage.getItem("director_auth_verified");
+    const savedUserJson = sessionStorage.getItem("director_user");
+    if (sessionVerified === "true" && savedUserJson) {
+      try {
+        const savedUser = JSON.parse(savedUserJson);
+        setUser(savedUser);
+        setAccessGranted(true);
+        onAccessGranted?.(savedUser);
+        setLoading(false);
+        return;
+      } catch (e) {
+        console.error("Error restoring session:", e);
+        // Clear invalid data
+        sessionStorage.removeItem("director_auth_verified");
+        sessionStorage.removeItem("director_user");
+      }
+    }
+
+    // 2. No session → get authenticated user from Supabase
     const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !authUser) {
@@ -30,17 +51,12 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
     }
 
     setUser(authUser);
-
-    // First, fetch the director's code from lovemate table
     await fetchDirectorCode();
 
-    // Check if user has saved code in localStorage
-    const savedCode = localStorage.getItem(`director_code_${authUser.id}`);
-    if (savedCode && directorCode && savedCode === directorCode) {
-      setAccessGranted(true);
-      onAccessGranted?.(authUser);
-    }
-
+    // 3. Also check if there's a saved code in localStorage? (optional, for backward compatibility)
+    //    But we prefer sessionStorage. If you want to migrate from localStorage to sessionStorage,
+    //    you can read localStorage here and then store to sessionStorage on success.
+    //    For now we only use sessionStorage.
     setLoading(false);
   };
 
@@ -72,15 +88,15 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
     e.preventDefault();
     setCodeError("");
 
-    // If we don't have the director code yet, fetch it first
     if (!directorCode) {
       await fetchDirectorCode();
     }
 
-    // Check if the entered code matches
     if (codeInput === directorCode) {
       setAccessGranted(true);
-      localStorage.setItem(`director_code_${user.id}`, directorCode);
+      // Store in sessionStorage (not localStorage)
+      sessionStorage.setItem("director_auth_verified", "true");
+      sessionStorage.setItem("director_user", JSON.stringify(user));
       onAccessGranted?.(user);
     } else {
       setCodeError("Invalid director code. Access denied.");
@@ -117,16 +133,23 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
             </div>
 
             <form onSubmit={handleCodeSubmit} className="space-y-4">
-              <div>
+              <div className="relative">
                 <input
-                  type="password"
+                  type={showCode ? "text" : "password"}
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value)}
                   placeholder="Enter director code"
-                  className="w-full px-4 py-3 bg-rose-50/50 border border-rose-200 rounded-xl text-gray-800 focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all outline-none"
+                  className="w-full px-4 py-3 bg-rose-50/50 border border-rose-200 rounded-xl text-gray-800 focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all outline-none pr-10"
                   autoFocus
                   disabled={fetchingCode}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowCode(!showCode)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showCode ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
               </div>
 
               {codeError && (
@@ -167,5 +190,5 @@ export default function DirectorAuthGuard({ children, onAccessGranted }) {
     );
   }
 
-  return children;   
+  return children;
 }
