@@ -1,7 +1,7 @@
 // components/directors/DirectorsLayout.js
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, LogOut, Crown, Eye, Users, UserCheck, BarChart3, DollarSign, X, Gift, CreditCard } from "lucide-react";
+import { Menu, LogOut, Crown, Eye, Users, UserCheck, BarChart3, DollarSign, X, Gift, CreditCard, UsersRound } from "lucide-react";
 import Image from "next/image";
 
 const formatName = (fullName) => {
@@ -26,6 +26,7 @@ export default function DirectorsLayout({
     { id: "overview", label: "Overview", icon: Eye },
     { id: "candidates", label: "Candidates", icon: Users },
     { id: "fans", label: "Fans", icon: UserCheck },
+    { id: "profiles", label: "All Users", icon: UsersRound },  // NEW TAB
     { id: "transactions", label: "Transactions", icon: DollarSign },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
   ];

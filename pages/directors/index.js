@@ -12,6 +12,7 @@ import TopFansSection from "../../components/directors/TopFansSection";
 import TopCandidatesSection from "../../components/directors/TopCandidatesSection";
 import CandidatesTable from "../../components/directors/CandidatesTable";
 import FansTable from "../../components/directors/FansTable";
+import ProfilesTable from "../../components/directors/ProfilesTable"; // NEW import
 import AnalyticsCharts from "../../components/directors/AnalyticsCharts";
 import TransactionsView from "../../components/directors/TransactionsView";
 
@@ -34,6 +35,7 @@ export default function DirectorsDashboard() {
   // Data states
   const [profiles, setProfiles] = useState([]);
   const [candidates, setCandidates] = useState([]);
+  const [wallets, setWallets] = useState([]); // NEW: wallets data
   const [voteTransactions, setVoteTransactions] = useState([]);
   const [giftTransactions, setGiftTransactions] = useState([]);
   const [topFans, setTopFans] = useState([]);
@@ -112,6 +114,32 @@ export default function DirectorsDashboard() {
       .subscribe();
     subscriptions.push(profileSubscription);
 
+    // NEW: Subscribe to wallets changes
+    const walletsSubscription = supabase
+      .channel('wallets_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'wallets' },
+        async () => {
+          console.log('Wallets changed, refreshing...');
+          await fetchDashboardData(user.id);
+        }
+      )
+      .subscribe();
+    subscriptions.push(walletsSubscription);
+
+    // Subscribe to candidates changes (to keep candidate status updated)
+    const candidatesSubscription = supabase
+      .channel('candidates_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'candidates' },
+        async () => {
+          console.log('Candidates changed, refreshing...');
+          await fetchDashboardData(user.id);
+        }
+      )
+      .subscribe();
+    subscriptions.push(candidatesSubscription);
+
     // Cleanup subscriptions on unmount
     return () => {
       subscriptions.forEach(sub => supabase.removeChannel(sub));
@@ -138,29 +166,29 @@ export default function DirectorsDashboard() {
 
       if (candidatesError) console.error('Candidates error:', candidatesError);
 
-      // Fetch vote transactions - simple select without joins
+      // NEW: Fetch all wallets
+      const { data: walletsData, error: walletsError } = await supabase
+        .from("wallets")
+        .select("*");
+
+      if (walletsError) console.error('Wallets error:', walletsError);
+      else console.log('Wallets fetched:', walletsData?.length || 0);
+
+      // Fetch vote transactions
       const { data: votesData, error: votesError } = await supabase
         .from("vote_transactions")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (votesError) {
-        console.error('Votes error:', votesError);
-      } else {
-        console.log('Vote transactions fetched:', votesData?.length || 0);
-      }
+      if (votesError) console.error('Votes error:', votesError);
 
-      // Fetch gift transactions - simple select without joins
+      // Fetch gift transactions
       const { data: giftsData, error: giftsError } = await supabase
         .from("gift_transactions")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (giftsError) {
-        console.error('Gifts error:', giftsError);
-      } else {
-        console.log('Gift transactions fetched:', giftsData?.length || 0);
-      }
+      if (giftsError) console.error('Gifts error:', giftsError);
 
       // Fetch user profile
       const { data: userProfile, error: userError } = await supabase
@@ -174,6 +202,7 @@ export default function DirectorsDashboard() {
       setProfile(userProfile);
       setProfiles(profilesData || []);
       setCandidates(candidatesData || []);
+      setWallets(walletsData || []); // NEW
       setVoteTransactions(votesData || []);
       setGiftTransactions(giftsData || []);
 
@@ -330,11 +359,19 @@ export default function DirectorsDashboard() {
               <FansTable profiles={profiles} candidates={candidates} />
             )}
 
+            {activeTab === "profiles" && (  // NEW TAB: All Users (Detailed)
+              <ProfilesTable 
+                profiles={profiles} 
+                candidates={candidates} 
+                wallets={wallets} 
+              />
+            )}
+
             {activeTab === "transactions" && (
               <TransactionsView 
                 voteTransactions={voteTransactions}
                 giftTransactions={giftTransactions}
-                profiles={profiles} // Added profiles prop here
+                profiles={profiles}
               />
             )}
 
