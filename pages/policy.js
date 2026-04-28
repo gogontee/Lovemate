@@ -335,10 +335,11 @@ export default function Policy() {
                     title="13. Updates to This Policy"
                     icon={FileText}
                   >
-                    <li>We may update this privacy policy periodically</li>
-                    <li>Material changes will be notified via email or website notice</li>
-                    <li>Continued use after changes constitutes acceptance of new terms</li>
-                    <li>Check the "Last Updated" date at the top of this page</li>
+                    <li>We may update this privacy policy from time to time without prior notification</li>
+                    <li>Any changes will be reflected immediately on this page</li>
+                    <li>It is your responsibility to review this page periodically for updates</li>
+                    <li>Your continued use of the platform after changes are posted constitutes acceptance of the updated terms</li>
+                    <li>The "Last Updated" date at the top of this page will indicate when the most recent changes were made</li>
                   </Section>
 
                   <Section 
