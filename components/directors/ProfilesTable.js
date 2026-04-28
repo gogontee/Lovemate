@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useRouter } from "next/router";
-import { UserCheck, Phone, Mail, Wallet, Award, Star, Lock, Eye, EyeOff, Copy, MessageCircle, PhoneCall, X } from "lucide-react";
+import { UserCheck, Phone, Mail, Wallet, Award, Star, Lock, Eye, EyeOff, Copy, MessageCircle, PhoneCall, X, Eye as EyeShow, EyeOff as EyeHide, Shield } from "lucide-react";
 import { supabase } from "@/utils/supabaseClient";
 
 const fadeInUp = {
@@ -56,6 +56,10 @@ export default function ProfilesTable({ profiles, candidates, wallets }) {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [selectedPhone, setSelectedPhone] = useState("");
   const [copiedFeedback, setCopiedFeedback] = useState(false);
+
+  // Toggle states for hiding/showing sensitive columns
+  const [showPhoneNumbers, setShowPhoneNumbers] = useState(false);
+  const [showEmails, setShowEmails] = useState(false);
 
   // Fetch the stored PIN from lovemate table only if not already verified
   useEffect(() => {
@@ -137,7 +141,6 @@ export default function ProfilesTable({ profiles, candidates, wallets }) {
 
   const handleCopyNumber = () => {
     copyToClipboard(selectedPhone, setCopiedFeedback);
-    // Keep modal open, show feedback, then close after short delay
     setTimeout(() => setShowPhoneModal(false), 1500);
   };
 
@@ -236,10 +239,38 @@ export default function ProfilesTable({ profiles, candidates, wallets }) {
         variants={fadeInUp}
         className="bg-white/90 backdrop-blur-sm rounded-xl shadow-lg p-4 border border-rose-100"
       >
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <UserCheck className="w-5 h-5 text-red-600" />
-          User Directory — Detailed View
-        </h3>
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-red-600" />
+            User Directory — Detailed View
+          </h3>
+          <div className="flex gap-3">
+            {/* Toggle for Phone Numbers */}
+            <button
+              onClick={() => setShowPhoneNumbers(!showPhoneNumbers)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                showPhoneNumbers
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {showPhoneNumbers ? <EyeShow className="w-4 h-4" /> : <EyeHide className="w-4 h-4" />}
+              {showPhoneNumbers ? "Hide Phones" : "Show Phones"}
+            </button>
+            {/* Toggle for Emails */}
+            <button
+              onClick={() => setShowEmails(!showEmails)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                showEmails
+                  ? "bg-green-100 text-green-700 hover:bg-green-200"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {showEmails ? <EyeShow className="w-4 h-4" /> : <EyeHide className="w-4 h-4" />}
+              {showEmails ? "Hide Emails" : "Show Emails"}
+            </button>
+          </div>
+        </div>
         
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[1000px]">
@@ -283,8 +314,10 @@ export default function ProfilesTable({ profiles, candidates, wallets }) {
                     <td className="px-3 py-2 font-medium text-gray-800">{formatName(profile.full_name)}</td>
                     <td className="px-3 py-2 text-xs text-gray-500">{profile.id.substring(0, 8)}...</td>
                     <td className="px-3 py-2 font-bold text-red-600">{profile.points?.toFixed(2) || 0}</td>
+                    
+                    {/* Phone Column with Toggle */}
                     <td className="px-3 py-2">
-                      {profile.phone ? (
+                      {showPhoneNumbers && profile.phone ? (
                         <button
                           onClick={() => openPhoneModal(profile.phone)}
                           className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors group"
@@ -294,11 +327,16 @@ export default function ProfilesTable({ profiles, candidates, wallets }) {
                           <span className="text-xs underline-offset-2 group-hover:underline">{profile.phone}</span>
                         </button>
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        <div className="flex items-center gap-1 text-gray-400">
+                          <Shield className="w-3.5 h-3.5" />
+                          <span className="text-xs">••••••</span>
+                        </div>
                       )}
                     </td>
+                    
+                    {/* Email Column with Toggle */}
                     <td className="px-3 py-2">
-                      {profile.email ? (
+                      {showEmails && profile.email ? (
                         <button
                           onClick={() => handleEmailClick(profile.email)}
                           className="flex items-center gap-1 text-blue-600 hover:text-blue-800 transition-colors group"
@@ -310,9 +348,13 @@ export default function ProfilesTable({ profiles, candidates, wallets }) {
                           </span>
                         </button>
                       ) : (
-                        <span className="text-xs text-gray-400">—</span>
+                        <div className="flex items-center gap-1 text-gray-400">
+                          <Shield className="w-3.5 h-3.5" />
+                          <span className="text-xs">••••••</span>
+                        </div>
                       )}
                     </td>
+                    
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-1">
                         <Wallet className="w-3.5 h-3.5 text-emerald-600" />
