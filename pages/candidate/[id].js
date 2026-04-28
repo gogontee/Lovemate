@@ -9,6 +9,7 @@ import VoteSection from "../../components/candidate/VoteSection";
 import GiftSection from "../../components/candidate/GiftSection";
 import Gallery from "../../components/candidate/Gallery";
 import { motion, AnimatePresence } from "framer-motion";
+import { Share2, CheckCircle } from "lucide-react";
 
 function formatNaira(n) {
   if (n == null) return "₦0";
@@ -17,7 +18,7 @@ function formatNaira(n) {
 }
 
 // Digital Stats Component - Integrated into Hero
-function DigitalStats({ candidate, formatNaira, onVoteClick, onGiftClick }) {
+function DigitalStats({ candidate, formatNaira, onVoteClick, onGiftClick, onShareClick }) {
   const [animatedVotes, setAnimatedVotes] = useState(0);
   const [animatedGifts, setAnimatedGifts] = useState(0);
   const [animatedWorth, setAnimatedWorth] = useState(0);
@@ -89,6 +90,15 @@ function DigitalStats({ candidate, formatNaira, onVoteClick, onGiftClick }) {
             <span className="text-rose-400">💰</span> Worth
           </div>
         </div>
+
+        {/* Share Button */}
+        <button
+          onClick={onShareClick}
+          className="ml-2 p-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+          title="Share profile"
+        >
+          <Share2 className="w-4 h-4 text-white" />
+        </button>
       </div>
 
       {/* Mobile: Bottom Right */}
@@ -131,6 +141,16 @@ function DigitalStats({ candidate, formatNaira, onVoteClick, onGiftClick }) {
             {formatNaira(Math.round(animatedWorth))}
           </div>
         </div>
+
+        {/* Share Button */}
+        <button
+          onClick={onShareClick}
+          className="flex items-center justify-center gap-1 mt-1 p-1 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
+          title="Share profile"
+        >
+          <Share2 className="w-3 h-3 text-white" />
+          <span className="text-[8px] text-white">Share</span>
+        </button>
       </div>
     </motion.div>
   );
@@ -149,6 +169,7 @@ export default function CandidateProfile() {
   const [uploading, setUploading] = useState(false);
   const [galleryImages, setGalleryImages] = useState([]);
   const refreshIntervalRef = useRef(null);
+  const [shareToast, setShareToast] = useState(false);
 
   // Default banner fallback
   const defaultBanner = "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/lovemateshow/logo/banner.png";
@@ -322,6 +343,37 @@ export default function CandidateProfile() {
     if (giftRef.current) {
       giftRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+  };
+
+  // Share handler
+  const handleShare = async () => {
+    if (!candidate) return;
+    const shareUrl = `https://www.lovemateshow.com/candidate/${candidate.id}`;
+    const shareData = {
+      title: `${candidate.name} on Lovemate Show`,
+      text: `Support ${candidate.name} with votes and gifts!`,
+      url: shareUrl,
+    };
+
+    if (navigator.share && /(iPhone|iPad|iPod|Android)/i.test(navigator.userAgent)) {
+      try {
+        await navigator.share(shareData);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Share failed:', err);
+          fallbackCopy();
+        }
+      }
+    } else {
+      fallbackCopy();
+    }
+  };
+
+  const fallbackCopy = async () => {
+    const shareUrl = `https://www.lovemateshow.com/candidate/${candidate.id}`;
+    await navigator.clipboard.writeText(shareUrl);
+    setShareToast(true);
+    setTimeout(() => setShareToast(false), 3000);
   };
 
   // Handle tab change
@@ -511,6 +563,9 @@ export default function CandidateProfile() {
   if (loading) {
     return (
       <>
+        <Head>
+          <title>Loading Candidate Profile – Lovemate Show</title>
+        </Head>
         <Header />
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center">
           <div className="text-center">
@@ -528,6 +583,9 @@ export default function CandidateProfile() {
   if (!candidate) {
     return (
       <>
+        <Head>
+          <title>Candidate Not Found – Lovemate Show</title>
+        </Head>
         <Header />
         <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-rose-50 flex items-center justify-center">
           <div className="text-center">
@@ -548,11 +606,34 @@ export default function CandidateProfile() {
     );
   }
 
+  // Build full URL for candidate image
+  const candidateImageUrl = candidate.image_url?.startsWith('http')
+    ? candidate.image_url
+    : candidate.image_url
+    ? `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${candidate.image_url}`
+    : 'https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/lovemateshow/logo/logo.png';
+
   return (
     <>
       <Head>
         <title>{candidate.name} – Lovemate Show</title>
-        <meta name="description" content={`Support ${candidate.name} on Lovemate Show with votes and gifts`} />
+        <meta name="description" content={`Support ${candidate.name} on Lovemate Show with votes and gifts.`} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={`https://www.lovemateshow.com/candidate/${candidate.id}`} />
+        <meta property="og:title" content={`${candidate.name} – Lovemate Show Contestant`} />
+        <meta property="og:description" content={`Join me on Lovemate Show! Vote or send gifts to help ${candidate.name} win the grand prize.`} />
+        <meta property="og:image" content={candidateImageUrl} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={`https://www.lovemateshow.com/candidate/${candidate.id}`} />
+        <meta name="twitter:title" content={`${candidate.name} – Lovemate Show Contestant`} />
+        <meta name="twitter:description" content={`Support ${candidate.name} with votes and gifts!`} />
+        <meta name="twitter:image" content={candidateImageUrl} />
       </Head>
 
       <Header />
@@ -589,12 +670,13 @@ export default function CandidateProfile() {
             </div>
           )}
           
-          {/* Digital Stats Overlay - Now clickable */}
+          {/* Digital Stats Overlay - Now includes Share button */}
           <DigitalStats 
             candidate={candidate} 
             formatNaira={formatNaira} 
             onVoteClick={scrollToVote}
             onGiftClick={scrollToGift}
+            onShareClick={handleShare}
           />
           
           {/* Profile Photo and Info - Bottom Left */}
@@ -758,6 +840,21 @@ export default function CandidateProfile() {
       <div className="hidden md:block">
         <Footer />
       </div>
+
+      {/* Share Toast (for fallback copy) */}
+      <AnimatePresence>
+        {shareToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 bg-gray-900 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm"
+          >
+            <CheckCircle className="w-4 h-4 text-green-400" />
+            Link copied to clipboard!
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

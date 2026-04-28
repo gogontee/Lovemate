@@ -52,26 +52,21 @@ export default function Policy() {
               <Users className="w-5 h-5 text-pink-400" />
               This Policy Applies To:
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
               <div className="bg-white/10 rounded-xl p-3">
                 <User className="w-6 h-6 text-pink-400 mx-auto mb-2" />
                 <p className="text-white text-sm font-semibold">Registered Users</p>
-                <p className="text-gray-400 text-xs">Account holders</p>
-              </div>
-              <div className="bg-white/10 rounded-xl p-3">
-                <Vote className="w-6 h-6 text-pink-400 mx-auto mb-2" />
-                <p className="text-white text-sm font-semibold">Voters</p>
-                <p className="text-gray-400 text-xs">Supporting candidates</p>
-              </div>
-              <div className="bg-white/10 rounded-xl p-3">
-                <Wallet className="w-6 h-6 text-pink-400 mx-auto mb-2" />
-                <p className="text-white text-sm font-semibold">Wallet Users</p>
-                <p className="text-gray-400 text-xs">Funding votes</p>
+                <p className="text-gray-400 text-xs">Fans, Supporters, Voters, Wallet Funders</p>
               </div>
               <div className="bg-white/10 rounded-xl p-3">
                 <EyeOff className="w-6 h-6 text-pink-400 mx-auto mb-2" />
                 <p className="text-white text-sm font-semibold">Anonymous Visitors</p>
-                <p className="text-gray-400 text-xs">Unregistered users</p>
+                <p className="text-gray-400 text-xs">Unregistered voters & browsers</p>
+              </div>
+              <div className="bg-white/10 rounded-xl p-3">
+                <Heart className="w-6 h-6 text-pink-400 mx-auto mb-2" />
+                <p className="text-white text-sm font-semibold">Contestant Applicants</p>
+                <p className="text-gray-400 text-xs">Candidates on the show</p>
               </div>
             </div>
           </div>
@@ -120,11 +115,9 @@ export default function Policy() {
                     title="1. Types of Users on Our Platform"
                     icon={Users}
                   >
-                    <li><strong>Registered Users (Fans/Supporters):</strong> Individuals who create accounts using their name, email address, phone number (optional), and profile picture to vote for candidates, fund their wallets, and engage with content</li>
-                    <li><strong>Voters:</strong> Users who participate in voting to keep their favorite candidates from eviction and help them potentially emerge as winners</li>
-                    <li><strong>Wallet Funders:</strong> Users who add funds to their digital wallets to purchase votes or send gifts to candidates</li>
-                    <li><strong>Anonymous Users:</strong> Individuals who vote or browse without creating an account (limited functionality)</li>
-                    <li><strong>Contestant Applicants:</strong> Users who apply to become candidates on the show (requires full registration)</li>
+                    <li><strong>Registered Users (Fans/Supporters):</strong> Individuals who create accounts using their name, email address, phone number (optional), and profile picture to vote for candidates, fund their wallets, send gifts, and engage with content. All registered users can fund their wallet and vote.</li>
+                    <li><strong>Anonymous Users:</strong> Individuals who vote or browse without creating an account (limited functionality, cannot send gifts or appear on leaderboards).</li>
+                    <li><strong>Contestant Applicants:</strong> Users who apply to become candidates on the show (requires full registration and additional information).</li>
                   </Section>
 
                   <Section 
@@ -132,25 +125,31 @@ export default function Policy() {
                     icon={Database}
                   >
                     <div className="mb-4">
-                      <h3 className="font-bold text-gray-800 mb-2">For Registered Users (Account Creation):</h3>
+                      <h3 className="font-bold text-gray-800 mb-2">For Registered Users (Fans/Supporters):</h3>
                       <ul className="list-disc pl-6 space-y-1">
-                        <li>Full name and/or nickname</li>
-                        <li>Email address (required for account verification)</li>
-                        <li>Phone number (optional, for SMS notifications)</li>
-                        <li>Profile picture (optional, displayed on leaderboards)</li>
+                        <li>First name and/or nickname (visible to other users)</li>
+                        <li>Email address (required, kept confidential)</li>
+                        <li>Phone number (optional, kept confidential)</li>
+                        <li>Profile picture (visible to other users, may appear in top fan section)</li>
                         <li>Account creation date and last active timestamp</li>
+                        <li>Wallet balance and transaction history (private)</li>
+                        <li>Voting history (which candidates you supported)</li>
+                        <li>Gift purchases and send history</li>
+                        <li>Points earned and ranking on fan leaderboards (name and profile photo visible)</li>
                       </ul>
                     </div>
                     <div className="mb-4">
-                      <h3 className="font-bold text-gray-800 mb-2">For Voters & Wallet Users:</h3>
+                      <h3 className="font-bold text-gray-800 mb-2">For Contestant Applicants (Candidates):</h3>
                       <ul className="list-disc pl-6 space-y-1">
-                        <li>Voting history (which candidates you supported)</li>
-                        <li>Number of votes cast and vote timestamps</li>
-                        <li>Wallet balance and transaction history</li>
-                        <li>Payment information (processed through secure third-party gateways)</li>
-                        <li>Gift purchases and send history</li>
-                        <li>Points earned and ranking on fan leaderboards</li>
+                        <li>All information collected for registered users plus:</li>
+                        <li>Government-issued ID for age and identity verification (confidential)</li>
+                        <li>Contact information (phone, email – confidential)</li>
+                        <li>Gallery photos, "About You" biography (public on candidate profile)</li>
+                        <li>Vote count and gift card total (public on candidate profile)</li>
+                        <li>Bank account details for prize payouts (confidential)</li>
+                        <li>Any other documentation required for participation (confidential)</li>
                       </ul>
+                      <p className="mt-2 text-sm text-gray-600">Note: On your public candidate profile, only your nickname, profile photo, gallery photos, "About You" description, vote count, and gift card total are shown. All other personal information remains confidential.</p>
                     </div>
                     <div className="mb-4">
                       <h3 className="font-bold text-gray-800 mb-2">For Anonymous Users:</h3>
@@ -177,14 +176,14 @@ export default function Policy() {
                     icon={Eye}
                   >
                     <div className="mb-4">
-                      <h3 className="font-bold text-gray-800 mb-2">For Registered Users:</h3>
+                      <h3 className="font-bold text-gray-800 mb-2">For Registered Users (Fans/Supporters):</h3>
                       <ul className="list-disc pl-6 space-y-1">
                         <li>Create and manage your user account</li>
                         <li>Display your name and profile picture on fan leaderboards (top fans)</li>
                         <li>Track your voting activity and points earned</li>
                         <li>Send important updates about voting periods and show events</li>
                         <li>Notify you when candidates you support are at risk of eviction</li>
-                        <li>Process wallet transactions and vote purchases</li>
+                        <li>Process wallet transactions, vote purchases, and gift sending</li>
                       </ul>
                     </div>
                     <div className="mb-4">
@@ -196,16 +195,6 @@ export default function Policy() {
                         <li>Track which candidates receive the most support</li>
                         <li>Enable vote gifting and sharing features</li>
                         <li>Determine eviction outcomes based on audience votes</li>
-                      </ul>
-                    </div>
-                    <div className="mb-4">
-                      <h3 className="font-bold text-gray-800 mb-2">For Wallet & Payments:</h3>
-                      <ul className="list-disc pl-6 space-y-1">
-                        <li>Manage your digital wallet balance</li>
-                        <li>Process secure payments for votes and gifts</li>
-                        <li>Maintain transaction history for audit purposes</li>
-                        <li>Prevent fraudulent transactions</li>
-                        <li>Calculate accumulated gifts for candidates</li>
                       </ul>
                     </div>
                     <div>
@@ -220,7 +209,27 @@ export default function Policy() {
                   </Section>
 
                   <Section 
-                    title="4. Voting & Wallet Transparency"
+                    title="4. What Information Is Visible to Other Users"
+                    icon={Eye}
+                  >
+                    <div className="mb-4">
+                      <h3 className="font-bold text-gray-800 mb-2">For Registered Users (Fans/Supporters):</h3>
+                      <ul className="list-disc pl-6 space-y-1">
+                        <li><span className="font-semibold">Visible:</span> First name/nickname, profile photo (may appear in top fan section of the portal).</li>
+                        <li><span className="font-semibold">Not Visible:</span> Email address, phone number, wallet balance, transaction history, voting choices (kept confidential).</li>
+                      </ul>
+                    </div>
+                    <div className="mb-4">
+                      <h3 className="font-bold text-gray-800 mb-2">For Candidates (Contestants):</h3>
+                      <ul className="list-disc pl-6 space-y-1">
+                        <li><span className="font-semibold">Visible on Public Profile:</span> Nickname, profile photo, gallery photos, "About You" description, vote count, gift card total.</li>
+                        <li><span className="font-semibold">Not Visible (Confidential):</span> Real name (unless chosen as nickname), email address, phone number, government ID, bank account details, any other confidential documents.</li>
+                      </ul>
+                    </div>
+                  </Section>
+
+                  <Section 
+                    title="5. Voting & Wallet Transparency"
                     icon={Vote}
                   >
                     <li><strong>Vote Counting:</strong> All votes are recorded on the blockchain or secure database for transparency and auditability</li>
@@ -233,10 +242,11 @@ export default function Policy() {
                   </Section>
 
                   <Section 
-                    title="5. Information Sharing & Disclosure"
+                    title="6. Information Sharing & Disclosure"
                     icon={Users}
                   >
                     <li><strong>Public Information:</strong> Fan names, profile pictures, and points are displayed on leaderboards</li>
+                    <li><strong>Candidate Public Profile:</strong> Nickname, photos, bio, vote count, gift total are public</li>
                     <li><strong>Voting Results:</strong> Aggregate voting data is shared publicly to show candidate popularity</li>
                     <li><strong>Service Providers:</strong> Payment processors (Stripe, Paystack, etc.) receive necessary payment information</li>
                     <li><strong>Legal Requirements:</strong> When required by law or to protect rights and safety</li>
@@ -246,7 +256,7 @@ export default function Policy() {
                   </Section>
 
                   <Section 
-                    title="6. Data Security"
+                    title="7. Data Security"
                     icon={Lock}
                   >
                     <li>Industry-standard encryption for data transmission (SSL/TLS)</li>
@@ -257,10 +267,11 @@ export default function Policy() {
                     <li>Automatic logout for inactive sessions</li>
                     <li>Vote manipulation detection systems to ensure fair play</li>
                     <li>While we implement strong security measures, no internet transmission is 100% secure</li>
+                    <li className="font-semibold">Your sensitive information (email, phone number, wallet details) is never exposed to other users – only your first name and profile photo may appear publicly.</li>
                   </Section>
 
                   <Section 
-                    title="7. Your Rights as a User"
+                    title="8. Your Rights as a User"
                     icon={CheckCircle}
                   >
                     <li><strong>Access:</strong> Request a copy of your personal data and voting history</li>
@@ -270,11 +281,11 @@ export default function Policy() {
                     <li><strong>Data Portability:</strong> Receive your voting and transaction data in a structured format</li>
                     <li><strong>Vote Privacy:</strong> Request anonymity for your voting activity (if registered)</li>
                     <li><strong>Wallet Closure:</strong> Request wallet closure and remaining fund withdrawal (subject to minimum amounts)</li>
-                    <li>Contact us at <span className="text-pink-600 font-semibold">privacy@lovemate.show</span> to exercise your rights</li>
+                    <li>Contact us at <span className="text-pink-600 font-semibold">lovemateshow@gmail.com</span> to exercise your rights</li>
                   </Section>
 
                   <Section 
-                    title="8. Data Retention"
+                    title="9. Data Retention"
                     icon={Clock}
                   >
                     <li><strong>Registered Users:</strong> Data retained while your account is active; 12 months after account deletion for audit purposes</li>
@@ -286,7 +297,7 @@ export default function Policy() {
                   </Section>
 
                   <Section 
-                    title="9. Anonymous Voting"
+                    title="10. Anonymous Voting"
                     icon={EyeOff}
                   >
                     <li>You can vote for your favorite candidates without creating an account</li>
@@ -300,7 +311,7 @@ export default function Policy() {
                   </Section>
 
                   <Section 
-                    title="10. Children's Privacy"
+                    title="11. Children's Privacy"
                     icon={AlertCircle}
                   >
                     <li>Lovemate Show is strictly for individuals 18 years and older</li>
@@ -311,7 +322,7 @@ export default function Policy() {
                   </Section>
 
                   <Section 
-                    title="11. International Data Transfers"
+                    title="12. International Data Transfers"
                     icon={Globe}
                   >
                     <li>Your data may be processed in Nigeria and other countries where we operate</li>
@@ -321,7 +332,7 @@ export default function Policy() {
                   </Section>
 
                   <Section 
-                    title="12. Updates to This Policy"
+                    title="13. Updates to This Policy"
                     icon={FileText}
                   >
                     <li>We may update this privacy policy periodically</li>
@@ -331,13 +342,10 @@ export default function Policy() {
                   </Section>
 
                   <Section 
-                    title="13. Contact Information"
+                    title="14. Contact Information"
                     icon={Smartphone}
                   >
-                    <li><strong>Privacy Officer:</strong> privacy@lovemate.show</li>
-                    <li><strong>Voting Support:</strong> votes@lovemate.show</li>
-                    <li><strong>Wallet/Payment Issues:</strong> payments@lovemate.show</li>
-                    <li><strong>General Inquiries:</strong> lovemateshow@gmail.com</li>
+                    <li><strong>All Inquiries:</strong> lovemateshow@gmail.com</li>
                     <li><strong>Address:</strong> Lagos, Nigeria</li>
                     <li><strong>Response Time:</strong> We aim to respond within 5-7 business days</li>
                   </Section>
@@ -352,7 +360,7 @@ export default function Policy() {
                       <div>
                         <p className="font-semibold text-gray-700 mb-1">✅ What's Public:</p>
                         <ul className="text-gray-600 space-y-1 ml-4 list-disc">
-                          <li>Your name (if registered)</li>
+                          <li>Your first name/nickname (if registered)</li>
                           <li>Profile picture (if uploaded)</li>
                           <li>Points earned on leaderboards</li>
                           <li>Votes cast (aggregate, not individual choices)</li>
@@ -451,9 +459,11 @@ export default function Policy() {
                       <AlertCircle className="w-5 h-5 text-yellow-600" />
                       Your Consent
                     </h3>
+                    <p className="text-gray-700 mb-2">
+                      By continuing to use our website, you consent to our use of cookies as described in this policy.
+                    </p>
                     <p className="text-gray-700">
-                      By continuing to use our website, you consent to our use of cookies as described in this policy. 
-                      You can withdraw consent at any time by clearing cookies in your browser settings or adjusting your cookie preferences.
+                      You can withdraw consent at any time by clearing cookies in your browser settings, adjusting your cookie preferences, or requesting account deletion.
                     </p>
                   </div>
                 </div>
@@ -492,7 +502,7 @@ export default function Policy() {
                   >
                     <li><strong>Contract Performance:</strong> Processing votes, managing wallets, and providing voting services</li>
                     <li><strong>Legitimate Interests:</strong> Preventing vote manipulation, fraud detection, and analytics</li>
-                    <li><strong>Consent:</strong> Newsletter subscriptions, marketing communications, and data sharing preferences</li>
+                    <li><strong>Consent:</strong> By accepting our Terms of Participation and Privacy Policy during sign-up, you grant us consent to process your data as described. For anonymous users, continued use constitutes consent.</li>
                     <li><strong>Legal Obligations:</strong> Financial transaction records and compliance with election/voting laws</li>
                   </Section>
 
@@ -572,7 +582,7 @@ export default function Policy() {
                       <li>• Request anonymity for your voting activity</li>
                     </ul>
                     <p className="text-amber-700 mt-3">
-                      To exercise these rights, contact: <strong className="text-amber-800">privacy@lovemate.show</strong>
+                      To exercise these rights, contact: <strong className="text-amber-800">lovemateshow@gmail.com</strong>
                     </p>
                   </div>
                 </div>
@@ -586,20 +596,12 @@ export default function Policy() {
                 >
                   ← Back to Home
                 </Link>
-                <div className="flex gap-3">
-                  <Link
-                    href="/terms"
-                    className="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all"
-                  >
-                    View Terms of Participation
-                  </Link>
-                  <Link
-                    href="/register"
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white font-semibold rounded-xl hover:from-pink-700 hover:to-rose-700 transition-all shadow-lg"
-                  >
-                    Accept & Register →
-                  </Link>
-                </div>
+                <Link
+                  href="/terms"
+                  className="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all"
+                >
+                  View Terms of Participation
+                </Link>
               </div>
             </div>
           </div>
@@ -607,7 +609,7 @@ export default function Policy() {
           {/* Help Section */}
           <div className="mt-8 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 text-center text-gray-300">
             <p className="mb-2">Have questions about our privacy practices or voting data?</p>
-            <p>Contact our Data Protection Officer at <span className="text-pink-400 font-semibold">privacy@lovemate.show</span></p>
+            <p>Contact us at <span className="text-pink-400 font-semibold">lovemateshow@gmail.com</span></p>
           </div>
         </div>
       </main>

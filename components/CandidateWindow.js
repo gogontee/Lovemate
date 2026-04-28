@@ -188,6 +188,13 @@ export default function CandidateWindow({ profileId }) {
   const [favorites, setFavorites] = useState([]);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
 
+  // Helper to get full image URL
+  const getFullImageUrl = (imageUrl) => {
+    if (!imageUrl) return null;
+    if (imageUrl.startsWith("http")) return imageUrl;
+    return `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${imageUrl}`;
+  };
+
   // Fetch Orakul messages from database
   useEffect(() => {
     const fetchMessages = async () => {
@@ -484,11 +491,13 @@ export default function CandidateWindow({ profileId }) {
     }, 2000);
   };
 
+  // Enhanced share function with image support for Facebook & Twitter
   const handleShare = async (platform) => {
     if (!candidate) return;
     
     const shareUrl = `https://www.lovemateshow.com/candidate/${candidate.id}`;
     const shareText = `I'm a contestant on Lovemate Show! Support my journey to find love and win $10,000! Vote for me here:`;
+    const candidateImage = getFullImageUrl(candidate.image_url);
     
     switch(platform) {
       case 'whatsapp':
@@ -506,10 +515,20 @@ export default function CandidateWindow({ profileId }) {
         setTimeout(() => setOrakulMessage(null), 3000);
         break;
       case 'facebook':
-        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`, '_blank');
+        // Facebook share with image parameter
+        let fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+        if (candidateImage) {
+          fbUrl += `&picture=${encodeURIComponent(candidateImage)}`;
+        }
+        window.open(fbUrl, '_blank');
         break;
       case 'twitter':
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+        // Twitter share with image parameter
+        let twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+        if (candidateImage) {
+          twitterUrl += `&image=${encodeURIComponent(candidateImage)}`;
+        }
+        window.open(twitterUrl, '_blank');
         break;
       case 'messenger':
         window.open(`https://www.facebook.com/dialog/send?link=${encodeURIComponent(shareUrl)}&app_id=YOUR_FB_APP_ID&redirect_uri=${encodeURIComponent(shareUrl)}`, '_blank');
@@ -797,10 +816,7 @@ export default function CandidateWindow({ profileId }) {
                           <div className="w-10 h-10 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
                             {foundCandidate.image_url ? (
                               <img 
-                                src={foundCandidate.image_url.startsWith("http") 
-                                  ? foundCandidate.image_url 
-                                  : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${foundCandidate.image_url}`
-                                } 
+                                src={getFullImageUrl(foundCandidate.image_url)} 
                                 alt={foundCandidate.name}
                                 className="w-full h-full object-cover"
                               />
@@ -880,10 +896,7 @@ export default function CandidateWindow({ profileId }) {
                           <div className="w-10 h-10 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
                             {fav.image_url ? (
                               <img 
-                                src={fav.image_url.startsWith("http") 
-                                  ? fav.image_url 
-                                  : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
-                                } 
+                                src={getFullImageUrl(fav.image_url)} 
                                 alt={fav.name}
                                 className="w-full h-full object-cover"
                               />
@@ -1304,10 +1317,7 @@ export default function CandidateWindow({ profileId }) {
                         <div className="w-10 h-10 rounded overflow-hidden bg-purple-900/30 flex-shrink-0">
                           {fav.image_url ? (
                             <img 
-                              src={fav.image_url.startsWith("http") 
-                                ? fav.image_url 
-                                : `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${fav.image_url}`
-                              } 
+                              src={getFullImageUrl(fav.image_url)} 
                               alt={fav.name}
                               className="w-full h-full object-cover"
                             />
