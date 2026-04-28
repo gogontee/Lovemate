@@ -2,7 +2,7 @@
 import Head from "next/head";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { Heart, Clock, Home, Award, Sparkles, Users, Target, Eye, Zap, Gift, Star, Globe } from "lucide-react";
+import { Heart, Clock, Home, Award, Sparkles, Users, Target, Eye, Zap, Gift, Star, Globe, FileText, Shield } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
@@ -288,6 +288,24 @@ export default function About() {
               ))}
             </div>
           </motion.div>
+
+          {/* MOBILE ONLY: Terms & Privacy Policy Buttons */}
+          <div className="block md:hidden mt-8 pt-4 border-t border-rose-200">
+            <div className="flex flex-col gap-3">
+              <Link href="/terms" className="w-full">
+                <button className="w-full flex items-center justify-center gap-2 bg-gray-800 text-white px-4 py-3 rounded-xl font-semibold hover:bg-gray-700 transition-all shadow-md">
+                  <FileText className="w-5 h-5" />
+                  Terms of Participation
+                </button>
+              </Link>
+              <Link href="/policy" className="w-full">
+                <button className="w-full flex items-center justify-center gap-2 bg-rose-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-rose-700 transition-all shadow-md">
+                  <Shield className="w-5 h-5" />
+                  Privacy Policy
+                </button>
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
