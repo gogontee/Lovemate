@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 export default function EventSchedule() {
   const registrationOpenDate = new Date("2026-04-20T00:00:00").getTime();
-  const registrationCloseDate = new Date("2026-05-10T23:59:59").getTime();
+  const registrationCloseDate = new Date("2026-05-20T23:59:59").getTime();
 
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
