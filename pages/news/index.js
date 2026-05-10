@@ -10,7 +10,7 @@ import VideoCarousel from "../../components/VideoCarousel";
 import { motion } from "framer-motion";
 import { ChevronRight, Sparkles, TrendingUp, Heart } from "lucide-react";
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 8; // fills two rows of 4 on desktop
 
 const videos = [
   { url: "https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE" },
@@ -56,6 +56,7 @@ export default function NewsPage() {
     fetchScrollContent();
   }, []);
 
+  // Fetch news – ordered by date DESC (latest first)
   const fetchNews = async (pageNum = 1) => {
     setLoading(true);
     const from = (pageNum - 1) * PAGE_SIZE;
@@ -64,7 +65,7 @@ export default function NewsPage() {
     const { data, error } = await supabase
       .from("news")
       .select("*")
-      .order("date", { ascending: false })
+      .order("date", { ascending: false })   // ✅ fix: use 'date' column
       .range(from, to);
 
     if (error) {
@@ -196,17 +197,17 @@ export default function NewsPage() {
             <div className="w-16 md:w-20 h-1 bg-gradient-to-r from-rose-400 to-rose-600 mx-auto rounded-full"></div>
           </motion.div>
 
-          {/* News Grid - 2 columns on mobile, 3 on desktop */}
+          {/* News Grid - 2 columns mobile, 3 tablet, 4 desktop */}
           {newsItems.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-8">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-8">
                 {newsItems.map((item, index) => (
                   <motion.div
                     key={item.id}
                     initial={{ opacity: 0, y: 40 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                    transition={{ duration: 0.5, delay: index * 0.05 }}
                   >
                     <NewsCard
                       image={item.image}
@@ -239,9 +240,9 @@ export default function NewsPage() {
               )}
             </>
           ) : (
-            // Loading Skeleton - 2 columns on mobile, 3 on desktop
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-8">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
+            // Loading Skeleton - matches 2/3/4 columns
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-8">
+              {[...Array(8)].map((_, i) => (
                 <div key={i} className="bg-white rounded-xl md:rounded-2xl overflow-hidden shadow-md animate-pulse">
                   <div className="aspect-[4/3] bg-gray-200"></div>
                   <div className="p-3 md:p-5">

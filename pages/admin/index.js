@@ -1,11 +1,12 @@
 // pages/admin/index.js
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabaseClient";
-import Image from "next/image";
 import AdminSidebar from "@/components/AdminSidebar";
 import AdminHeader from "@/components/AdminHeader";
 import withAdminAuth from "@/components/withAdminAuth";
+import NewsManagement from "@/components/admin/NewsManagement";
+import ProfileManagement from "@/components/admin/ProfileManagement";
+import CandidateManagement from "@/components/admin/CandidateManagement";
 import {
   LineChart,
   Line,
@@ -19,295 +20,298 @@ import {
   Legend,
 } from "recharts";
 
-const COLORS = ["#e11d48", "#fbbf24"];
+const COLORS = ["#ea580c", "#fbbf24"];
 
 function AdminDashboard() {
+  const [activeView, setActiveView] = useState("dashboard");
   const [stats, setStats] = useState({
     users: 0,
     votes: 0,
     revenue: 0,
-    votesPerDay: [],
     genderDistribution: [],
   });
-
   const [topVoters, setTopVoters] = useState([]);
-  const [profile, setProfile] = useState(null);
   const [votesPerCandidate, setVotesPerCandidate] = useState([]);
   const [dailyRevenue, setDailyRevenue] = useState([]);
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
 
- useEffect(() => {
-  const fetchProfile = async () => {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    const email = session?.user?.email;
-
-    const { data: profile, error } = await supabase
-      .from("profile")
-      .select("*")
-      .eq("email", email)
-      .single();
-
-    if (error) {
-      console.error("Error fetching profile:", error);
-      return;
-    }
-
-    setProfile(profile); // if you're using a profile state
-  };
-
-  fetchProfile();
-}, []);
-
-
-
+  // Fetch dashboard stats
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // Determine table name (try "profile" first, fallback to "profiles")
+        let tableName = "profile";
+        let testQuery = await supabase.from(tableName).select("id", { count: "exact", head: true });
+        if (testQuery.error && testQuery.error.message.includes("relation") && testQuery.error.message.includes("does not exist")) {
+          tableName = "profiles";
+          const checkAgain = await supabase.from(tableName).select("id", { count: "exact", head: true });
+          if (checkAgain.error) throw new Error("Neither 'profile' nor 'profiles' table found.");
+        }
+
         // Total users
         const { count: userCount, error: userErr } = await supabase
-          .from("profile")
+          .from(tableName)
           .select("*", { count: "exact", head: true });
-
         if (userErr) throw userErr;
 
-        // All vote transactions
+        // Vote transactions
         const { data: voteTx, error: voteError } = await supabase
           .from("transactions")
           .select("amount, type, user_id, created_at, candidate_id")
           .eq("type", "vote");
-
         if (voteError) throw voteError;
 
-        // All transactions for revenue
+        // All transactions (revenue)
         const { data: allTx, error: txErr } = await supabase
           .from("transactions")
           .select("amount, created_at");
-
         if (txErr) throw txErr;
 
-        // Candidate profiles
-        const { data: candidates, error: candidateError } = await supabase
-  .from("profile")
-  .select("id, full_name, gender, role")
-  .eq("role", "candidate");
-
-if (candidateError) {
-  console.error("Error fetching candidates:", candidateError.message);
-  return;
-}
-
-if (!candidates || candidates.length === 0) {
-  console.warn("No candidates found yet.");
-  return;
-}
-
-
-        // Top Voters
-        const voteCountByUser = {};
-        voteTx.forEach((tx) => {
-          if (tx.user_id) {
-            voteCountByUser[tx.user_id] = (voteCountByUser[tx.user_id] || 0) + 1;
+        // Get all profiles (candidates will be determined if role column exists)
+        let candidates = [];
+        try {
+          const { data: profilesWithRole, error: roleError } = await supabase
+            .from(tableName)
+            .select("id, full_name, gender, role");
+          
+          if (!roleError && profilesWithRole) {
+            candidates = profilesWithRole.filter(p => p.role === "candidate");
+          } else {
+            const { data: allProfiles } = await supabase
+              .from(tableName)
+              .select("id, full_name, gender");
+            if (allProfiles) candidates = allProfiles;
           }
-        });
+        } catch (err) {
+          console.warn("Could not fetch role column, fetching all profiles");
+          const { data: allProfiles } = await supabase
+            .from(tableName)
+            .select("id, full_name, gender");
+          if (allProfiles) candidates = allProfiles;
+        }
 
-        const sortedTopVoters = Object.entries(voteCountByUser)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 5)
-          .map(([user_id, count]) => ({ user_id, votes: count }));
-
-        const { data: votersData } = await supabase
-          .from("profile")
-          .select("id, full_name, email")
-          .in("id", sortedTopVoters.map((v) => v.user_id));
-
-        const topVoterProfiles = sortedTopVoters.map((v) => {
-          const profile = votersData.find((u) => u.id === v.user_id);
-          return { ...profile, votes: v.votes };
-        });
-
-        // Votes per candidate
-        const candidateVotes = {};
-        voteTx.forEach((tx) => {
-          const cid = tx.candidate_id;
-          if (cid) {
-            candidateVotes[cid] = (candidateVotes[cid] || 0) + 1;
+        const buildStats = async (candidatesList) => {
+          // Top voters
+          const voteCountByUser = {};
+          voteTx.forEach(tx => {
+            if (tx.user_id) voteCountByUser[tx.user_id] = (voteCountByUser[tx.user_id] || 0) + 1;
+          });
+          const sortedTopVoters = Object.entries(voteCountByUser)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([user_id, votes]) => ({ user_id, votes }));
+          
+          let topVoterProfiles = [];
+          if (sortedTopVoters.length) {
+            const { data: votersData } = await supabase
+              .from(tableName)
+              .select("id, full_name, email")
+              .in("id", sortedTopVoters.map(v => v.user_id));
+            topVoterProfiles = sortedTopVoters.map(v => ({
+              ...votersData?.find(u => u.id === v.user_id),
+              votes: v.votes
+            }));
           }
-        });
 
-        const votesPerCandidateData = candidates.map((c) => ({
-          name: c.full_name,
-          votes: candidateVotes[c.id] || 0,
-        }));
+          // Votes per candidate
+          const candidateVotes = {};
+          voteTx.forEach(tx => {
+            if (tx.candidate_id) candidateVotes[tx.candidate_id] = (candidateVotes[tx.candidate_id] || 0) + 1;
+          });
+          const votesPerCandidateData = candidatesList.map(c => ({
+            name: c.full_name,
+            votes: candidateVotes[c.id] || 0,
+          }));
 
-        // Revenue per day
-        const revenueByDay = {};
-        allTx.forEach((tx) => {
-          const date = new Date(tx.created_at).toLocaleDateString();
-          revenueByDay[date] = (revenueByDay[date] || 0) + tx.amount;
-        });
+          // Daily revenue
+          const revenueByDay = {};
+          allTx.forEach(tx => {
+            const date = new Date(tx.created_at).toLocaleDateString();
+            revenueByDay[date] = (revenueByDay[date] || 0) + tx.amount;
+          });
+          const dailyRevenueData = Object.entries(revenueByDay).map(([date, amount]) => ({ date, amount }));
 
-        const dailyRevenueData = Object.entries(revenueByDay).map(([date, amount]) => ({
-          date,
-          amount,
-        }));
+          // Gender distribution
+          const genderDist = {};
+          candidatesList.forEach(c => {
+            if (c.gender) {
+              const gender = c.gender.toLowerCase();
+              genderDist[gender] = (genderDist[gender] || 0) + 1;
+            }
+          });
+          const genderDistributionData = Object.entries(genderDist).map(([name, value]) => ({ name, value }));
 
-        // Gender distribution
-        const genderDist = {};
-        candidates.forEach((c) => {
-          const gender = c.gender || "unknown";
-          genderDist[gender] = (genderDist[gender] || 0) + 1;
-        });
+          setStats({
+            users: userCount || 0,
+            votes: voteTx.length,
+            revenue: allTx.reduce((sum, t) => sum + t.amount, 0),
+            genderDistribution: genderDistributionData,
+          });
+          setTopVoters(topVoterProfiles);
+          setVotesPerCandidate(votesPerCandidateData);
+          setDailyRevenue(dailyRevenueData);
+          setLoading(false);
+        };
 
-        const genderDistributionData = Object.entries(genderDist).map(
-          ([name, value]) => ({ name, value })
-        );
-
-        setStats({
-          users: userCount || 0,
-          votes: voteTx.length,
-          revenue: allTx.reduce((sum, t) => sum + t.amount, 0),
-          votesPerDay: [], // Placeholder
-          genderDistribution: genderDistributionData,
-        });
-
-        setTopVoters(topVoterProfiles);
-        setVotesPerCandidate(votesPerCandidateData);
-        setDailyRevenue(dailyRevenueData);
+        await buildStats(candidates);
       } catch (err) {
-        console.error("Unexpected error:", err);
+        console.error("Stats error:", err);
         setNotFound(true);
-      } finally {
         setLoading(false);
       }
     };
-
     fetchStats();
   }, []);
 
   if (notFound) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 text-center">
-        <div>
-          <h1 className="text-6xl font-bold text-rose-600">404</h1>
-          <p className="text-lg text-gray-600 mt-2">Oops! Data not found.</p>
-          <p className="text-sm text-gray-400">Please check your database or try again later.</p>
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-gray-900 to-black">
+        <div className="text-center">
+          <h1 className="text-6xl font-bold text-orange-500">404</h1>
+          <p className="text-lg text-white/60 mt-2">Data not found.</p>
         </div>
       </div>
     );
   }
 
+  // Mobile-friendly tab scrolling wrapper
+  const tabs = [
+    { id: "dashboard", label: "Dashboard", component: null },
+    { id: "profiles", label: "Profiles", component: <ProfileManagement /> },
+    { id: "candidates", label: "Candidates", component: <CandidateManagement /> },
+    { id: "news", label: "News", component: <NewsManagement /> },
+  ];
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gradient-to-b from-gray-900 via-black to-gray-900">
       <AdminSidebar />
       <div className="flex-1 flex flex-col">
         <AdminHeader />
 
         <main className="p-6 space-y-6">
-          <h2 className="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
+          {/* Horizontal scrollable tabs (app-style) */}
+          <div className="overflow-x-auto scrollbar-hide pb-2">
+            <div className="flex gap-2 border-b border-white/10 min-w-max">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveView(tab.id)}
+                  className={`px-4 py-2 rounded-t-lg font-medium transition-all whitespace-nowrap ${
+                    activeView === tab.id
+                      ? "bg-gradient-to-r from-orange-500 to-yellow-500 text-white shadow-lg"
+                      : "bg-white/5 text-white/70 hover:bg-white/10"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          {loading ? (
-            <div className="text-center text-gray-500 text-lg">Loading dashboard...</div>
-          ) : (
+          {/* Content area */}
+          {activeView === "dashboard" ? (
             <>
-              {/* Stat Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded shadow text-center">
-                  <p className="text-sm text-gray-500">Total Users</p>
-                  <h3 className="text-3xl font-bold text-rose-600">{stats.users}</h3>
-                </div>
-                <div className="bg-white p-6 rounded shadow text-center">
-                  <p className="text-sm text-gray-500">Total Votes</p>
-                  <h3 className="text-3xl font-bold text-rose-600">{stats.votes}</h3>
-                </div>
-                <div className="bg-white p-6 rounded shadow text-center">
-                  <p className="text-sm text-gray-500">Revenue (₦)</p>
-                  <h3 className="text-3xl font-bold text-rose-600">
-                    ₦{stats.revenue.toLocaleString()}
-                  </h3>
-                </div>
-              </div>
+              <h2 className="text-2xl font-bold text-white">Admin Dashboard</h2>
+              {loading ? (
+                <div className="text-center text-white/60 py-10">Loading dashboard...</div>
+              ) : (
+                <>
+                  {/* Stat Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 text-center">
+                      <p className="text-sm text-white/60">Total Users</p>
+                      <h3 className="text-3xl font-bold text-orange-400">{stats.users}</h3>
+                    </div>
+                    <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 text-center">
+                      <p className="text-sm text-white/60">Total Votes</p>
+                      <h3 className="text-3xl font-bold text-orange-400">{stats.votes}</h3>
+                    </div>
+                    <div className="bg-white/5 backdrop-blur-sm rounded-xl p-6 border border-white/10 text-center">
+                      <p className="text-sm text-white/60">Revenue (₦)</p>
+                      <h3 className="text-3xl font-bold text-yellow-400">
+                        ₦{stats.revenue.toLocaleString()}
+                      </h3>
+                    </div>
+                  </div>
 
-              {/* Top Voters */}
-              <div className="bg-white p-6 rounded shadow">
-                <h4 className="text-lg font-semibold mb-4">Top Voters</h4>
-                <ul className="space-y-2 text-sm">
-                  {topVoters.map((voter) => (
-                    <li key={voter.id} className="flex justify-between">
-                      <span>{voter.full_name || voter.email}</span>
-                      <span className="font-bold text-rose-600">{voter.votes} votes</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                  {/* Top Voters */}
+                  {topVoters.length > 0 && (
+                    <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                      <h4 className="text-lg font-semibold text-white mb-4">Top Voters</h4>
+                      <ul className="space-y-2">
+                        {topVoters.map((voter) => (
+                          <li key={voter.id} className="flex justify-between text-white/80">
+                            <span>{voter.full_name || voter.email}</span>
+                            <span className="font-bold text-orange-400">{voter.votes} votes</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-              {/* Votes Per Candidate */}
-              <div className="bg-white p-6 rounded shadow">
-                <h4 className="text-lg font-semibold mb-4">Votes Per Candidate</h4>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={votesPerCandidate}>
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="votes" stroke="#e11d48" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+                  {/* Votes Per Candidate */}
+                  {votesPerCandidate.length > 0 && (
+                    <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                      <h4 className="text-lg font-semibold text-white mb-4">Votes Per Candidate</h4>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={votesPerCandidate}>
+                          <XAxis dataKey="name" stroke="#fff" tick={{ fill: "#ccc" }} />
+                          <YAxis stroke="#ccc" />
+                          <Tooltip contentStyle={{ backgroundColor: "#1f1f2e", border: "none", borderRadius: "8px" }} />
+                          <Line type="monotone" dataKey="votes" stroke="#ea580c" strokeWidth={2} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
 
-              {/* Daily Revenue */}
-              <div className="bg-white p-6 rounded shadow">
-                <h4 className="text-lg font-semibold mb-4">Daily Revenue (₦)</h4>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={dailyRevenue}>
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="amount" stroke="#10b981" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-              {profile?.photo_url ? (
-  <Image
-    src={profile.photo_url}
-    alt="Admin profile picture"
-    width={80}
-    height={80}
-    className="rounded-full object-cover"
-  />
-) : (
-  <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
-    <span>No Photo</span>
-  </div>
-)}
+                  {/* Daily Revenue */}
+                  {dailyRevenue.length > 0 && (
+                    <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                      <h4 className="text-lg font-semibold text-white mb-4">Daily Revenue (₦)</h4>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={dailyRevenue}>
+                          <XAxis dataKey="date" stroke="#fff" tick={{ fill: "#ccc" }} />
+                          <YAxis stroke="#ccc" />
+                          <Tooltip contentStyle={{ backgroundColor: "#1f1f2e", border: "none", borderRadius: "8px" }} />
+                          <Line type="monotone" dataKey="amount" stroke="#fbbf24" strokeWidth={2} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
 
-
-              {/* Gender Distribution */}
-              <div className="bg-white p-6 rounded shadow">
-                <h4 className="text-lg font-semibold mb-4">Candidates by Gender</h4>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={stats.genderDistribution}
-                      dataKey="value"
-                      nameKey="name"
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={80}
-                      fill="#e11d48"
-                      label
-                    >
-                      {stats.genderDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
+                  {/* Gender Distribution */}
+                  {stats.genderDistribution.length > 0 && (
+                    <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                      <h4 className="text-lg font-semibold text-white mb-4">Candidates by Gender</h4>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={stats.genderDistribution}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            label
+                          >
+                            {stats.genderDistribution.map((entry, idx) => (
+                              <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Legend wrapperStyle={{ color: "#fff" }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </>
+              )}
             </>
+          ) : (
+            // Render the selected management component (Profiles, Candidates, News)
+            <div className="bg-black/40 rounded-xl p-4 sm:p-6 border border-white/10">
+              {tabs.find(t => t.id === activeView)?.component}
+            </div>
           )}
         </main>
       </div>
@@ -315,5 +319,4 @@ if (!candidates || candidates.length === 0) {
   );
 }
 
-// ✅ Optional: Protect route if you're using HOC
 export default withAdminAuth(AdminDashboard);

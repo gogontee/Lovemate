@@ -34,26 +34,20 @@ export default function NewsDetails() {
       timerRef.current = setInterval(() => {
         setTimeSpent(prev => {
           const newTime = prev + 1;
-          
-          // After 5 seconds, increment views if not already done
           if (newTime >= 5 && !viewIncremented) {
             incrementViews();
           }
-          
           return newTime;
         });
       }, 1000);
     }
-
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [article, viewIncremented]);
 
   const fetchArticle = async (id) => {
-    // Fetch the main article
+    // Fetch main article
     const { data, error } = await supabase
       .from("news")
       .select("*")
@@ -63,13 +57,13 @@ export default function NewsDetails() {
     if (data) {
       setArticle(data);
 
-      // Fetch other articles for suggestion
+      // Fetch other articles for suggestion (latest 4, excluding current)
       const { data: allNews } = await supabase
         .from("news")
         .select("*")
         .neq("id", id)
         .order("date", { ascending: false })
-        .limit(3);
+        .limit(4);   // 🔹 Changed from 3 to 4 for 4‑column desktop layout
 
       if (allNews) setSuggestions(allNews);
     }
@@ -81,23 +75,16 @@ export default function NewsDetails() {
 
   const incrementViews = async () => {
     if (!article || viewIncremented) return;
-
     const { error } = await supabase
       .from("news")
       .update({ views: (article.views || 0) + 1 })
       .eq("id", id);
-
     if (!error) {
       setViewIncremented(true);
-      // Update local article state
-      setArticle(prev => ({
-        ...prev,
-        views: (prev.views || 0) + 1
-      }));
+      setArticle(prev => ({ ...prev, views: (prev.views || 0) + 1 }));
     }
   };
 
-  // Format date
   const formatDate = (dateString) => {
     if (!dateString) return "Recent";
     const date = new Date(dateString);
@@ -128,51 +115,28 @@ export default function NewsDetails() {
     <>
       <Header />
 
-      {/* Main Article Section - Rose-50 Background - NO TOP PADDING */}
+      {/* Main Article Section */}
       <section className="bg-rose-50 px-4 relative overflow-hidden">
-        
-        {/* Animated Background Elements */}
+        {/* Animated Background Elements... (keep as is) */}
         <div className="absolute inset-0 pointer-events-none">
-          {/* Floating Hearts */}
           {[...Array(6)].map((_, i) => (
             <motion.div
               key={i}
-              initial={{ 
-                x: Math.random() * 100 + "%", 
-                y: Math.random() * 100 + "%",
-                scale: 0
-              }}
-              animate={{ 
-                y: ["0%", "-20%", "0%"],
-                rotate: [0, 360],
-                scale: [0, 1, 0],
-                opacity: [0, 0.1, 0]
-              }}
-              transition={{
-                duration: 15 + i * 2,
-                repeat: Infinity,
-                delay: i * 3
-              }}
+              initial={{ x: Math.random() * 100 + "%", y: Math.random() * 100 + "%", scale: 0 }}
+              animate={{ y: ["0%", "-20%", "0%"], rotate: [0, 360], scale: [0, 1, 0], opacity: [0, 0.1, 0] }}
+              transition={{ duration: 15 + i * 2, repeat: Infinity, delay: i * 3 }}
               className="absolute text-rose-300"
             >
               <Heart size={40 + i * 10} fill="currentColor" />
             </motion.div>
           ))}
-          
-          {/* Golden/Reddish Glow Effects */}
           <motion.div
-            animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.1, 0.2, 0.1]
-            }}
+            animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
             transition={{ duration: 4, repeat: Infinity }}
             className="absolute top-20 left-10 w-64 h-64 bg-gradient-to-r from-yellow-500/20 to-red-600/20 rounded-full blur-3xl"
           />
           <motion.div
-            animate={{ 
-              scale: [1, 1.3, 1],
-              opacity: [0.1, 0.15, 0.1]
-            }}
+            animate={{ scale: [1, 1.3, 1], opacity: [0.1, 0.15, 0.1] }}
             transition={{ duration: 5, repeat: Infinity, delay: 1 }}
             className="absolute bottom-20 right-10 w-80 h-80 bg-gradient-to-r from-red-600/20 to-rose-600/20 rounded-full blur-3xl"
           />
@@ -184,14 +148,14 @@ export default function NewsDetails() {
           transition={{ duration: 0.6 }}
           className="max-w-4xl mx-auto relative z-10"
         >
-          {/* Article Card with Golden/Reddish/Silver Edges - NO TOP MARGIN */}
+          {/* Article Card */}
           <motion.div
             initial={{ scale: 0.98 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2 }}
             className="bg-white rounded-2xl shadow-2xl overflow-hidden relative"
           >
-            {/* Animated Border Glow - Golden/Reddish/Silver */}
+            {/* Animated Border Glow (unchanged) */}
             <motion.div
               animate={{ 
                 boxShadow: viewIncremented ? [
@@ -205,7 +169,6 @@ export default function NewsDetails() {
               className="absolute inset-0 rounded-2xl pointer-events-none"
             />
 
-            {/* Featured Badge (if applicable) */}
             {article.featured && (
               <div className="absolute top-4 left-4 z-20">
                 <div className="bg-gradient-to-r from-yellow-500 to-red-600 text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg">
@@ -215,9 +178,8 @@ export default function NewsDetails() {
               </div>
             )}
 
-            {/* Image Gallery Section with Outline */}
+            {/* Image Gallery Section */}
             <div className="relative w-full h-[300px] md:h-[400px] overflow-hidden p-1">
-              {/* Animated Outline Border */}
               <motion.div
                 animate={viewIncremented ? {
                   borderColor: ["#EAB308", "#DC2626", "#C0C0C0", "#EAB308"],
@@ -255,10 +217,9 @@ export default function NewsDetails() {
                 </motion.div>
               </AnimatePresence>
 
-              {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent rounded-lg" />
 
-              {/* YouTube Subscribe Button - Bottom Right */}
+              {/* YouTube Subscribe Button */}
               <motion.a
                 href="https://www.youtube.com/@Lovemateshow?sub_confirmation=1"
                 target="_blank"
@@ -274,17 +235,15 @@ export default function NewsDetails() {
                 <span className="text-[8px] md:text-sm font-semibold">Subscribe</span>
               </motion.a>
 
-              {/* Image Navigation Dots (if multiple images) */}
+              {/* Navigation dots (if multiple images) */}
               {article.images?.length > 1 && (
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
-                  {article.images.map((_, index) => (
+                  {article.images.map((_, idx) => (
                     <button
-                      key={index}
-                      onClick={() => setCurrentImageIndex(index)}
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
                       className={`w-2 h-2 rounded-full transition-all ${
-                        index === currentImageIndex 
-                          ? 'bg-white w-4' 
-                          : 'bg-white/50 hover:bg-white/80'
+                        idx === currentImageIndex ? 'bg-white w-4' : 'bg-white/50 hover:bg-white/80'
                       }`}
                     />
                   ))}
@@ -294,7 +253,6 @@ export default function NewsDetails() {
 
             {/* Article Content */}
             <div className="p-4 md:p-8">
-              {/* Meta Information - Smaller on mobile */}
               <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-3 md:mb-4">
                 <div className="flex items-center gap-1 bg-rose-100 px-2 md:px-3 py-0.5 md:py-1 rounded-full">
                   <Calendar className="w-2 h-2 md:w-3 md:h-3 text-red-600" />
@@ -302,9 +260,7 @@ export default function NewsDetails() {
                 </div>
                 <div className="flex items-center gap-1 bg-rose-100 px-2 md:px-3 py-0.5 md:py-1 rounded-full">
                   <Eye className="w-2 h-2 md:w-3 md:h-3 text-red-600" />
-                  <span className="text-[8px] md:text-xs text-gray-700">
-                    {article.views?.toLocaleString() || 0} views
-                  </span>
+                  <span className="text-[8px] md:text-xs text-gray-700">{article.views?.toLocaleString() || 0} views</span>
                 </div>
                 {article.readTime && (
                   <div className="flex items-center gap-1 bg-rose-100 px-2 md:px-3 py-0.5 md:py-1 rounded-full">
@@ -314,7 +270,6 @@ export default function NewsDetails() {
                 )}
               </div>
 
-              {/* Title - Smaller on mobile */}
               <motion.h1
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -324,43 +279,34 @@ export default function NewsDetails() {
                 {article.title}
               </motion.h1>
 
-              {/* Content - Much smaller on mobile */}
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
                 className="prose prose-xs md:prose-base max-w-none text-gray-700 leading-relaxed"
               >
-                {article.content.split('\n').map((paragraph, index) => (
-                  <p key={index} className="text-[10px] md:text-base mb-2 md:mb-4">
+                {article.content.split('\n').map((paragraph, idx) => (
+                  <p key={idx} className="text-[10px] md:text-base mb-2 md:mb-4">
                     {paragraph}
                   </p>
                 ))}
               </motion.div>
 
-              {/* Tags - Smaller on mobile */}
               {article.tags && article.tags.length > 0 && (
                 <div className="mt-4 md:mt-6 flex flex-wrap gap-1 md:gap-2">
-                  {article.tags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="text-[6px] md:text-xs bg-rose-50 text-red-600 px-1.5 md:px-3 py-0.5 md:py-1 rounded-full border border-rose-200"
-                    >
+                  {article.tags.map((tag, idx) => (
+                    <span key={idx} className="text-[6px] md:text-xs bg-rose-50 text-red-600 px-1.5 md:px-3 py-0.5 md:py-1 rounded-full border border-rose-200">
                       #{tag}
                     </span>
                   ))}
                 </div>
               )}
 
-              {/* Share Section - Smaller on mobile */}
               <div className="mt-4 md:mt-8 pt-4 md:pt-6 border-t border-rose-200">
                 <p className="text-[8px] md:text-sm text-gray-500 mb-2 md:mb-3">Share this article</p>
                 <div className="flex gap-1 md:gap-2">
-                  {['Twitter', 'Facebook', 'WhatsApp'].map((platform) => (
-                    <button
-                      key={platform}
-                      className="bg-rose-50 hover:bg-rose-100 text-red-600 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[6px] md:text-xs font-medium transition-colors"
-                    >
+                  {['Twitter', 'Facebook', 'WhatsApp'].map(platform => (
+                    <button key={platform} className="bg-rose-50 hover:bg-rose-100 text-red-600 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[6px] md:text-xs font-medium transition-colors">
                       {platform}
                     </button>
                   ))}
@@ -371,9 +317,9 @@ export default function NewsDetails() {
         </motion.div>
       </section>
 
-      {/* Suggested News Section */}
+      {/* Suggested News Section - 4‑column desktop grid */}
       <section className="bg-white py-8 md:py-16 px-4">
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -386,8 +332,8 @@ export default function NewsDetails() {
             </h3>
           </motion.div>
 
-          {/* Grid: 2 columns on mobile, 3 columns on desktop */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-6">
+          {/* Grid: 2 columns mobile, 3 columns tablet, 4 columns desktop */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 md:gap-6">
             {suggestions.map((item, index) => (
               <motion.div
                 key={item.id}
@@ -399,8 +345,8 @@ export default function NewsDetails() {
                 className="group"
               >
                 <Link href={`/news/${item.id}`}>
-                  <div className="bg-white rounded-lg md:rounded-xl shadow-md md:shadow-lg overflow-hidden border border-rose-100 hover:shadow-xl transition-all duration-300">
-                    <div className="relative w-full h-20 sm:h-24 md:h-48 overflow-hidden">
+                  <div className="bg-white rounded-lg md:rounded-xl shadow-md md:shadow-lg overflow-hidden border border-rose-100 hover:shadow-xl transition-all duration-300 h-full flex flex-col">
+                    <div className="relative w-full h-20 sm:h-24 md:h-32 lg:h-40 overflow-hidden">
                       <Image
                         src={item.image}
                         alt={item.title}
@@ -408,8 +354,6 @@ export default function NewsDetails() {
                         className="object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
-                      
-                      {/* View Count Badge - Smaller on mobile */}
                       <div className="absolute bottom-1 right-1 md:bottom-2 md:right-2 bg-black/40 backdrop-blur-md rounded-full px-1 md:px-2 py-0.5">
                         <span className="text-[6px] md:text-[10px] text-white flex items-center gap-0.5 md:gap-1">
                           <Eye className="w-1.5 h-1.5 md:w-3 md:h-3" />
@@ -418,14 +362,14 @@ export default function NewsDetails() {
                       </div>
                     </div>
 
-                    <div className="p-1.5 md:p-4">
-                      <h4 className="font-bold text-gray-800 text-[8px] md:text-base mb-0.5 md:mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
+                    <div className="p-1.5 md:p-4 flex-1 flex flex-col">
+                      <h4 className="font-bold text-gray-800 text-[8px] md:text-sm lg:text-base mb-0.5 md:mb-2 line-clamp-2 group-hover:text-red-600 transition-colors">
                         {item.title}
                       </h4>
                       <p className="text-[6px] md:text-xs text-gray-500 mb-0.5 md:mb-3 line-clamp-2 hidden sm:block">
                         {item.summary}
                       </p>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mt-auto pt-1">
                         <span className="text-[5px] md:text-xs text-rose-600 font-medium flex items-center gap-0.5 md:gap-1">
                           Read More
                           <ChevronRight className="w-1 h-1 md:w-3 md:h-3 group-hover:translate-x-1 transition-transform" />
@@ -436,7 +380,6 @@ export default function NewsDetails() {
                       </div>
                     </div>
 
-                    {/* Bottom Gradient Bar */}
                     <div className="h-0.5 bg-gradient-to-r from-red-600 to-rose-600 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
                   </div>
                 </Link>
