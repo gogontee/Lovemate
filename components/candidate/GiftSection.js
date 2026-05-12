@@ -32,6 +32,7 @@ export default function GiftSection({ candidate }) {
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const [showZeroBalanceModal, setShowZeroBalanceModal] = useState(false);
   const [showFundWalletModal, setShowFundWalletModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [suggestedGift, setSuggestedGift] = useState(null);
   const [userBalance, setUserBalance] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -92,9 +93,11 @@ export default function GiftSection({ candidate }) {
     console.log("Current user:", user);
     console.log("Current balance:", userBalance);
     
+    // If not logged in, show login modal
     if (!user) {
-      alert("Login required to send gift.");
-      return router.push("/auth/login");
+      setSelectedGift(gift);
+      setShowLoginModal(true);
+      return;
     }
 
     // Refresh balance before checking
@@ -212,22 +215,7 @@ export default function GiftSection({ candidate }) {
     );
   }
 
-  if (!user) {
-    return (
-      <section className="py-8 px-4">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-gray-500">Please login to send gifts to {candidate?.name}</p>
-          <button 
-            onClick={() => router.push("/auth/login")}
-            className="mt-2 bg-red-500 text-white px-4 py-2 rounded-lg text-sm"
-          >
-            Login Now
-          </button>
-        </div>
-      </section>
-    );
-  }
-
+  // No early return for non‑auth users – they can see the gifts, but clicking will show login modal
   return (
     <>
       <section className="py-8 px-4">
@@ -238,12 +226,14 @@ export default function GiftSection({ candidate }) {
             </h2>
             <p className="text-sm text-gray-500">Show your love with a special gift 💝</p>
             
-            {/* Wallet Balance Display - Same as VoteSection */}
-            <div className="mt-2 inline-flex items-center gap-2 bg-gray-100 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-200">
-              <span className="text-xs text-gray-600">Wallet:</span>
-              <span className="text-sm font-bold text-green-600">{formatPrice(userBalance)}</span>
-              <span className="text-[10px] text-gray-500">available</span>
-            </div>
+            {/* Wallet Balance - Only show for logged-in users */}
+            {user && (
+              <div className="mt-2 inline-flex items-center gap-2 bg-gray-100 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-200">
+                <span className="text-xs text-gray-600">Wallet:</span>
+                <span className="text-sm font-bold text-green-600">{formatPrice(userBalance)}</span>
+                <span className="text-[10px] text-gray-500">available</span>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
@@ -282,7 +272,58 @@ export default function GiftSection({ candidate }) {
         onSuccess={handleFundWalletSuccess}
       />
 
-      {/* Zero Balance Modal */}
+      {/* Login Modal for Guest Users */}
+      <AnimatePresence>
+        {showLoginModal && selectedGift && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowLoginModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
+                  🔐
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Login Required</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Login or sign up to send a <span className="font-semibold text-rose-600">{selectedGift.type}</span> to <span className="font-semibold text-rose-600">{candidate?.name}</span>!
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => router.push("/auth/login")}
+                    className="flex-1 bg-gradient-to-r from-rose-500 to-pink-500 text-white py-2.5 rounded-lg text-sm font-semibold hover:from-rose-600 hover:to-pink-600 transition-all shadow-md"
+                  >
+                    Login
+                  </button>
+                  <button
+                    onClick={() => router.push("/auth/signup")}
+                    className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-all"
+                  >
+                    Sign Up
+                  </button>
+                </div>
+                <button
+                  onClick={() => setShowLoginModal(false)}
+                  className="mt-3 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Maybe later
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Zero Balance Modal (unchanged) */}
       <AnimatePresence>
         {showZeroBalanceModal && selectedGift && (
           <motion.div
@@ -300,9 +341,7 @@ export default function GiftSection({ candidate }) {
               onClick={e => e.stopPropagation()}
             >
               <div className="text-center">
-                <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
-                  💝
-                </div>
+                <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">💝</div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Wallet Balance Empty! 💔</h3>
                 <p className="text-sm text-gray-600 mb-3">
                   Oops! Your wallet balance is ₦0. You need to fund your wallet to send <span className="font-semibold text-rose-600">{selectedGift.type}</span> to <span className="font-semibold text-rose-600">{candidate?.name}</span>.
@@ -332,7 +371,7 @@ export default function GiftSection({ candidate }) {
         )}
       </AnimatePresence>
 
-      {/* Insufficient Balance Modal */}
+      {/* Insufficient Balance Modal (unchanged) */}
       <AnimatePresence>
         {showInsufficientModal && selectedGift && (
           <motion.div
@@ -350,9 +389,7 @@ export default function GiftSection({ candidate }) {
               onClick={e => e.stopPropagation()}
             >
               <div className="text-center">
-                <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">
-                  😢
-                </div>
+                <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">😢</div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Insufficient Balance!</h3>
                 <p className="text-sm text-gray-600 mb-3">
                   Your balance is <span className="font-bold text-gray-800">{formatPrice(userBalance)}</span>, but <span className="font-semibold text-rose-600">{selectedGift.type}</span> costs <span className="font-bold text-rose-600">{formatPrice(selectedGift.price)}</span>.
@@ -407,7 +444,7 @@ export default function GiftSection({ candidate }) {
         )}
       </AnimatePresence>
 
-      {/* Confirm Gift Modal */}
+      {/* Confirm Gift Modal (unchanged) */}
       <AnimatePresence>
         {showConfirmModal && selectedGift && (
           <motion.div
@@ -465,7 +502,7 @@ export default function GiftSection({ candidate }) {
         )}
       </AnimatePresence>
 
-      {/* Thank You Modal */}
+      {/* Thank You Modal (unchanged) */}
       <AnimatePresence>
         {showThankYou && (
           <motion.div
