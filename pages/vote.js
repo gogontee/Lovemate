@@ -16,6 +16,8 @@ export default function VotePage() {
   const [candidates, setCandidates] = useState([]);
   const [filteredCandidates, setFilteredCandidates] = useState([]);
   const [search, setSearch] = useState("");
+  const [candidateCode, setCandidateCode] = useState("");
+  const [codeError, setCodeError] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [heroDesktop, setHeroDesktop] = useState(null);
@@ -146,12 +148,59 @@ export default function VotePage() {
     };
   }, []);
 
+  // Filter logic: name search OR exact code match (alphanumeric, case-insensitive)
   useEffect(() => {
-    const filtered = candidates.filter((candidate) =>
-      candidate.name.toLowerCase().includes(search.toLowerCase())
-    );
+    let filtered = [...candidates];
+    
+    // If code is exactly 4 alphanumeric characters (letters A-Z and digits 0-9)
+    const alphanumericRegex = /^[A-Z0-9]{4}$/;
+    if (candidateCode.length === 4 && alphanumericRegex.test(candidateCode.toUpperCase())) {
+      const codeMatch = candidates.find(c => c.code && c.code.toUpperCase() === candidateCode.toUpperCase());
+      if (codeMatch) {
+        filtered = [codeMatch];
+        setCodeError("");
+      } else {
+        filtered = [];
+        setCodeError("No candidate found with that code");
+      }
+    } 
+    // Otherwise filter by name search
+    else if (search.trim() !== "") {
+      filtered = candidates.filter(candidate =>
+        candidate.name.toLowerCase().includes(search.toLowerCase())
+      );
+      setCodeError("");
+    } else {
+      setCodeError("");
+    }
+    
     setFilteredCandidates(filtered);
-  }, [search, candidates]);
+  }, [search, candidateCode, candidates]);
+
+  const handleCodeSubmit = (e) => {
+    e?.preventDefault();
+    const val = candidateCode.toUpperCase();
+    if (val.length !== 4) {
+      setCodeError("Code must be exactly 4 characters");
+    } else if (!/^[A-Z0-9]{4}$/.test(val)) {
+      setCodeError("Use only capital letters A-Z and numbers 0-9");
+    } else {
+      // Valid - let the useEffect handle filtering
+      setCodeError("");
+    }
+  };
+
+  const handleCodeChange = (e) => {
+    let value = e.target.value.toUpperCase().slice(0, 4);
+    setCandidateCode(value);
+    setSearch(""); // Clear name search when using code
+  };
+
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setCandidateCode(""); // Clear code when using name search
+    setCodeError("");
+  };
 
   // Format number for display
   const formatNumber = (num) => {
@@ -332,20 +381,50 @@ export default function VotePage() {
           </div>
         </div>
 
-        {/* Search Bar - Only show if there are eligible candidates */}
+        {/* Search & Code Input - Side by side on mobile, same row */}
         {hasEligibleCandidates && candidates.length > 0 && (
           <section className="py-6 px-4">
-            <div className="max-w-xs mx-auto">
-              <div className="relative group">
-                <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
-                <input
-                  type="text"
-                  placeholder="🔍 Search candidate..."
-                  className="relative w-full px-4 py-2 bg-gray-800 text-white border border-purple-500/30 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
+            <div className="max-w-xl md:max-w-2xl mx-auto">
+              {/* Flex row for both inputs */}
+              <div className="flex gap-2 md:gap-3">
+                {/* Search Input */}
+                <div className="relative group flex-1">
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
+                  <input
+                    type="text"
+                    placeholder="🔍 Search name..."
+                    className="relative w-full px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 text-white border border-purple-500/30 rounded-full text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
+                    value={search}
+                    onChange={handleSearchChange}
+                  />
+                </div>
+
+                {/* Code Input - with submit on enter */}
+                <form onSubmit={handleCodeSubmit} className="flex gap-1 md:gap-2">
+                  <div className="relative group">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
+                    <input
+                      type="text"
+                      placeholder="Code"
+                      className="relative w-24 md:w-32 px-2 md:px-3 py-1.5 md:py-2 bg-gray-800 text-white border border-cyan-500/30 rounded-full text-xs md:text-sm uppercase focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-400 text-center"
+                      value={candidateCode}
+                      onChange={handleCodeChange}
+                      maxLength={4}
+                      pattern="[A-Z0-9]{4}"
+                      title="4 characters: A-Z and 0-9"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-full text-xs md:text-sm font-semibold hover:from-cyan-700 hover:to-blue-700 transition-all"
+                  >
+                    Go
+                  </button>
+                </form>
               </div>
+              {codeError && (
+                <p className="text-red-400 text-xs mt-2 text-center">{codeError}</p>
+              )}
             </div>
           </section>
         )}
@@ -391,8 +470,27 @@ export default function VotePage() {
                   ))}
                 </div>
 
-                {/* Load More */}
-                {hasMore && (
+                {/* Show "no results" message if filtered list is empty */}
+                {filteredCandidates.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-400 text-lg">No candidates match your search.</p>
+                    {(search || candidateCode) && (
+                      <button
+                        onClick={() => {
+                          setSearch("");
+                          setCandidateCode("");
+                          setCodeError("");
+                        }}
+                        className="mt-4 text-rose-400 underline hover:text-rose-300"
+                      >
+                        Clear filters
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Load More - only show when not filtering by code and has more */}
+                {hasMore && !candidateCode && filteredCandidates.length === candidates.length && (
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
