@@ -4,7 +4,6 @@ import Footer from "../components/Footer";
 import SponsorCarousel from "../components/SponsorCarousel";
 import CandidateCard from "../components/CandidateCard";
 import { useState, useEffect } from "react";
-import EventSchedule from "@/components/EventSchedule";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 import Image from "next/image";
@@ -331,21 +330,6 @@ export default function VotePage() {
               )}
             </AnimatePresence>
           </div>
-        </div>
-
-        {/* Event Schedule - Integrated into hero flow */}
-        <div className="max-w-7xl mx-auto px-4 -mt-8 md:-mt-10 relative z-10">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-purple-500/20"
-          >
-            <EventSchedule
-              startDate="2025-08-01T00:00:00"
-              endDate="2025-08-15T23:59:59"
-            />
-          </motion.div>
         </div>
 
         {/* Search Bar - Only show if there are eligible candidates */}
