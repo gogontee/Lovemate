@@ -13,11 +13,12 @@ const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
 const PAGE_SIZE = 50;
 
 export default function VotePage() {
-  const [candidates, setCandidates] = useState([]);
+  const [candidates, setCandidates] = useState([]);        // only visible candidates (visibility = true)
   const [filteredCandidates, setFilteredCandidates] = useState([]);
   const [search, setSearch] = useState("");
   const [candidateCode, setCandidateCode] = useState("");
   const [codeError, setCodeError] = useState("");
+  const [codeMatchCandidate, setCodeMatchCandidate] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [heroDesktop, setHeroDesktop] = useState(null);
@@ -27,7 +28,7 @@ export default function VotePage() {
     totalVotes: 0,
     totalGifts: 0,
     totalGiftWorth: 0,
-    activeVoters: 0
+    activeVoters: 0,
   });
   const router = useRouter();
 
@@ -42,19 +43,14 @@ export default function VotePage() {
       if (error) {
         console.error("Error fetching hero content:", error);
       } else {
-        if (data?.vote_hero_desktop) {
-          setHeroDesktop(data.vote_hero_desktop);
-        }
-        if (data?.vote_hero_mobile) {
-          setHeroMobile(data.vote_hero_mobile);
-        }
+        if (data?.vote_hero_desktop) setHeroDesktop(data.vote_hero_desktop);
+        if (data?.vote_hero_mobile) setHeroMobile(data.vote_hero_mobile);
       }
     };
-
     fetchHeroContent();
   }, []);
 
-  // Fetch candidates
+  // Fetch ONLY visible candidates (visibility = true)
   const fetchCandidates = async (pageNum = 1) => {
     const from = (pageNum - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
@@ -63,17 +59,17 @@ export default function VotePage() {
       .from("candidates")
       .select("*")
       .eq("role", "Yes")
+      .eq("visibility", true)
       .order("votes", { ascending: false })
       .range(from, to);
 
     if (error) {
       console.error("Error fetching candidates:", error);
     } else {
-      // Check if there are any eligible candidates
       if (pageNum === 1) {
         setHasEligibleCandidates(data.length > 0);
       }
-      
+
       const updated = data.map((item) => ({
         ...item,
         imageUrl:
@@ -85,12 +81,32 @@ export default function VotePage() {
       }));
 
       if (data.length < PAGE_SIZE) setHasMore(false);
-
       setCandidates((prev) => [...prev, ...updated]);
     }
   };
 
-  // Fetch stats
+  // Fetch a single candidate by code (ignores visibility)
+  const fetchCandidateByCode = async (code) => {
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("*")
+      .ilike("code", code)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      ...data,
+      imageUrl:
+        data.image_url && data.image_url.startsWith("http")
+          ? data.image_url
+          : data.image_url
+          ? `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${data.image_url}`
+          : fallbackImage,
+    };
+  };
+
+  // Fetch global stats (all candidates, visible or not)
   const fetchStats = async () => {
     const { data, error } = await supabase
       .from("candidates")
@@ -100,8 +116,7 @@ export default function VotePage() {
       const totalVotes = data.reduce((sum, c) => sum + (c.votes || 0), 0);
       const totalGifts = data.reduce((sum, c) => sum + (c.gifts || 0), 0);
       const totalGiftWorth = data.reduce((sum, c) => sum + (c.gift_worth || 0), 0);
-      
-      // Get unique voters count
+
       const { count } = await supabase
         .from("vote_transactions")
         .select("*", { count: "exact", head: true });
@@ -110,7 +125,7 @@ export default function VotePage() {
         totalVotes,
         totalGifts,
         totalGiftWorth,
-        activeVoters: count || 0
+        activeVoters: count || 0,
       });
     }
   };
@@ -120,7 +135,7 @@ export default function VotePage() {
     fetchStats();
   }, []);
 
-  // Real-time updates
+  // Real-time updates for visible candidates + code-matched candidate
   useEffect(() => {
     const channel = supabase
       .channel("votes-realtime")
@@ -134,10 +149,24 @@ export default function VotePage() {
         (payload) => {
           setCandidates((prev) =>
             prev.map((c) =>
-              c.id === payload.new.id ? { ...c, votes: payload.new.votes, gifts: payload.new.gifts, gift_worth: payload.new.gift_worth } : c
+              c.id === payload.new.id
+                ? {
+                    ...c,
+                    votes: payload.new.votes,
+                    gifts: payload.new.gifts,
+                    gift_worth: payload.new.gift_worth,
+                  }
+                : c
             )
           );
-          // Update stats
+          if (codeMatchCandidate && codeMatchCandidate.id === payload.new.id) {
+            setCodeMatchCandidate((prev) => ({
+              ...prev,
+              votes: payload.new.votes,
+              gifts: payload.new.gifts,
+              gift_worth: payload.new.gift_worth,
+            }));
+          }
           fetchStats();
         }
       )
@@ -146,63 +175,72 @@ export default function VotePage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [codeMatchCandidate]);
 
-  // Filter logic: name search OR exact code match (alphanumeric, case-insensitive)
+  // Filtering: code match takes precedence, then name search among visible candidates
   useEffect(() => {
-    let filtered = [...candidates];
-    
-    // If code is exactly 4 alphanumeric characters (letters A-Z and digits 0-9)
-    const alphanumericRegex = /^[A-Z0-9]{4}$/;
-    if (candidateCode.length === 4 && alphanumericRegex.test(candidateCode.toUpperCase())) {
-      const codeMatch = candidates.find(c => c.code && c.code.toUpperCase() === candidateCode.toUpperCase());
-      if (codeMatch) {
-        filtered = [codeMatch];
-        setCodeError("");
-      } else {
-        filtered = [];
-        setCodeError("No candidate found with that code");
-      }
-    } 
-    // Otherwise filter by name search
-    else if (search.trim() !== "") {
-      filtered = candidates.filter(candidate =>
+    if (codeMatchCandidate) {
+      setFilteredCandidates([codeMatchCandidate]);
+      return;
+    }
+
+    if (search.trim() !== "") {
+      const filtered = candidates.filter((candidate) =>
         candidate.name.toLowerCase().includes(search.toLowerCase())
       );
-      setCodeError("");
+      setFilteredCandidates(filtered);
     } else {
-      setCodeError("");
+      setFilteredCandidates(candidates);
     }
-    
-    setFilteredCandidates(filtered);
-  }, [search, candidateCode, candidates]);
+  }, [codeMatchCandidate, search, candidates]);
 
-  const handleCodeSubmit = (e) => {
+  // Handle code search from either the global row or the empty state card
+  const handleCodeSubmit = async (e, codeValue = null) => {
     e?.preventDefault();
-    const val = candidateCode.toUpperCase();
+    const val = (codeValue || candidateCode).toUpperCase();
+
     if (val.length !== 4) {
       setCodeError("Code must be exactly 4 characters");
-    } else if (!/^[A-Z0-9]{4}$/.test(val)) {
+      setCodeMatchCandidate(null);
+      return;
+    }
+
+    if (!/^[A-Z0-9]{4}$/.test(val)) {
       setCodeError("Use only capital letters A-Z and numbers 0-9");
+      setCodeMatchCandidate(null);
+      return;
+    }
+
+    setCodeError("");
+    const found = await fetchCandidateByCode(val);
+
+    if (found) {
+      setCodeMatchCandidate(found);
+      setSearch("");
+      setCandidateCode(""); // clear global code input if any
     } else {
-      // Valid - let the useEffect handle filtering
-      setCodeError("");
+      setCodeError("No candidate found with that code");
+      setCodeMatchCandidate(null);
     }
   };
 
   const handleCodeChange = (e) => {
     let value = e.target.value.toUpperCase().slice(0, 4);
     setCandidateCode(value);
-    setSearch(""); // Clear name search when using code
+    setSearch("");
+    if (value.length === 0) {
+      setCodeMatchCandidate(null);
+      setCodeError("");
+    }
   };
 
   const handleSearchChange = (e) => {
     setSearch(e.target.value);
-    setCandidateCode(""); // Clear code when using name search
+    setCandidateCode("");
+    setCodeMatchCandidate(null);
     setCodeError("");
   };
 
-  // Format number for display
   const formatNumber = (num) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
     if (num >= 1000) return `${(num / 1000).toFixed(1)}k`;
@@ -217,9 +255,9 @@ export default function VotePage() {
       </Head>
 
       <Header />
-      
+
       <main className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen">
-        {/* Desktop Hero - 1000:300 ratio */}
+        {/* Desktop Hero */}
         <div className="hidden md:block relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
           {heroDesktop?.image ? (
             <div className="relative w-full h-full">
@@ -237,11 +275,10 @@ export default function VotePage() {
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-pink-900 to-rose-900" />
           )}
-          
-          {/* Hero Content */}
+
           <div className="absolute inset-0 flex items-center">
             <div className="max-w-7xl mx-auto px-8 w-full">
-              <motion.h1 
+              <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -249,7 +286,7 @@ export default function VotePage() {
               >
                 {heroDesktop?.title || "Ready to Vote?"}
               </motion.h1>
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -257,11 +294,10 @@ export default function VotePage() {
               >
                 {heroDesktop?.subtitle || "Cast your votes and make your voice count"}
               </motion.p>
-              
-              {/* Stats Bar - Desktop - Only show when candidates exist */}
+
               <AnimatePresence mode="wait">
                 {hasEligibleCandidates && candidates.length > 0 && (
-                  <motion.div 
+                  <motion.div
                     key="desktop-stats"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -270,30 +306,22 @@ export default function VotePage() {
                     className="flex gap-6 bg-black/30 backdrop-blur-md rounded-2xl p-3 border border-purple-500/30 max-w-2xl"
                   >
                     <div className="flex-1 text-center">
-                      <div className="text-sm font-bold text-red-500">
-                        {formatNumber(stats.totalVotes)}
-                      </div>
+                      <div className="text-sm font-bold text-red-500">{formatNumber(stats.totalVotes)}</div>
                       <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Votes</div>
                     </div>
                     <div className="w-px bg-purple-500/30" />
                     <div className="flex-1 text-center">
-                      <div className="text-sm font-bold text-red-500">
-                        {formatNumber(stats.totalGifts)}
-                      </div>
+                      <div className="text-sm font-bold text-red-500">{formatNumber(stats.totalGifts)}</div>
                       <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Gifts</div>
                     </div>
                     <div className="w-px bg-purple-500/30" />
                     <div className="flex-1 text-center">
-                      <div className="text-sm font-bold text-red-500">
-                        ₦{formatNumber(stats.totalGiftWorth)}
-                      </div>
+                      <div className="text-sm font-bold text-red-500">₦{formatNumber(stats.totalGiftWorth)}</div>
                       <div className="text-[8px] text-gray-400 uppercase tracking-wider">Gift Worth</div>
                     </div>
                     <div className="w-px bg-purple-500/30" />
                     <div className="flex-1 text-center">
-                      <div className="text-sm font-bold text-red-500">
-                        {formatNumber(stats.activeVoters)}
-                      </div>
+                      <div className="text-sm font-bold text-red-500">{formatNumber(stats.activeVoters)}</div>
                       <div className="text-[8px] text-gray-400 uppercase tracking-wider">Active Voters</div>
                     </div>
                   </motion.div>
@@ -303,7 +331,7 @@ export default function VotePage() {
           </div>
         </div>
 
-        {/* Mobile Hero - 1000:300 ratio */}
+        {/* Mobile Hero */}
         <div className="md:hidden relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
           {heroMobile?.image ? (
             <div className="relative w-full h-full">
@@ -321,17 +349,16 @@ export default function VotePage() {
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-pink-900 to-rose-900" />
           )}
-          
-          {/* Mobile Hero Content */}
+
           <div className="absolute inset-0 flex flex-col justify-end p-5">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-xl font-bold text-white mb-1"
             >
               {heroMobile?.title || "Ready to Vote?"}
             </motion.h1>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
@@ -339,11 +366,10 @@ export default function VotePage() {
             >
               {heroMobile?.subtitle || "Cast your votes and make your voice count"}
             </motion.p>
-            
-            {/* Stats Grid - Mobile - Only show when candidates exist */}
+
             <AnimatePresence mode="wait">
               {hasEligibleCandidates && candidates.length > 0 && (
-                <motion.div 
+                <motion.div
                   key="mobile-stats"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -352,27 +378,19 @@ export default function VotePage() {
                   className="grid grid-cols-4 gap-1 bg-black/30 backdrop-blur-md rounded-xl p-2 border border-purple-500/20"
                 >
                   <div className="text-center">
-                    <div className="text-[10px] font-bold text-red-500">
-                      {formatNumber(stats.totalVotes)}
-                    </div>
+                    <div className="text-[10px] font-bold text-red-500">{formatNumber(stats.totalVotes)}</div>
                     <div className="text-[6px] text-gray-400 uppercase">Votes</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-[10px] font-bold text-red-500">
-                      {formatNumber(stats.totalGifts)}
-                    </div>
+                    <div className="text-[10px] font-bold text-red-500">{formatNumber(stats.totalGifts)}</div>
                     <div className="text-[6px] text-gray-400 uppercase">Gifts</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-[10px] font-bold text-red-500">
-                      ₦{formatNumber(stats.totalGiftWorth)}
-                    </div>
+                    <div className="text-[10px] font-bold text-red-500">₦{formatNumber(stats.totalGiftWorth)}</div>
                     <div className="text-[6px] text-gray-400 uppercase">Worth</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-[10px] font-bold text-red-500">
-                      {formatNumber(stats.activeVoters)}
-                    </div>
+                    <div className="text-[10px] font-bold text-red-500">{formatNumber(stats.activeVoters)}</div>
                     <div className="text-[6px] text-gray-400 uppercase">Voters</div>
                   </div>
                 </motion.div>
@@ -381,13 +399,11 @@ export default function VotePage() {
           </div>
         </div>
 
-        {/* Search & Code Input - Side by side on mobile, same row */}
+        {/* Search Row – only visible when there are public candidates */}
         {hasEligibleCandidates && candidates.length > 0 && (
           <section className="py-6 px-4">
             <div className="max-w-xl md:max-w-2xl mx-auto">
-              {/* Flex row for both inputs */}
               <div className="flex gap-2 md:gap-3">
-                {/* Search Input */}
                 <div className="relative group flex-1">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
                   <input
@@ -399,7 +415,6 @@ export default function VotePage() {
                   />
                 </div>
 
-                {/* Code Input - with submit on enter */}
                 <form onSubmit={handleCodeSubmit} className="flex gap-1 md:gap-2">
                   <div className="relative group">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
@@ -422,34 +437,65 @@ export default function VotePage() {
                   </button>
                 </form>
               </div>
-              {codeError && (
-                <p className="text-red-400 text-xs mt-2 text-center">{codeError}</p>
-              )}
+              {codeError && <p className="text-red-400 text-xs mt-2 text-center">{codeError}</p>}
             </div>
           </section>
         )}
 
-        {/* Candidate Cards or Empty State */}
+        {/* Main Content */}
         <section className="py-4 px-4">
           <div className="max-w-7xl mx-auto">
-            {!hasEligibleCandidates ? (
+            {/* Empty State – No public candidates and no code match */}
+            {!hasEligibleCandidates && !codeMatchCandidate && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-3xl p-8 md:p-12 border border-purple-500/20 text-center max-w-3xl mx-auto"
               >
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-                  Stay Tuned!
+                <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+                  Here to support your favorite candidate?
                 </h2>
-                
-                <p className="text-gray-300 text-lg mb-2">
-                  Eligible candidates for Stage 1 will be revealed here
+                <p className="text-rose-400 text-xl md:text-2xl font-semibold mb-6">
+                  Oya! Enter his/her candidate code here.
                 </p>
-                <p className="text-rose-400 font-semibold">
-                  at the close of registration.
-                </p>
+
+                {/* Dedicated code input bar inside the card */}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const inputEl = e.currentTarget.querySelector('input[type="text"]');
+                    const codeValue = inputEl?.value.toUpperCase() || "";
+                    handleCodeSubmit(e, codeValue);
+                  }}
+                  className="flex flex-col sm:flex-row gap-3 justify-center items-center"
+                >
+                  <div className="relative group w-full sm:w-64">
+                    <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
+                    <input
+                      type="text"
+                      placeholder="e.g., A1B2"
+                      className="relative w-full px-4 py-3 bg-gray-800 text-white border border-cyan-500/30 rounded-full text-center text-lg uppercase focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-400"
+                      maxLength={4}
+                      pattern="[A-Z0-9]{4}"
+                      title="4 characters: A-Z and 0-9"
+                      onChange={(e) => {
+                        e.target.value = e.target.value.toUpperCase().slice(0, 4);
+                      }}
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-full text-base font-semibold hover:from-cyan-700 hover:to-blue-700 transition-all shadow-lg"
+                  >
+                    Search Candidate
+                  </button>
+                </form>
+                {codeError && <p className="text-red-400 text-sm mt-4">{codeError}</p>}
               </motion.div>
-            ) : (
+            )}
+
+            {/* Candidate Display – either visible list or code match */}
+            {(hasEligibleCandidates || codeMatchCandidate) && (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                   {filteredCandidates.map((candidate, index) => (
@@ -470,7 +516,6 @@ export default function VotePage() {
                   ))}
                 </div>
 
-                {/* Show "no results" message if filtered list is empty */}
                 {filteredCandidates.length === 0 && (
                   <div className="text-center py-12">
                     <p className="text-gray-400 text-lg">No candidates match your search.</p>
@@ -479,6 +524,7 @@ export default function VotePage() {
                         onClick={() => {
                           setSearch("");
                           setCandidateCode("");
+                          setCodeMatchCandidate(null);
                           setCodeError("");
                         }}
                         className="mt-4 text-rose-400 underline hover:text-rose-300"
@@ -489,13 +535,9 @@ export default function VotePage() {
                   </div>
                 )}
 
-                {/* Load More - only show when not filtering by code and has more */}
-                {hasMore && !candidateCode && filteredCandidates.length === candidates.length && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center mt-8"
-                  >
+                {/* Load More – only if not in code-match mode and more visible candidates exist */}
+                {hasMore && !codeMatchCandidate && filteredCandidates.length === candidates.length && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mt-8">
                     <button
                       onClick={() => {
                         const nextPage = page + 1;
@@ -516,7 +558,7 @@ export default function VotePage() {
           </div>
         </section>
 
-        {/* Sponsors - Futuristic with thinner borders */}
+        {/* Sponsors */}
         <section className="py-8 px-4">
           <div className="max-w-7xl mx-auto">
             <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 border border-purple-500/10 md:border-purple-500/5">
@@ -528,7 +570,6 @@ export default function VotePage() {
         </section>
       </main>
 
-      {/* Footer - Hidden on mobile */}
       <div className="hidden md:block">
         <Footer />
       </div>

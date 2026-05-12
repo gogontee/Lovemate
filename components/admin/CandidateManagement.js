@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   Calendar,
   Eye,
+  EyeOff,
   Upload,
   X,
   Check,
@@ -134,7 +135,7 @@ export default function CandidateManagement() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Toggle role (status)
+  // Toggle role (status) - used by both the button and the clickable badge
   const toggleRole = async (candidate, newRole) => {
     setUpdating(true);
     try {
@@ -145,12 +146,64 @@ export default function CandidateManagement() {
 
       if (error) throw error;
 
-      setCandidates(candidates.map(c =>
+      // Optimistic update
+      setCandidates(prev => prev.map(c =>
         c.id === candidate.id ? { ...c, role: newRole } : c
       ));
     } catch (error) {
       console.error('Error updating role:', error);
       alert('Failed to update status');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Toggle individual candidate visibility
+  const toggleVisibility = async (candidate, newVisibility) => {
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from('candidates')
+        .update({ visibility: newVisibility })
+        .eq('id', candidate.id);
+
+      if (error) throw error;
+
+      setCandidates(prev => prev.map(c =>
+        c.id === candidate.id ? { ...c, visibility: newVisibility } : c
+      ));
+    } catch (error) {
+      console.error('Error updating visibility:', error);
+      alert('Failed to update visibility');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Global visibility toggle (set all candidates to visible or hidden)
+  const setAllVisibility = async (makeVisible) => {
+    const confirmMsg = makeVisible
+      ? 'Set ALL candidates to VISIBLE?'
+      : 'Set ALL candidates to HIDDEN? (They will not appear on the public vote page unless searched by code)';
+    if (!window.confirm(confirmMsg)) return;
+
+    setUpdating(true);
+    try {
+      // Use a dummy UUID that will never match any real candidate to bypass the "no filter" restriction
+      // This effectively updates every row because every real UUID is not equal to the dummy.
+      const dummyUUID = '00000000-0000-0000-0000-000000000000';
+      const { error } = await supabase
+        .from('candidates')
+        .update({ visibility: makeVisible })
+        .neq('id', dummyUUID);
+
+      if (error) throw error;
+
+      setCandidates(prev => prev.map(c => ({ ...c, visibility: makeVisible })));
+      alert(`All candidates are now ${makeVisible ? 'VISIBLE' : 'HIDDEN'}`);
+    } catch (error) {
+      console.error('Error updating global visibility:', error);
+      alert('Failed to update all candidates visibility');
     } finally {
       setUpdating(false);
     }
@@ -168,7 +221,7 @@ export default function CandidateManagement() {
 
       if (error) throw error;
 
-      setCandidates(candidates.filter(c => c.id !== id));
+      setCandidates(prev => prev.filter(c => c.id !== id));
       if (editingCandidate?.id === id) setShowEditModal(false);
     } catch (error) {
       console.error('Error deleting candidate:', error);
@@ -221,7 +274,7 @@ export default function CandidateManagement() {
 
       if (error) throw error;
 
-      setCandidates(candidates.map(c =>
+      setCandidates(prev => prev.map(c =>
         c.id === editingCandidate.id ? { ...c, ...updates } : c
       ));
       setShowEditModal(false);
@@ -257,15 +310,35 @@ export default function CandidateManagement() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
+      {/* Header with global visibility controls */}
       <div className="bg-white/5 rounded-xl border border-white/10 p-3 sm:p-4">
-        <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-          <User className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
-          Candidate Management
-        </h2>
-        <p className="text-[10px] sm:text-xs text-white/40 mt-1">
-          Manage candidates, approve status, edit profiles
-        </p>
+        <div className="flex flex-wrap justify-between items-center gap-3">
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <User className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400" />
+              Candidate Management
+            </h2>
+            <p className="text-[10px] sm:text-xs text-white/40 mt-1">
+              Manage candidates, approve status, edit profiles, control visibility
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAllVisibility(true)}
+              className="px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-green-400 text-xs font-medium flex items-center gap-1 transition"
+            >
+              <Eye className="w-3 h-3" />
+              Show All
+            </button>
+            <button
+              onClick={() => setAllVisibility(false)}
+              className="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-400 text-xs font-medium flex items-center gap-1 transition"
+            >
+              <EyeOff className="w-3 h-3" />
+              Hide All
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Search */}
@@ -301,7 +374,7 @@ export default function CandidateManagement() {
             animate={{ opacity: 1, y: 0 }}
             className="bg-white/5 rounded-xl border border-white/10 overflow-hidden hover:border-orange-500/30 transition-all"
           >
-            {/* Header with image & status */}
+            {/* Header with image & action buttons */}
             <div className="relative">
               {candidate.image_url ? (
                 <div className="relative h-40 w-full">
@@ -318,6 +391,24 @@ export default function CandidateManagement() {
                 </div>
               )}
               <div className="absolute top-2 right-2 flex gap-1">
+                {/* Visibility toggle button */}
+                <button
+                  onClick={() => toggleVisibility(candidate, !candidate.visibility)}
+                  disabled={updating}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    candidate.visibility
+                      ? 'bg-green-500/80 text-white'
+                      : 'bg-white/20 text-white/80'
+                  }`}
+                  title={candidate.visibility ? 'Visible to public' : 'Hidden (only via code)'}
+                >
+                  {candidate.visibility ? (
+                    <Eye className="w-4 h-4" />
+                  ) : (
+                    <EyeOff className="w-4 h-4" />
+                  )}
+                </button>
+                {/* Role toggle button (keep for redundancy) */}
                 <button
                   onClick={() => toggleRole(candidate, candidate.role === 'Yes' ? 'No' : 'Yes')}
                   disabled={updating}
@@ -326,7 +417,7 @@ export default function CandidateManagement() {
                       ? 'bg-green-500/80 text-white'
                       : 'bg-white/20 text-white/80'
                   }`}
-                  title={candidate.role === 'Yes' ? 'Approved' : 'Pending'}
+                  title="Toggle approved status"
                 >
                   {candidate.role === 'Yes' ? (
                     <Check className="w-4 h-4" />
@@ -353,9 +444,34 @@ export default function CandidateManagement() {
                   <h3 className="font-bold text-white">{candidate.name || candidate.full_name}</h3>
                   <p className="text-xs text-white/40">{candidate.country || 'Country not set'}</p>
                 </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${candidate.role === 'Yes' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                {/* Clickable status badge */}
+                <button
+                  onClick={() => toggleRole(candidate, candidate.role === 'Yes' ? 'No' : 'Yes')}
+                  disabled={updating}
+                  className={`text-xs px-2 py-1 rounded-full transition-colors cursor-pointer ${
+                    candidate.role === 'Yes'
+                      ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                      : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30'
+                  }`}
+                  title="Click to toggle approval"
+                >
                   {candidate.role === 'Yes' ? 'Approved' : 'Pending'}
+                </button>
+              </div>
+
+              {/* Visibility indicator (text + toggle) */}
+              <div className="flex items-center justify-between text-xs">
+                <span className={`flex items-center gap-1 ${candidate.visibility ? 'text-green-400' : 'text-red-400'}`}>
+                  {candidate.visibility ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                  {candidate.visibility ? 'Public' : 'Hidden'}
                 </span>
+                <button
+                  onClick={() => toggleVisibility(candidate, !candidate.visibility)}
+                  disabled={updating}
+                  className="text-[10px] px-2 py-0.5 bg-white/10 rounded-full hover:bg-white/20 transition"
+                >
+                  Toggle visibility
+                </button>
               </div>
 
               <div className="text-xs text-white/60 space-y-1">
@@ -437,13 +553,11 @@ export default function CandidateManagement() {
               </div>
 
               <div className="space-y-4">
-                {/* Code (read-only) */}
                 <div className="bg-white/5 rounded-lg p-3">
                   <label className="block text-xs text-white/60 mb-1">Candidate Code</label>
                   <p className="text-sm text-orange-400 font-mono">{editingCandidate.code || 'N/A'}</p>
                 </div>
 
-                {/* Name (nickname) */}
                 <div>
                   <label className="block text-xs text-white/60 mb-1">Name (Display name)</label>
                   <input
@@ -454,7 +568,6 @@ export default function CandidateManagement() {
                   />
                 </div>
 
-                {/* Full name */}
                 <div>
                   <label className="block text-xs text-white/60 mb-1">Full Name</label>
                   <input
@@ -465,7 +578,6 @@ export default function CandidateManagement() {
                   />
                 </div>
 
-                {/* Email & Phone */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-white/60 mb-1">Email</label>
@@ -487,7 +599,6 @@ export default function CandidateManagement() {
                   </div>
                 </div>
 
-                {/* Age, Gender, Occupation */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs text-white/60 mb-1">Age</label>
@@ -522,7 +633,6 @@ export default function CandidateManagement() {
                   </div>
                 </div>
 
-                {/* Instagram Handle */}
                 <div>
                   <label className="block text-xs text-white/60 mb-1">Instagram Handle</label>
                   <input
@@ -533,7 +643,6 @@ export default function CandidateManagement() {
                   />
                 </div>
 
-                {/* Bio */}
                 <div>
                   <label className="block text-xs text-white/60 mb-1">Bio</label>
                   <textarea
@@ -544,7 +653,6 @@ export default function CandidateManagement() {
                   />
                 </div>
 
-                {/* Image Upload */}
                 <div>
                   <label className="block text-xs text-white/60 mb-2">Profile Image</label>
                   {formData.image_url ? (
