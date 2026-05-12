@@ -17,20 +17,14 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     formats: ['image/webp', 'image/avif'],
-    qualities: [75, 85], // Add this line - include the quality values you use
+    // ❌ REMOVE THIS LINE: qualities: [75, 85],
   },
   staticPageGenerationTimeout: 180,
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
-  // Turbopack is now a top-level option, NOT inside experimental
   turbopack: {
-    resolveAlias: {
-      // Add any aliases here if needed
-      // Example: '@': path.join(__dirname, 'src'),
-    },
-    // You can add other Turbopack-specific options here
-    // loaders: { ... },
+    resolveAlias: {},
   },
 };
 

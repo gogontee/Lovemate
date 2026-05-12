@@ -13,7 +13,7 @@ const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
 const PAGE_SIZE = 50;
 
 export default function VotePage() {
-  const [candidates, setCandidates] = useState([]);        // only visible candidates (visibility = true)
+  const [candidates, setCandidates] = useState([]);
   const [filteredCandidates, setFilteredCandidates] = useState([]);
   const [search, setSearch] = useState("");
   const [candidateCode, setCandidateCode] = useState("");
@@ -24,13 +24,37 @@ export default function VotePage() {
   const [heroDesktop, setHeroDesktop] = useState(null);
   const [heroMobile, setHeroMobile] = useState(null);
   const [hasEligibleCandidates, setHasEligibleCandidates] = useState(true);
+  const [candidatesLoading, setCandidatesLoading] = useState(true);
   const [stats, setStats] = useState({
     totalVotes: 0,
     totalGifts: 0,
     totalGiftWorth: 0,
     activeVoters: 0,
   });
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+
+  // Check admin status from profiles table
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setIsAdmin(false);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .single();
+      if (!error && data?.role === "admin") {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    };
+    checkAdmin();
+  }, []);
 
   // Fetch hero content
   useEffect(() => {
@@ -51,7 +75,8 @@ export default function VotePage() {
   }, []);
 
   // Fetch ONLY visible candidates (visibility = true)
-  const fetchCandidates = async (pageNum = 1) => {
+  const fetchCandidates = async (pageNum = 1, reset = true) => {
+    if (reset) setCandidatesLoading(true);
     const from = (pageNum - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
@@ -81,8 +106,9 @@ export default function VotePage() {
       }));
 
       if (data.length < PAGE_SIZE) setHasMore(false);
-      setCandidates((prev) => [...prev, ...updated]);
+      setCandidates((prev) => (reset ? updated : [...prev, ...updated]));
     }
+    setCandidatesLoading(false);
   };
 
   // Fetch a single candidate by code (ignores visibility)
@@ -106,7 +132,7 @@ export default function VotePage() {
     };
   };
 
-  // Fetch global stats (all candidates, visible or not)
+  // Fetch global stats (all candidates, visible or not) – only if admin
   const fetchStats = async () => {
     const { data, error } = await supabase
       .from("candidates")
@@ -131,9 +157,9 @@ export default function VotePage() {
   };
 
   useEffect(() => {
-    fetchCandidates();
-    fetchStats();
-  }, []);
+    fetchCandidates(1, true);
+    if (isAdmin) fetchStats();
+  }, [isAdmin]);
 
   // Real-time updates for visible candidates + code-matched candidate
   useEffect(() => {
@@ -167,7 +193,7 @@ export default function VotePage() {
               gift_worth: payload.new.gift_worth,
             }));
           }
-          fetchStats();
+          if (isAdmin) fetchStats();
         }
       )
       .subscribe();
@@ -175,7 +201,7 @@ export default function VotePage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [codeMatchCandidate]);
+  }, [codeMatchCandidate, isAdmin]);
 
   // Filtering: code match takes precedence, then name search among visible candidates
   useEffect(() => {
@@ -217,7 +243,7 @@ export default function VotePage() {
     if (found) {
       setCodeMatchCandidate(found);
       setSearch("");
-      setCandidateCode(""); // clear global code input if any
+      setCandidateCode("");
     } else {
       setCodeError("No candidate found with that code");
       setCodeMatchCandidate(null);
@@ -295,8 +321,9 @@ export default function VotePage() {
                 {heroDesktop?.subtitle || "Cast your votes and make your voice count"}
               </motion.p>
 
-              <AnimatePresence mode="wait">
-                {hasEligibleCandidates && candidates.length > 0 && (
+              {/* Admin‑only stats bar (existing) */}
+              {isAdmin && hasEligibleCandidates && candidates.length > 0 && (
+                <AnimatePresence mode="wait">
                   <motion.div
                     key="desktop-stats"
                     initial={{ opacity: 0, y: 20 }}
@@ -325,8 +352,8 @@ export default function VotePage() {
                       <div className="text-[8px] text-gray-400 uppercase tracking-wider">Active Voters</div>
                     </div>
                   </motion.div>
-                )}
-              </AnimatePresence>
+                </AnimatePresence>
+              )}
             </div>
           </div>
         </div>
@@ -367,8 +394,9 @@ export default function VotePage() {
               {heroMobile?.subtitle || "Cast your votes and make your voice count"}
             </motion.p>
 
-            <AnimatePresence mode="wait">
-              {hasEligibleCandidates && candidates.length > 0 && (
+            {/* Admin‑only stats grid (mobile) */}
+            {isAdmin && hasEligibleCandidates && candidates.length > 0 && (
+              <AnimatePresence mode="wait">
                 <motion.div
                   key="mobile-stats"
                   initial={{ opacity: 0, y: 10 }}
@@ -394,8 +422,8 @@ export default function VotePage() {
                     <div className="text-[6px] text-gray-400 uppercase">Voters</div>
                   </div>
                 </motion.div>
-              )}
-            </AnimatePresence>
+              </AnimatePresence>
+            )}
           </div>
         </div>
 
@@ -446,7 +474,7 @@ export default function VotePage() {
         <section className="py-4 px-4">
           <div className="max-w-7xl mx-auto">
             {/* Empty State – No public candidates and no code match */}
-            {!hasEligibleCandidates && !codeMatchCandidate && (
+            {!hasEligibleCandidates && !codeMatchCandidate && !candidatesLoading && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -459,7 +487,6 @@ export default function VotePage() {
                   Oya! Enter his/her candidate code here.
                 </p>
 
-                {/* Dedicated code input bar inside the card */}
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -497,51 +524,56 @@ export default function VotePage() {
             {/* Candidate Display – either visible list or code match */}
             {(hasEligibleCandidates || codeMatchCandidate) && (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                  {filteredCandidates.map((candidate, index) => (
-                    <motion.div
-                      key={candidate.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <CandidateCard
-                        id={candidate.id}
-                        name={candidate.name}
-                        country={candidate.country}
-                        votes={candidate.votes}
-                        imageUrl={candidate.imageUrl}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-
-                {filteredCandidates.length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-gray-400 text-lg">No candidates match your search.</p>
-                    {(search || candidateCode) && (
-                      <button
-                        onClick={() => {
-                          setSearch("");
-                          setCandidateCode("");
-                          setCodeMatchCandidate(null);
-                          setCodeError("");
-                        }}
-                        className="mt-4 text-rose-400 underline hover:text-rose-300"
-                      >
-                        Clear filters
-                      </button>
-                    )}
+                {candidatesLoading && candidates.length === 0 ? (
+                  <div className="flex justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
                   </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+                      {filteredCandidates.map((candidate, index) => (
+                        <motion.div
+                          key={candidate.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                        >
+                          <CandidateCard
+                            id={candidate.id}
+                            name={candidate.name}
+                            country={candidate.country}
+                            votes={candidate.votes}
+                            imageUrl={candidate.imageUrl}
+                          />
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {filteredCandidates.length === 0 && (search || candidateCode) && (
+                      <div className="text-center py-12">
+                        <p className="text-gray-400 text-lg">No candidates match your search.</p>
+                        <button
+                          onClick={() => {
+                            setSearch("");
+                            setCandidateCode("");
+                            setCodeMatchCandidate(null);
+                            setCodeError("");
+                          }}
+                          className="mt-4 text-rose-400 underline hover:text-rose-300"
+                        >
+                          Clear filters
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
 
-                {/* Load More – only if not in code-match mode and more visible candidates exist */}
-                {hasMore && !codeMatchCandidate && filteredCandidates.length === candidates.length && (
+                {hasMore && !codeMatchCandidate && filteredCandidates.length === candidates.length && !candidatesLoading && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mt-8">
                     <button
                       onClick={() => {
                         const nextPage = page + 1;
-                        fetchCandidates(nextPage);
+                        fetchCandidates(nextPage, false);
                         setPage(nextPage);
                       }}
                       className="relative group"
