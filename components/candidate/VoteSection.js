@@ -42,30 +42,37 @@ export default function VoteSection({ candidate }) {
   const [selectedCurrency, setSelectedCurrency] = useState('NGN');
   const router = useRouter();
 
-  // Get current user and wallet balance
+  // Get current user and clear any stale session
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      
-      if (user) {
-        const { data: wallet, error } = await supabase
-          .from("wallets")
-          .select("balance")
-          .eq("user_id", user.id)
-          .single();
-        
-        if (error) {
-          console.error("Error fetching wallet:", error);
-        } else if (wallet) {
-          setWalletBalance(wallet.balance);
-        }
+    const initAuth = async () => {
+      const { data: { session, user } } = await supabase.auth.getSession();
+      if (!session) {
+        await supabase.auth.signOut();
+        setUser(null);
+      } else {
+        setUser(user);
       }
     };
-    getUser();
+    initAuth();
   }, []);
 
-  // Fetch vote packages from database
+  // Fetch wallet balance if logged in
+  useEffect(() => {
+    const fetchWallet = async () => {
+      if (!user) return;
+      const { data: wallet, error } = await supabase
+        .from("wallets")
+        .select("balance")
+        .eq("user_id", user.id)
+        .single();
+      if (!error && wallet) {
+        setWalletBalance(wallet.balance);
+      }
+    };
+    fetchWallet();
+  }, [user]);
+
+  // Fetch vote packages
   useEffect(() => {
     const fetchVotePackages = async () => {
       try {
@@ -75,10 +82,7 @@ export default function VoteSection({ candidate }) {
           .eq('is_active', true)
           .order('sort_order', { ascending: true });
 
-        if (error) {
-          console.error('Error fetching vote packages:', error);
-          return;
-        }
+        if (error) throw error;
 
         if (data && data.length > 0) {
           const transformedPackages = data.map(pkg => ({
@@ -100,12 +104,11 @@ export default function VoteSection({ candidate }) {
           setVotePackages(transformedPackages);
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching vote packages:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchVotePackages();
   }, []);
 
@@ -114,87 +117,103 @@ export default function VoteSection({ candidate }) {
     setShowPaymentModal(true);
   };
 
-  // Create pending transaction in database
+  // Create pending transaction – uses API route for guests
   const createPendingTransaction = async (paymentMethod, currency) => {
-    if (!selectedPackage || !candidate) {
-      console.error("Missing selectedPackage or candidate");
-      return null;
-    }
+    if (!selectedPackage || !candidate) return null;
 
     const price = currency === 'USD' ? selectedPackage.price_usd : selectedPackage.price_ngn;
     const pricePerVote = Math.round(price / selectedPackage.points);
     const reference = generateReference();
 
-    console.log("Creating pending transaction:", {
+    const transactionData = {
       user_id: user?.id || null,
       candidate_id: candidate.id,
       package_name: selectedPackage.packageName,
       votes: selectedPackage.points,
       price_per_vote: pricePerVote,
       total_amount: price,
-      currency: currency,
+      discount_percentage: selectedPackage.discount || 0,
+      original_amount: currency === 'USD' ? selectedPackage.price_usd : selectedPackage.price_ngn,
       payment_method: paymentMethod,
-      reference: reference
-    });
+      status: "pending",
+      currency: currency,
+      reference: reference,
+      metadata: {
+        package_label: selectedPackage.label,
+        candidate_name: candidate.name,
+        timestamp: new Date().toISOString(),
+        guest_email: !user ? 'guest' : undefined
+      }
+    };
 
     try {
-      const { data, error } = await supabase
-        .from("vote_transactions")
-        .insert({
-          user_id: user?.id || null,
-          candidate_id: candidate.id,
-          package_name: selectedPackage.packageName,
-          votes: selectedPackage.points,
-          price_per_vote: pricePerVote,
-          total_amount: price,
-          discount_percentage: selectedPackage.discount || 0,
-          original_amount: currency === 'USD' ? selectedPackage.price_usd : selectedPackage.price_ngn,
-          payment_method: paymentMethod,
-          status: "pending",
-          currency: currency,
-          reference: reference,
-          metadata: {
-            package_label: selectedPackage.label,
-            candidate_name: candidate.name,
-            timestamp: new Date().toISOString(),
-            guest_email: !user ? 'guest' : undefined
-          }
-        })
-        .select()
-        .single();
+      let data, error;
 
-      if (error) {
-        console.error("Error creating pending transaction:", error);
-        return null;
+      if (user) {
+        // Authenticated – direct Supabase client
+        const response = await supabase
+          .from("vote_transactions")
+          .insert(transactionData)
+          .select()
+          .single();
+        data = response.data;
+        error = response.error;
+      } else {
+        // Guest – API route (bypasses RLS)
+        const response = await fetch('/api/vote-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(transactionData),
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || 'API insert failed');
+        data = json[0];
+        error = null;
       }
 
-      console.log("Transaction created:", data);
+      if (error) throw error;
       return { transaction: data, reference };
     } catch (error) {
-      console.error("Unexpected error creating transaction:", error);
+      console.error("Error creating transaction:", error);
       return null;
     }
   };
 
-  // Complete transaction after successful payment
+  // Complete transaction – API route for guests
   const completeTransaction = async (reference, paymentDetails) => {
     try {
-      const { error } = await supabase
-        .from("vote_transactions")
-        .update({
-          status: "completed",
-          metadata: {
-            ...paymentDetails,
-            completed_at: new Date().toISOString()
-          }
-        })
-        .eq("reference", reference);
-
-      if (error) {
-        console.error("Error completing transaction:", error);
-        throw error;
+      if (user) {
+        const { error } = await supabase
+          .from("vote_transactions")
+          .update({
+            status: "completed",
+            metadata: {
+              ...paymentDetails,
+              completed_at: new Date().toISOString()
+            }
+          })
+          .eq("reference", reference);
+        if (error) throw error;
+      } else {
+        const response = await fetch('/api/vote-transaction', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reference,
+            updates: {
+              status: "completed",
+              metadata: {
+                ...paymentDetails,
+                completed_at: new Date().toISOString()
+              }
+            }
+          }),
+        });
+        if (!response.ok) {
+          const json = await response.json();
+          throw new Error(json.error);
+        }
       }
-
       console.log("Transaction completed:", reference);
     } catch (error) {
       console.error("Error completing transaction:", error);
@@ -202,26 +221,50 @@ export default function VoteSection({ candidate }) {
     }
   };
 
+  // Helper to mark transaction as failed (cancelled)
+  const failTransaction = async (reference, reason = 'user_cancelled') => {
+    try {
+      if (user) {
+        await supabase
+          .from("vote_transactions")
+          .update({
+            status: "failed",
+            metadata: { cancelled_at: new Date().toISOString(), reason }
+          })
+          .eq("reference", reference);
+      } else {
+        await fetch('/api/vote-transaction', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reference,
+            updates: {
+              status: "failed",
+              metadata: { cancelled_at: new Date().toISOString(), reason }
+            }
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("Error failing transaction:", err);
+    }
+  };
+
   const handleWalletVote = async () => {
     if (!selectedPackage || !user) return;
 
     setIsProcessing(true);
-
     try {
-      // Check wallet balance
       if (walletBalance < selectedPackage.price_ngn) {
         alert(`Insufficient balance. You have ${formatPrice(walletBalance)} but need ${formatPrice(selectedPackage.price_ngn)}`);
         setIsProcessing(false);
         return;
       }
 
-      // Create pending transaction
       const result = await createPendingTransaction('wallet', 'NGN');
       if (!result) throw new Error("Failed to create transaction");
-      
       const { transaction, reference } = result;
 
-      // Deduct from wallet
       const { error: deductError } = await supabase
         .from("wallets")
         .update({ 
@@ -229,24 +272,18 @@ export default function VoteSection({ candidate }) {
           updated_at: new Date().toISOString()
         })
         .eq("user_id", user.id);
-
       if (deductError) throw deductError;
 
-      // Complete transaction
       await completeTransaction(reference, {
         wallet_deduction: true,
         balance_after: walletBalance - selectedPackage.price_ngn,
         transaction_id: transaction.id
       });
 
-      // Update local wallet balance
       setWalletBalance(prev => prev - selectedPackage.price_ngn);
-
-      // Success!
       setIsProcessing(false);
       setShowPaymentModal(false);
       setShowSuccessModal(true);
-
     } catch (error) {
       console.error("Vote error:", error);
       alert(error.message || "Vote failed. Try again.");
@@ -258,20 +295,15 @@ export default function VoteSection({ candidate }) {
     if (!selectedPackage) return;
 
     setIsProcessing(true);
-
     try {
-      // Create pending transaction
       const result = await createPendingTransaction('paystack', 'NGN');
       if (!result) throw new Error("Failed to create transaction");
-      
       const { transaction, reference } = result;
 
-      // Check if Paystack is loaded
       if (!window.PaystackPop) {
         throw new Error("Paystack not loaded. Please refresh the page.");
       }
 
-      // Initialize Paystack payment
       const handler = window.PaystackPop.setup({
         key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
         email: user?.email || 'guest@example.com',
@@ -288,7 +320,6 @@ export default function VoteSection({ candidate }) {
         },
         callback: function(response) {
           console.log("Paystack callback received:", response);
-          
           completeTransaction(response.reference, {
             paystack_ref: response.trxref,
             status: 'success',
@@ -305,29 +336,10 @@ export default function VoteSection({ candidate }) {
         },
         onClose: function() {
           console.log("Paystack closed");
-          
-          supabase
-            .from("vote_transactions")
-            .update({ 
-              status: "failed",
-              metadata: {
-                cancelled_at: new Date().toISOString(),
-                reason: 'user_cancelled'
-              }
-            })
-            .eq("reference", reference)
-            .then(() => {
-              setIsProcessing(false);
-            })
-            .catch(err => {
-              console.error("Error updating cancelled transaction:", err);
-              setIsProcessing(false);
-            });
+          failTransaction(reference, 'user_cancelled').finally(() => setIsProcessing(false));
         }
       });
-      
       handler.openIframe();
-
     } catch (error) {
       console.error("Paystack error:", error);
       alert(error.message || "Payment initialization failed. Please try again.");
@@ -339,11 +351,8 @@ export default function VoteSection({ candidate }) {
     if (!selectedPackage) return;
 
     setIsProcessing(true);
-
     try {
-      // Check if PayPal is loaded
       if (!window.paypal) {
-        // Load PayPal dynamically
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
           script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&currency=USD`;
@@ -354,13 +363,10 @@ export default function VoteSection({ candidate }) {
         });
       }
 
-      // Create pending transaction
       const result = await createPendingTransaction('paypal', 'USD');
       if (!result) throw new Error("Failed to create transaction");
-      
       const { transaction, reference } = result;
 
-      // Create PayPal order
       const response = await fetch('/api/create-paypal-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -377,42 +383,21 @@ export default function VoteSection({ candidate }) {
         })
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('PayPal order creation failed:', errorText);
-        throw new Error('Failed to create PayPal order');
-      }
-
+      if (!response.ok) throw new Error('Failed to create PayPal order');
       const order = await response.json();
 
       if (order.id) {
-        // Clear any existing PayPal buttons
         const container = document.getElementById('paypal-button-container');
         if (container) container.innerHTML = '';
-        
-        // Render PayPal buttons
         window.paypal.Buttons({
-          createOrder: function() {
-            return order.id;
-          },
-          onApprove: function(data) {
-            console.log("PayPal payment approved:", data);
-            
-            // Capture payment
+          createOrder: () => order.id,
+          onApprove: (data) => {
             fetch('/api/capture-paypal-order', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ 
-                orderID: data.orderID,
-                reference: reference
-              })
+              body: JSON.stringify({ orderID: data.orderID, reference })
             })
-            .then(res => {
-              if (!res.ok) {
-                throw new Error('Failed to capture payment');
-              }
-              return res.json();
-            })
+            .then(res => res.json())
             .then(captureData => {
               if (captureData.status === 'COMPLETED') {
                 return completeTransaction(reference, {
@@ -420,12 +405,13 @@ export default function VoteSection({ candidate }) {
                   paypal_capture_id: captureData.purchase_units[0].payments.captures[0].id,
                   status: 'completed',
                   transaction_id: transaction.id
-                }).then(() => {
-                  setIsProcessing(false);
-                  setShowPaymentModal(false);
-                  setShowSuccessModal(true);
                 });
               }
+            })
+            .then(() => {
+              setIsProcessing(false);
+              setShowPaymentModal(false);
+              setShowSuccessModal(true);
             })
             .catch(error => {
               console.error("Error capturing PayPal payment:", error);
@@ -433,27 +419,10 @@ export default function VoteSection({ candidate }) {
               setIsProcessing(false);
             });
           },
-          onCancel: function() {
-            console.log("PayPal payment cancelled");
-            supabase
-              .from("vote_transactions")
-              .update({ 
-                status: "failed",
-                metadata: {
-                  cancelled_at: new Date().toISOString(),
-                  reason: 'user_cancelled'
-                }
-              })
-              .eq("reference", reference)
-              .then(() => {
-                setIsProcessing(false);
-              })
-              .catch(err => {
-                console.error("Error updating cancelled transaction:", err);
-                setIsProcessing(false);
-              });
+          onCancel: () => {
+            failTransaction(reference, 'user_cancelled').finally(() => setIsProcessing(false));
           },
-          onError: function(err) {
+          onError: (err) => {
             console.error("PayPal error:", err);
             alert("PayPal payment failed. Please try again.");
             setIsProcessing(false);
@@ -462,7 +431,6 @@ export default function VoteSection({ candidate }) {
       } else {
         throw new Error("Failed to create PayPal order");
       }
-
     } catch (error) {
       console.error("PayPal error:", error);
       alert(error.message || "Payment initialization failed. Please try again.");
@@ -489,8 +457,6 @@ export default function VoteSection({ candidate }) {
               Support <span className="text-red-400">{candidate?.name}</span>
             </h2>
             <p className="text-xs md:text-sm text-gray-400">Choose your vote package below</p>
-            
-            {/* Wallet Balance - Only for auth users */}
             {user && (
               <div className="mt-2 inline-flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-700">
                 <span className="text-xs text-gray-400">Wallet:</span>
@@ -539,39 +505,22 @@ export default function VoteSection({ candidate }) {
                   pkg.popular ? 'ring-2 ring-red-500 bg-gradient-to-br from-gray-800 to-red-900/30' : ''
                 }`}
               >
-                {/* Discount Badge */}
                 {pkg.discount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 md:-top-2 md:-right-2 bg-gradient-to-r from-red-500 to-rose-500 text-white text-[8px] md:text-[10px] w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center font-bold shadow-sm z-10">
                     {pkg.discount}%
                   </span>
                 )}
-                
-                {/* Popular Badge */}
                 {(pkg.label === 'CLOK' || pkg.label === 'THOR' || pkg.label === 'WAR' || pkg.label === 'GOZZ') && (
                   <span className="absolute -top-1.5 -right-1.5 md:-top-2 md:-right-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-[8px] md:text-[10px] w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center font-bold shadow-sm z-10">
                     ★
                   </span>
                 )}
-                
-                {/* Icon */}
                 <div className="text-base md:text-xl mb-0.5 md:mb-1 text-gray-300">{pkg.icon}</div>
-                
-                {/* Label */}
-                <div className="font-bold text-[10px] md:text-sm text-white mb-0.5 truncate">
-                  {pkg.label}
-                </div>
-                
-                {/* Points */}
+                <div className="font-bold text-[10px] md:text-sm text-white mb-0.5 truncate">{pkg.label}</div>
                 <div className="text-sm md:text-base font-extrabold text-red-400">
                   {pkg.points < 1000 ? pkg.points : (pkg.points/1000).toFixed(0) + 'k'}
                 </div>
-                
-                {/* "votes" text */}
-                <div className="text-[8px] md:text-[10px] text-gray-500 mb-0.5 md:mb-1">
-                  votes
-                </div>
-                
-                {/* Price */}
+                <div className="text-[8px] md:text-[10px] text-gray-500 mb-0.5 md:mb-1">votes</div>
                 <div className="bg-gray-900/80 backdrop-blur-sm rounded py-0.5 md:py-1 px-0.5 border border-gray-700">
                   {pkg.discount > 0 ? (
                     <div className="flex flex-col items-center">
@@ -598,14 +547,13 @@ export default function VoteSection({ candidate }) {
             ))}
           </div>
 
-          {/* Helper text */}
           <p className="text-center text-[10px] md:text-xs text-gray-500 mt-3 md:mt-4">
             ⚡ Premium packages: THOR (5% off), WAR & GOZZ (10% off)
           </p>
         </div>
       </section>
 
-      {/* Payment Method Modal - FIXED: Properly sized for PayPal */}
+      {/* Payment Method Modal */}
       <AnimatePresence>
         {showPaymentModal && selectedPackage && (
           <motion.div
@@ -622,24 +570,18 @@ export default function VoteSection({ candidate }) {
               exit={{ scale: 0.9, y: 10 }}
               className="bg-gray-900 rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-gray-800 max-h-[85vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
-              style={{ maxHeight: '85vh', overflowY: 'auto' }}
             >
               <div className="flex items-center justify-center mb-4">
                 <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center text-2xl">
                   {selectedPackage.icon}
                 </div>
               </div>
-              
-              <h3 className="text-lg font-bold text-white mb-1 text-center">
-                Choose Payment Method
-              </h3>
-              
+              <h3 className="text-lg font-bold text-white mb-1 text-center">Choose Payment Method</h3>
               <p className="text-xs text-gray-400 mb-4 text-center">
                 {selectedPackage.packageName} • {selectedPackage.points.toLocaleString()} votes
               </p>
 
               <div className="space-y-2 mb-4">
-                {/* Wallet Option - Only for logged in users */}
                 {user && (
                   <button
                     onClick={handleWalletVote}
@@ -649,22 +591,14 @@ export default function VoteSection({ candidate }) {
                     <span className="text-xl">{PaymentIcons.wallet}</span>
                     <div className="flex-1 text-left">
                       <div className="text-sm font-semibold text-white">Pay with Wallet</div>
-                      <div className="text-xs text-gray-400">
-                        Balance: {formatPrice(walletBalance)}
-                      </div>
+                      <div className="text-xs text-gray-400">Balance: {formatPrice(walletBalance)}</div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-bold text-green-400">
-                        {formatPrice(selectedPackage.price_ngn)}
-                      </div>
-                      {walletBalance < selectedPackage.price_ngn && (
-                        <div className="text-[10px] text-red-400">Insufficient</div>
-                      )}
+                      <div className="text-sm font-bold text-green-400">{formatPrice(selectedPackage.price_ngn)}</div>
+                      {walletBalance < selectedPackage.price_ngn && <div className="text-[10px] text-red-400">Insufficient</div>}
                     </div>
                   </button>
                 )}
-
-                {/* Paystack Option (NGN) */}
                 <button
                   onClick={handlePaystackPayment}
                   className="w-full bg-gray-800 hover:bg-gray-750 p-3 rounded-xl border border-gray-700 flex items-center gap-3 transition-all group"
@@ -675,14 +609,10 @@ export default function VoteSection({ candidate }) {
                     <div className="text-xs text-gray-400">Visa, Mastercard, Bank Transfer</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-white">
-                      {formatPrice(selectedPackage.price_ngn, 'NGN')}
-                    </div>
+                    <div className="text-sm font-bold text-white">{formatPrice(selectedPackage.price_ngn, 'NGN')}</div>
                     <div className="text-[10px] text-gray-500">NGN</div>
                   </div>
                 </button>
-
-                {/* PayPal Option (USD) */}
                 <button
                   onClick={handlePayPalPayment}
                   className="w-full bg-gray-800 hover:bg-gray-750 p-3 rounded-xl border border-gray-700 flex items-center gap-3 transition-all group"
@@ -693,9 +623,7 @@ export default function VoteSection({ candidate }) {
                     <div className="text-xs text-gray-400">International cards, PayPal balance</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-white">
-                      ${selectedPackage.price_usd}
-                    </div>
+                    <div className="text-sm font-bold text-white">${selectedPackage.price_usd}</div>
                     <div className="text-[10px] text-gray-500">USD</div>
                   </div>
                 </button>
@@ -707,15 +635,13 @@ export default function VoteSection({ candidate }) {
               >
                 Cancel
               </button>
-
-              {/* PayPal Button Container - with proper spacing */}
               <div id="paypal-button-container" className="mt-2 pt-2 border-t border-gray-800"></div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Success Modal - REMOVED SEND GIFT BUTTON */}
+      {/* Success Modal */}
       <AnimatePresence>
         {showSuccessModal && (
           <motion.div
@@ -733,27 +659,23 @@ export default function VoteSection({ candidate }) {
               className="bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center border border-gray-800"
               onClick={e => e.stopPropagation()}
             >
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">
-                🎉
-              </div>
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">🎉</div>
               <h3 className="text-xl font-bold text-white mb-1">Votes Sent!</h3>
               <p className="text-sm text-gray-400 mb-4">
                 Thank you for supporting <span className="font-semibold text-red-400">{candidate.name}</span>!
               </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowSuccessModal(false)}
-                  className="flex-1 bg-gradient-to-r from-red-500 to-rose-500 text-white py-3 rounded-xl text-sm font-semibold hover:from-red-600 hover:to-rose-600 transition-all shadow-lg"
-                >
-                  Close
-                </button>
-              </div>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full bg-gradient-to-r from-red-500 to-rose-500 text-white py-3 rounded-xl text-sm font-semibold hover:from-red-600 hover:to-rose-600 transition-all shadow-lg"
+              >
+                Close
+              </button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Gift Prompt Modal */}
+      {/* Gift Prompt Modal – restored exactly as you had it */}
       <AnimatePresence>
         {showGiftPrompt && (
           <motion.div
@@ -771,9 +693,7 @@ export default function VoteSection({ candidate }) {
               className="bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center border border-gray-800"
               onClick={e => e.stopPropagation()}
             >
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">
-                🎁
-              </div>
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">🎁</div>
               <h3 className="text-xl font-bold text-white mb-1">Send a Gift?</h3>
               <p className="text-sm text-gray-400 mb-4">
                 Show extra support to <span className="font-semibold text-red-400">{candidate.name}</span> with a special gift
