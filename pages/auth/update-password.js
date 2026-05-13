@@ -20,15 +20,15 @@ export default function UpdatePasswordPage() {
   const [validToken, setValidToken] = useState(false);
   const [checking, setChecking] = useState(true);
 
-  // Verify token via API – no direct Supabase call
+  // Verify token only when token and email are available
   useEffect(() => {
-    const verifyToken = async () => {
-      if (!token || !email) {
-        setError("Invalid reset link. Please request a new one.");
-        setChecking(false);
-        return;
-      }
+    // If parameters are still null, keep checking state (do nothing yet)
+    if (!token || !email) {
+      // No error – just stay in loading state
+      return;
+    }
 
+    const verifyToken = async () => {
       try {
         const res = await fetch('/api/verify-token', {
           method: 'POST',
@@ -36,11 +36,11 @@ export default function UpdatePasswordPage() {
           body: JSON.stringify({ token, email }),
         });
         const data = await res.json();
-        console.log("Verify response:", res.status, data); // ✅ Added debug log
+        console.log("Verify response:", res.status, data);
 
         if (res.ok && data.valid) {
           setValidToken(true);
-          setError(""); // Clear any previous error
+          setError("");
         } else {
           setError(data.error || "Invalid reset link");
           setValidToken(false);
@@ -99,7 +99,8 @@ export default function UpdatePasswordPage() {
     }
   };
 
-  if (checking) {
+  // Show loading spinner until token/email are present and verification is done
+  if (!token || !email || checking) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-700 via-rose-100 to-red-800">
         <div className="text-white">Verifying reset link...</div>
