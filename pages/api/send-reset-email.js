@@ -5,8 +5,28 @@ import crypto from "crypto";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // Use service role key!
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+// Fetch ALL users from Supabase Auth (handles pagination)
+async function getAllUsers() {
+  let allUsers = [];
+  let page = 1;
+  const perPage = 100; // max allowed
+
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page: page,
+      perPage: perPage,
+    });
+    if (error) throw error;
+    if (!data.users || data.users.length === 0) break;
+    allUsers = [...allUsers, ...data.users];
+    if (data.users.length < perPage) break;
+    page++;
+  }
+  return allUsers;
+}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -14,32 +34,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email } = req.body;
-
+    let { email } = req.body;
+    email = email?.trim().toLowerCase();
     if (!email) {
       return res.status(400).json({ error: "Email is required" });
     }
 
-    // Check if user exists in Supabase
-    const { data: { users }, error: userError } = await supabase.auth.admin.listUsers();
-    
-    if (userError) {
-      return res.status(500).json({ error: "Error finding user" });
-    }
+    // Fetch all users (paginated)
+    const allUsers = await getAllUsers();
 
-    const user = users.find(u => u.email === email);
-    
+    // Find user (case‑insensitive)
+    const user = allUsers.find(u => u.email?.trim().toLowerCase() === email);
+
     if (!user) {
-      // For security, still return success even if user doesn't exist
+      // Security: always return success even if user not found
       return res.status(200).json({ message: "If an account exists, a reset link will be sent" });
     }
 
-    // Generate a unique reset token
+    // Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetTokenExpiry = new Date();
-    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1); // 1 hour expiry
+    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1);
 
-    // Store token in your database
+    // Store token in password_resets table
     const { error: tokenError } = await supabase
       .from('password_resets')
       .insert({
@@ -50,15 +67,15 @@ export default async function handler(req, res) {
       });
 
     if (tokenError) {
-      console.error("Token storage error:", tokenError);
-      return res.status(500).json({ error: "Failed to process reset request" });
+      console.error("Token insertion error:", tokenError);
+      return res.status(200).json({ message: "If an account exists, a reset link will be sent" });
     }
 
-    // Create reset URL
+    // Build reset URL
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
     const resetUrl = `${baseUrl}/auth/update-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
-    // Send custom email with Resend
+    // ---------- FULL HTML EMAIL WITH LOGO AND MESSAGE (restored) ----------
     const html = `
       <!DOCTYPE html>
       <html>
@@ -189,6 +206,7 @@ export default async function handler(req, res) {
       </html>
     `;
 
+    // Send via Resend
     const emailResponse = await resend.emails.send({
       from: "hello@lovemateshow.com",
       to: email,
@@ -196,11 +214,15 @@ export default async function handler(req, res) {
       html,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    if (emailResponse.error) {
+      console.error("Resend error:", emailResponse.error);
+      return res.status(200).json({ message: "If an account exists, a reset link will be sent" });
+    }
+
     return res.status(200).json({ message: "Password reset email sent" });
 
   } catch (err) {
-    console.error("API error:", err);
-    return res.status(500).json({ error: err.message || "Failed to send reset email" });
+    console.error("Unhandled error:", err);
+    return res.status(200).json({ message: "If an account exists, a reset link will be sent" });
   }
 }
