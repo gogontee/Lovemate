@@ -36,6 +36,7 @@ export default function UpdatePasswordPage() {
           body: JSON.stringify({ token, email }),
         });
         const data = await res.json();
+        console.log("Verify response:", res.status, data); // ✅ Added debug log
 
         if (res.ok && data.valid) {
           setValidToken(true);
@@ -45,6 +46,7 @@ export default function UpdatePasswordPage() {
           setValidToken(false);
         }
       } catch (err) {
+        console.error("Verification error:", err);
         setError("Unable to verify reset link. Please try again.");
         setValidToken(false);
       } finally {
