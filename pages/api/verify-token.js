@@ -1,3 +1,4 @@
+// pages/api/verify-token.js
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -12,12 +13,13 @@ export default async function handler(req, res) {
 
   try {
     const { token, email } = req.body;
+    const normalizedEmail = email.trim().toLowerCase();
 
     const { data, error } = await supabase
       .from('password_resets')
       .select('expires_at, used')
       .eq('token', token)
-      .eq('email', email)
+      .eq('email', normalizedEmail)
       .eq('used', false)
       .single();
 
@@ -32,6 +34,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ valid: true });
   } catch (err) {
+    console.error("Verify error:", err);
     return res.status(500).json({ valid: false, error: "Server error" });
   }
 }
