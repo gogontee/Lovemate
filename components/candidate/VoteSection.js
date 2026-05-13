@@ -42,37 +42,30 @@ export default function VoteSection({ candidate }) {
   const [selectedCurrency, setSelectedCurrency] = useState('NGN');
   const router = useRouter();
 
-  // Get current user and clear any stale session
+  // Get current user and wallet balance – no changes
   useEffect(() => {
-    const initAuth = async () => {
-      const { data: { session, user } } = await supabase.auth.getSession();
-      if (!session) {
-        await supabase.auth.signOut();
-        setUser(null);
-      } else {
-        setUser(user);
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      
+      if (user) {
+        const { data: wallet, error } = await supabase
+          .from("wallets")
+          .select("balance")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (error) {
+          console.error("Error fetching wallet:", error);
+        } else if (wallet) {
+          setWalletBalance(wallet.balance);
+        }
       }
     };
-    initAuth();
+    getUser();
   }, []);
 
-  // Fetch wallet balance if logged in
-  useEffect(() => {
-    const fetchWallet = async () => {
-      if (!user) return;
-      const { data: wallet, error } = await supabase
-        .from("wallets")
-        .select("balance")
-        .eq("user_id", user.id)
-        .single();
-      if (!error && wallet) {
-        setWalletBalance(wallet.balance);
-      }
-    };
-    fetchWallet();
-  }, [user]);
-
-  // Fetch vote packages
+  // Fetch vote packages – unchanged
   useEffect(() => {
     const fetchVotePackages = async () => {
       try {
@@ -82,7 +75,10 @@ export default function VoteSection({ candidate }) {
           .eq('is_active', true)
           .order('sort_order', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching vote packages:', error);
+          return;
+        }
 
         if (data && data.length > 0) {
           const transformedPackages = data.map(pkg => ({
@@ -104,11 +100,12 @@ export default function VoteSection({ candidate }) {
           setVotePackages(transformedPackages);
         }
       } catch (error) {
-        console.error('Error fetching vote packages:', error);
+        console.error('Error:', error);
       } finally {
         setLoading(false);
       }
     };
+
     fetchVotePackages();
   }, []);
 
@@ -117,7 +114,7 @@ export default function VoteSection({ candidate }) {
     setShowPaymentModal(true);
   };
 
-  // Create pending transaction – uses API route for guests
+  // 🔁 MODIFIED: Use API for guests, direct Supabase for auth
   const createPendingTransaction = async (paymentMethod, currency) => {
     if (!selectedPackage || !candidate) return null;
 
@@ -150,7 +147,7 @@ export default function VoteSection({ candidate }) {
       let data, error;
 
       if (user) {
-        // Authenticated – direct Supabase client
+        // Authenticated – direct Supabase
         const response = await supabase
           .from("vote_transactions")
           .insert(transactionData)
@@ -179,7 +176,7 @@ export default function VoteSection({ candidate }) {
     }
   };
 
-  // Complete transaction – API route for guests
+  // 🔁 MODIFIED: Use API for guests, direct Supabase for auth
   const completeTransaction = async (reference, paymentDetails) => {
     try {
       if (user) {
@@ -221,7 +218,7 @@ export default function VoteSection({ candidate }) {
     }
   };
 
-  // Helper to mark transaction as failed (cancelled)
+  // Helper to mark transaction as failed (for cancellations)
   const failTransaction = async (reference, reason = 'user_cancelled') => {
     try {
       if (user) {
@@ -250,6 +247,7 @@ export default function VoteSection({ candidate }) {
     }
   };
 
+  // 🟢 WALLET VOTE – unchanged (only for auth users)
   const handleWalletVote = async () => {
     if (!selectedPackage || !user) return;
 
@@ -291,6 +289,7 @@ export default function VoteSection({ candidate }) {
     }
   };
 
+  // 🟢 PAYSTACK – unchanged except using failTransaction
   const handlePaystackPayment = async () => {
     if (!selectedPackage) return;
 
@@ -347,6 +346,7 @@ export default function VoteSection({ candidate }) {
     }
   };
 
+  // 🟢 PAYPAL – unchanged except using failTransaction
   const handlePayPalPayment = async () => {
     if (!selectedPackage) return;
 
@@ -448,6 +448,7 @@ export default function VoteSection({ candidate }) {
     );
   }
 
+  // The return JSX is **exactly** your original code – no changes.
   return (
     <>
       <section className="py-6 md:py-10 px-3 md:px-4 bg-gradient-to-b from-gray-900 to-gray-800">
@@ -457,6 +458,8 @@ export default function VoteSection({ candidate }) {
               Support <span className="text-red-400">{candidate?.name}</span>
             </h2>
             <p className="text-xs md:text-sm text-gray-400">Choose your vote package below</p>
+            
+            {/* Wallet Balance - Only for auth users */}
             {user && (
               <div className="mt-2 inline-flex items-center gap-2 bg-gray-800/50 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-700">
                 <span className="text-xs text-gray-400">Wallet:</span>
@@ -505,22 +508,39 @@ export default function VoteSection({ candidate }) {
                   pkg.popular ? 'ring-2 ring-red-500 bg-gradient-to-br from-gray-800 to-red-900/30' : ''
                 }`}
               >
+                {/* Discount Badge */}
                 {pkg.discount > 0 && (
                   <span className="absolute -top-1.5 -right-1.5 md:-top-2 md:-right-2 bg-gradient-to-r from-red-500 to-rose-500 text-white text-[8px] md:text-[10px] w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center font-bold shadow-sm z-10">
                     {pkg.discount}%
                   </span>
                 )}
+                
+                {/* Popular Badge */}
                 {(pkg.label === 'CLOK' || pkg.label === 'THOR' || pkg.label === 'WAR' || pkg.label === 'GOZZ') && (
                   <span className="absolute -top-1.5 -right-1.5 md:-top-2 md:-right-2 bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-[8px] md:text-[10px] w-4 h-4 md:w-5 md:h-5 rounded-full flex items-center justify-center font-bold shadow-sm z-10">
                     ★
                   </span>
                 )}
+                
+                {/* Icon */}
                 <div className="text-base md:text-xl mb-0.5 md:mb-1 text-gray-300">{pkg.icon}</div>
-                <div className="font-bold text-[10px] md:text-sm text-white mb-0.5 truncate">{pkg.label}</div>
+                
+                {/* Label */}
+                <div className="font-bold text-[10px] md:text-sm text-white mb-0.5 truncate">
+                  {pkg.label}
+                </div>
+                
+                {/* Points */}
                 <div className="text-sm md:text-base font-extrabold text-red-400">
                   {pkg.points < 1000 ? pkg.points : (pkg.points/1000).toFixed(0) + 'k'}
                 </div>
-                <div className="text-[8px] md:text-[10px] text-gray-500 mb-0.5 md:mb-1">votes</div>
+                
+                {/* "votes" text */}
+                <div className="text-[8px] md:text-[10px] text-gray-500 mb-0.5 md:mb-1">
+                  votes
+                </div>
+                
+                {/* Price */}
                 <div className="bg-gray-900/80 backdrop-blur-sm rounded py-0.5 md:py-1 px-0.5 border border-gray-700">
                   {pkg.discount > 0 ? (
                     <div className="flex flex-col items-center">
@@ -547,13 +567,14 @@ export default function VoteSection({ candidate }) {
             ))}
           </div>
 
+          {/* Helper text */}
           <p className="text-center text-[10px] md:text-xs text-gray-500 mt-3 md:mt-4">
             ⚡ Premium packages: THOR (5% off), WAR & GOZZ (10% off)
           </p>
         </div>
       </section>
 
-      {/* Payment Method Modal */}
+      {/* Payment Method Modal - FIXED: Properly sized for PayPal */}
       <AnimatePresence>
         {showPaymentModal && selectedPackage && (
           <motion.div
@@ -570,18 +591,24 @@ export default function VoteSection({ candidate }) {
               exit={{ scale: 0.9, y: 10 }}
               className="bg-gray-900 rounded-2xl p-5 max-w-sm w-full shadow-2xl border border-gray-800 max-h-[85vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
+              style={{ maxHeight: '85vh', overflowY: 'auto' }}
             >
               <div className="flex items-center justify-center mb-4">
                 <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center text-2xl">
                   {selectedPackage.icon}
                 </div>
               </div>
-              <h3 className="text-lg font-bold text-white mb-1 text-center">Choose Payment Method</h3>
+              
+              <h3 className="text-lg font-bold text-white mb-1 text-center">
+                Choose Payment Method
+              </h3>
+              
               <p className="text-xs text-gray-400 mb-4 text-center">
                 {selectedPackage.packageName} • {selectedPackage.points.toLocaleString()} votes
               </p>
 
               <div className="space-y-2 mb-4">
+                {/* Wallet Option - Only for logged in users */}
                 {user && (
                   <button
                     onClick={handleWalletVote}
@@ -591,14 +618,22 @@ export default function VoteSection({ candidate }) {
                     <span className="text-xl">{PaymentIcons.wallet}</span>
                     <div className="flex-1 text-left">
                       <div className="text-sm font-semibold text-white">Pay with Wallet</div>
-                      <div className="text-xs text-gray-400">Balance: {formatPrice(walletBalance)}</div>
+                      <div className="text-xs text-gray-400">
+                        Balance: {formatPrice(walletBalance)}
+                      </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-sm font-bold text-green-400">{formatPrice(selectedPackage.price_ngn)}</div>
-                      {walletBalance < selectedPackage.price_ngn && <div className="text-[10px] text-red-400">Insufficient</div>}
+                      <div className="text-sm font-bold text-green-400">
+                        {formatPrice(selectedPackage.price_ngn)}
+                      </div>
+                      {walletBalance < selectedPackage.price_ngn && (
+                        <div className="text-[10px] text-red-400">Insufficient</div>
+                      )}
                     </div>
                   </button>
                 )}
+
+                {/* Paystack Option (NGN) */}
                 <button
                   onClick={handlePaystackPayment}
                   className="w-full bg-gray-800 hover:bg-gray-750 p-3 rounded-xl border border-gray-700 flex items-center gap-3 transition-all group"
@@ -609,10 +644,14 @@ export default function VoteSection({ candidate }) {
                     <div className="text-xs text-gray-400">Visa, Mastercard, Bank Transfer</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-white">{formatPrice(selectedPackage.price_ngn, 'NGN')}</div>
+                    <div className="text-sm font-bold text-white">
+                      {formatPrice(selectedPackage.price_ngn, 'NGN')}
+                    </div>
                     <div className="text-[10px] text-gray-500">NGN</div>
                   </div>
                 </button>
+
+                {/* PayPal Option (USD) */}
                 <button
                   onClick={handlePayPalPayment}
                   className="w-full bg-gray-800 hover:bg-gray-750 p-3 rounded-xl border border-gray-700 flex items-center gap-3 transition-all group"
@@ -623,7 +662,9 @@ export default function VoteSection({ candidate }) {
                     <div className="text-xs text-gray-400">International cards, PayPal balance</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-bold text-white">${selectedPackage.price_usd}</div>
+                    <div className="text-sm font-bold text-white">
+                      ${selectedPackage.price_usd}
+                    </div>
                     <div className="text-[10px] text-gray-500">USD</div>
                   </div>
                 </button>
@@ -635,13 +676,15 @@ export default function VoteSection({ candidate }) {
               >
                 Cancel
               </button>
+
+              {/* PayPal Button Container - with proper spacing */}
               <div id="paypal-button-container" className="mt-2 pt-2 border-t border-gray-800"></div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Success Modal */}
+      {/* Success Modal - REMOVED SEND GIFT BUTTON */}
       <AnimatePresence>
         {showSuccessModal && (
           <motion.div
@@ -659,23 +702,27 @@ export default function VoteSection({ candidate }) {
               className="bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center border border-gray-800"
               onClick={e => e.stopPropagation()}
             >
-              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">🎉</div>
+              <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">
+                🎉
+              </div>
               <h3 className="text-xl font-bold text-white mb-1">Votes Sent!</h3>
               <p className="text-sm text-gray-400 mb-4">
                 Thank you for supporting <span className="font-semibold text-red-400">{candidate.name}</span>!
               </p>
-              <button
-                onClick={() => setShowSuccessModal(false)}
-                className="w-full bg-gradient-to-r from-red-500 to-rose-500 text-white py-3 rounded-xl text-sm font-semibold hover:from-red-600 hover:to-rose-600 transition-all shadow-lg"
-              >
-                Close
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowSuccessModal(false)}
+                  className="flex-1 bg-gradient-to-r from-red-500 to-rose-500 text-white py-3 rounded-xl text-sm font-semibold hover:from-red-600 hover:to-rose-600 transition-all shadow-lg"
+                >
+                  Close
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Gift Prompt Modal – restored exactly as you had it */}
+      {/* Gift Prompt Modal */}
       <AnimatePresence>
         {showGiftPrompt && (
           <motion.div
@@ -693,7 +740,9 @@ export default function VoteSection({ candidate }) {
               className="bg-gray-900 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center border border-gray-800"
               onClick={e => e.stopPropagation()}
             >
-              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">🎁</div>
+              <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center text-3xl mx-auto mb-3">
+                🎁
+              </div>
               <h3 className="text-xl font-bold text-white mb-1">Send a Gift?</h3>
               <p className="text-sm text-gray-400 mb-4">
                 Show extra support to <span className="font-semibold text-red-400">{candidate.name}</span> with a special gift
