@@ -10,9 +10,7 @@ const FALLBACK_IMAGE = "https://via.placeholder.com/400x400?text=Image+Missing";
 // Helper: ensure we have a full public URL
 function getFullImageUrl(url) {
   if (!url) return FALLBACK_IMAGE;
-  // Already a full URL?
   if (url.startsWith("http")) return url;
-  // Otherwise, assume it's a filename and build the Supabase URL
   return `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${url}`;
 }
 
@@ -22,12 +20,16 @@ export default function CandidateCard({
   country,
   votes: initialVotes,
   imageUrl,
+  secret, // new prop: 'hidevote', 'hideall', or null/undefined
 }) {
   const [votes, setVotes] = useState(initialVotes);
   const [imgSrc, setImgSrc] = useState(() => getFullImageUrl(imageUrl));
   const router = useRouter();
 
-  // Real-time vote updates
+  // Decide whether to show vote count
+  const shouldShowVotes = secret !== 'hidevote' && secret !== 'hideall';
+
+  // Real-time vote updates (still fetch even if hidden – the data stays current)
   useEffect(() => {
     const channel = supabase
       .channel("candidate-votes")
@@ -66,7 +68,7 @@ export default function CandidateCard({
       className="bg-rose-200 rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden p-4 border border-rose-300"
     >
       <div className="flex flex-col gap-3">
-        {/* Image – using unoptimized to bypass Next.js config issues */}
+        {/* Image */}
         <div className="w-full aspect-square relative overflow-hidden rounded-xl border-2 border-rose-500 bg-rose-100">
           <Image
             src={imgSrc}
@@ -77,24 +79,29 @@ export default function CandidateCard({
             quality={60}
             loading="lazy"
             onError={handleImageError}
-            unoptimized={true}   // 👈 Bypass Next.js image optimization – ensures it works now
+            unoptimized={true}
           />
         </div>
 
+        {/* Name and Country */}
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-semibold text-gray-800">{name}</h3>
           <p className="text-sm text-gray-600">{country}</p>
         </div>
 
-        <div className="flex justify-between items-center">
-          <span className="text-sm font-medium text-gray-700">Vote</span>
-          <span className="text-sm font-bold text-rose-700">{votes}</span>
-        </div>
+        {/* Vote count – only shown when secret is NOT hidevote/hideall */}
+        {shouldShowVotes && (
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-700">Vote</span>
+            <span className="text-sm font-bold text-rose-700">{votes}</span>
+          </div>
+        )}
 
+        {/* View Candidate button – responsive: smaller on mobile */}
         <div className="mt-2">
           <button
             onClick={goToCandidatePage}
-            className="w-full px-4 py-2 bg-white text-rose-700 hover:bg-rose-50 rounded-full text-sm font-semibold transition duration-300 shadow-sm border border-rose-300"
+            className="w-full px-4 py-1 sm:py-2 bg-white text-rose-700 hover:bg-rose-50 rounded-full text-xs sm:text-sm font-semibold transition duration-300 shadow-sm border border-rose-300"
           >
             View Candidate
           </button>

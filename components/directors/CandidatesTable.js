@@ -60,7 +60,8 @@ export default function CandidatesTable({ candidates }) {
                 <td className="px-3 py-2 text-gray-600 capitalize">{candidate.gender}</td>
                 <td className="px-3 py-2 font-bold text-red-600">{candidate.votes || 0}</td>
                 <td className="px-3 py-2 font-bold text-rose-600">{candidate.gifts || 0}</td>
-                <td className="px-3 py-2 font-mono text-xs bg-rose-50 px-2 py-1 rounded">{candidate.code}</td>
+                {/* Fixed: removed duplicate padding classes */}
+                <td className="font-mono text-xs bg-rose-50 px-2 py-1 rounded">{candidate.code}</td>
                 <td className="px-3 py-2">
                   {candidate.role === "Yes" ? (
                     <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs">

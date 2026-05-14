@@ -56,6 +56,7 @@ export default function CandidateManagement() {
     occupation: '',
     instagram_handle: '',
     gender: '',
+    secret: '', // new field
   });
   const [formError, setFormError] = useState('');
 
@@ -189,8 +190,6 @@ export default function CandidateManagement() {
 
     setUpdating(true);
     try {
-      // Use a dummy UUID that will never match any real candidate to bypass the "no filter" restriction
-      // This effectively updates every row because every real UUID is not equal to the dummy.
       const dummyUUID = '00000000-0000-0000-0000-000000000000';
       const { error } = await supabase
         .from('candidates')
@@ -204,6 +203,44 @@ export default function CandidateManagement() {
     } catch (error) {
       console.error('Error updating global visibility:', error);
       alert('Failed to update all candidates visibility');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // NEW: Bulk secret mode update
+  const setAllSecret = async (mode) => {
+    let secretValue = null;
+    let modeLabel = '';
+    if (mode === 'V') {
+      secretValue = 'hidevote';
+      modeLabel = 'HIDE VOTE (V)';
+    } else if (mode === 'A') {
+      secretValue = 'hideall';
+      modeLabel = 'HIDE ALL (A)';
+    } else {
+      secretValue = null;
+      modeLabel = 'NORMAL (N)';
+    }
+
+    const confirmMsg = `Set ALL candidates to ${modeLabel} mode?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setUpdating(true);
+    try {
+      const dummyUUID = '00000000-0000-0000-0000-000000000000';
+      const { error } = await supabase
+        .from('candidates')
+        .update({ secret: secretValue })
+        .neq('id', dummyUUID);
+
+      if (error) throw error;
+
+      setCandidates(prev => prev.map(c => ({ ...c, secret: secretValue })));
+      alert(`All candidates are now in ${modeLabel} mode.`);
+    } catch (error) {
+      console.error('Error updating global secret:', error);
+      alert('Failed to update all candidates secret mode');
     } finally {
       setUpdating(false);
     }
@@ -245,6 +282,7 @@ export default function CandidateManagement() {
       occupation: candidate.occupation || '',
       instagram_handle: candidate.instagram_handle || '',
       gender: candidate.gender || '',
+      secret: candidate.secret || '',
     });
     setShowEditModal(true);
   };
@@ -265,6 +303,7 @@ export default function CandidateManagement() {
         occupation: formData.occupation,
         instagram_handle: formData.instagram_handle,
         gender: formData.gender,
+        secret: formData.secret === '' ? null : formData.secret,
       };
 
       const { error } = await supabase
@@ -300,6 +339,13 @@ export default function CandidateManagement() {
     currentPage * itemsPerPage
   );
 
+  // Helper to display secret mode text
+  const getSecretLabel = (secret) => {
+    if (secret === 'hidevote') return 'Hide Vote';
+    if (secret === 'hideall') return 'Hide All';
+    return 'Normal';
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -310,7 +356,7 @@ export default function CandidateManagement() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Header with global visibility controls */}
+      {/* Header with global visibility controls and new secret controls */}
       <div className="bg-white/5 rounded-xl border border-white/10 p-3 sm:p-4">
         <div className="flex flex-wrap justify-between items-center gap-3">
           <div>
@@ -319,10 +365,11 @@ export default function CandidateManagement() {
               Candidate Management
             </h2>
             <p className="text-[10px] sm:text-xs text-white/40 mt-1">
-              Manage candidates, approve status, edit profiles, control visibility
+              Manage candidates, approve status, edit profiles, control visibility, and privacy modes
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            {/* Global visibility buttons */}
             <button
               onClick={() => setAllVisibility(true)}
               className="px-3 py-1.5 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-green-400 text-xs font-medium flex items-center gap-1 transition"
@@ -337,6 +384,34 @@ export default function CandidateManagement() {
               <EyeOff className="w-3 h-3" />
               Hide All
             </button>
+
+            {/* Separator */}
+            <div className="w-px h-6 bg-white/20 mx-1 hidden sm:block"></div>
+
+            {/* Bulk Secret Mode Toggle (V, A, N) */}
+            <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+              <button
+                onClick={() => setAllSecret('V')}
+                className="px-2 py-1 text-xs font-medium rounded bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 transition"
+                title="Hide vote count from non‑owners"
+              >
+                V (Hide Vote)
+              </button>
+              <button
+                onClick={() => setAllSecret('A')}
+                className="px-2 py-1 text-xs font-medium rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 transition"
+                title="Hide vote, gift, and worth counts from non‑owners"
+              >
+                A (Hide All)
+              </button>
+              <button
+                onClick={() => setAllSecret('N')}
+                className="px-2 py-1 text-xs font-medium rounded bg-gray-500/20 text-gray-300 hover:bg-gray-500/30 transition"
+                title="Show all counts to everyone (default)"
+              >
+                N (Normal)
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -402,13 +477,9 @@ export default function CandidateManagement() {
                   }`}
                   title={candidate.visibility ? 'Visible to public' : 'Hidden (only via code)'}
                 >
-                  {candidate.visibility ? (
-                    <Eye className="w-4 h-4" />
-                  ) : (
-                    <EyeOff className="w-4 h-4" />
-                  )}
+                  {candidate.visibility ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                 </button>
-                {/* Role toggle button (keep for redundancy) */}
+                {/* Role toggle button */}
                 <button
                   onClick={() => toggleRole(candidate, candidate.role === 'Yes' ? 'No' : 'Yes')}
                   disabled={updating}
@@ -419,11 +490,7 @@ export default function CandidateManagement() {
                   }`}
                   title="Toggle approved status"
                 >
-                  {candidate.role === 'Yes' ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    <X className="w-4 h-4" />
-                  )}
+                  {candidate.role === 'Yes' ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                 </button>
                 <button
                   onClick={() => deleteCandidate(candidate.id)}
@@ -472,6 +539,16 @@ export default function CandidateManagement() {
                 >
                   Toggle visibility
                 </button>
+              </div>
+
+              {/* NEW: Secret mode badge */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-white/40 flex items-center gap-1">
+                  <span className="text-[10px]">🔒 Privacy:</span>
+                  <span className={`${candidate.secret === 'hidevote' ? 'text-blue-300' : candidate.secret === 'hideall' ? 'text-purple-300' : 'text-gray-400'}`}>
+                    {getSecretLabel(candidate.secret)}
+                  </span>
+                </span>
               </div>
 
               <div className="text-xs text-white/60 space-y-1">
@@ -528,7 +605,7 @@ export default function CandidateManagement() {
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Modal – includes secret field */}
       <AnimatePresence>
         {showEditModal && editingCandidate && (
           <motion.div
@@ -653,6 +730,26 @@ export default function CandidateManagement() {
                   />
                 </div>
 
+                {/* NEW: Secret mode dropdown */}
+                <div>
+                  <label className="block text-xs text-white/60 mb-1">Privacy Mode (secret)</label>
+                  <select
+                    value={formData.secret}
+                    onChange={(e) => setFormData({ ...formData, secret: e.target.value })}
+                    className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white"
+                  >
+                    <option value="">Normal (show all counts)</option>
+                    <option value="hidevote">Hide Vote (hide vote count from non‑owners)</option>
+                    <option value="hideall">Hide All (hide vote, gift, and worth counts from non‑owners)</option>
+                  </select>
+                  <p className="text-[10px] text-white/40 mt-1">
+                    • Normal: everyone sees vote, gift, and worth counts.<br />
+                    • Hide Vote: only the profile owner sees vote count.<br />
+                    • Hide All: only the profile owner sees vote, gift, and worth counts.
+                  </p>
+                </div>
+
+                {/* Image upload section (unchanged) */}
                 <div>
                   <label className="block text-xs text-white/60 mb-2">Profile Image</label>
                   {formData.image_url ? (

@@ -18,28 +18,41 @@ function formatNaira(n) {
 }
 
 // Digital Stats Component - Integrated into Hero
-function DigitalStats({ candidate, formatNaira, onVoteClick, onGiftClick, onShareClick }) {
+function DigitalStats({ candidate, currentUser, formatNaira, onVoteClick, onGiftClick, onShareClick }) {
   const [animatedVotes, setAnimatedVotes] = useState(0);
   const [animatedGifts, setAnimatedGifts] = useState(0);
   const [animatedWorth, setAnimatedWorth] = useState(0);
+  
+  // Determine if current user is the owner of this profile
+  const isOwner = currentUser && candidate.user_id === currentUser.id;
+  const secret = candidate.secret; // 'hidevote', 'hideall', or null/other
+
+  // Helper to decide if a stat should be visible
+  const shouldShowVotes = () => {
+    if (secret === 'hidevote') return isOwner;
+    if (secret === 'hideall') return isOwner;
+    return true; // NULL or any other value – show to everyone
+  };
+  const shouldShowGifts = () => {
+    if (secret === 'hideall') return isOwner;
+    return true; // 'hidevote' does not hide gifts
+  };
+  const shouldShowWorth = () => {
+    if (secret === 'hideall') return isOwner;
+    return true;
+  };
 
   // Animate numbers when they change
   useEffect(() => {
-    if (candidate?.votes !== undefined) {
-      setAnimatedVotes(candidate.votes);
-    }
+    if (candidate?.votes !== undefined) setAnimatedVotes(candidate.votes);
   }, [candidate?.votes]);
 
   useEffect(() => {
-    if (candidate?.gifts !== undefined) {
-      setAnimatedGifts(candidate.gifts);
-    }
+    if (candidate?.gifts !== undefined) setAnimatedGifts(candidate.gifts);
   }, [candidate?.gifts]);
 
   useEffect(() => {
-    if (candidate?.gift_worth !== undefined) {
-      setAnimatedWorth(candidate.gift_worth);
-    }
+    if (candidate?.gift_worth !== undefined) setAnimatedWorth(candidate.gift_worth);
   }, [candidate?.gift_worth]);
 
   return (
@@ -51,47 +64,55 @@ function DigitalStats({ candidate, formatNaira, onVoteClick, onGiftClick, onShar
     >
       {/* Desktop: Bottom Right */}
       <div className="hidden md:flex gap-4 bg-black/30 backdrop-blur-md rounded-2xl p-4 border border-rose-500/30 shadow-2xl">
-        {/* Votes - Clickable */}
-        <button 
-          onClick={onVoteClick}
-          className="text-right hover:scale-105 transition-transform cursor-pointer group"
-        >
-          <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
-            {Math.round(animatedVotes).toLocaleString()}
-          </div>
-          <div className="text-xs text-rose-300/80 uppercase tracking-wider flex items-center gap-1 group-hover:text-rose-200">
-            <span className="text-rose-400 group-hover:text-rose-300">🗳️</span> Votes
-          </div>
-        </button>
+        {/* Votes - Clickable only if visible */}
+        {shouldShowVotes() && (
+          <>
+            <button 
+              onClick={onVoteClick}
+              className="text-right hover:scale-105 transition-transform cursor-pointer group"
+            >
+              <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
+                {Math.round(animatedVotes).toLocaleString()}
+              </div>
+              <div className="text-xs text-rose-300/80 uppercase tracking-wider flex items-center gap-1 group-hover:text-rose-200">
+                <span className="text-rose-400 group-hover:text-rose-300">🗳️</span> Votes
+              </div>
+            </button>
+            <div className="w-px bg-rose-500/30" />
+          </>
+        )}
         
-        <div className="w-px bg-rose-500/30" />
+        {/* Gifts - Clickable only if visible */}
+        {shouldShowGifts() && (
+          <>
+            <button 
+              onClick={onGiftClick}
+              className="text-right hover:scale-105 transition-transform cursor-pointer group"
+            >
+              <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
+                {Math.round(animatedGifts).toLocaleString()}
+              </div>
+              <div className="text-xs text-rose-300/80 uppercase tracking-wider flex items-center gap-1 group-hover:text-rose-200">
+                <span className="text-rose-400 group-hover:text-rose-300">🎁</span> Gifts
+              </div>
+            </button>
+            <div className="w-px bg-rose-500/30" />
+          </>
+        )}
         
-        {/* Gifts - Clickable */}
-        <button 
-          onClick={onGiftClick}
-          className="text-right hover:scale-105 transition-transform cursor-pointer group"
-        >
-          <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
-            {Math.round(animatedGifts).toLocaleString()}
+        {/* Gift Worth - Not Clickable, only if visible */}
+        {shouldShowWorth() && (
+          <div className="text-right">
+            <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100">
+              {formatNaira(Math.round(animatedWorth))}
+            </div>
+            <div className="text-xs text-rose-300/80 uppercase tracking-wider flex items-center gap-1">
+              <span className="text-rose-400">💰</span> Worth
+            </div>
           </div>
-          <div className="text-xs text-rose-300/80 uppercase tracking-wider flex items-center gap-1 group-hover:text-rose-200">
-            <span className="text-rose-400 group-hover:text-rose-300">🎁</span> Gifts
-          </div>
-        </button>
-        
-        <div className="w-px bg-rose-500/30" />
-        
-        {/* Gift Worth - Not Clickable */}
-        <div className="text-right">
-          <div className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100">
-            {formatNaira(Math.round(animatedWorth))}
-          </div>
-          <div className="text-xs text-rose-300/80 uppercase tracking-wider flex items-center gap-1">
-            <span className="text-rose-400">💰</span> Worth
-          </div>
-        </div>
+        )}
 
-        {/* Share Button */}
+        {/* Share Button – always visible */}
         <button
           onClick={onShareClick}
           className="ml-2 p-1.5 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
@@ -101,46 +122,49 @@ function DigitalStats({ candidate, formatNaira, onVoteClick, onGiftClick, onShar
         </button>
       </div>
 
-      {/* Mobile: Bottom Right */}
+      {/* Mobile: Bottom Right – same visibility logic */}
       <div className="md:hidden flex flex-col gap-2 bg-gradient-to-r from-black/60 to-black/40 backdrop-blur-md rounded-2xl p-3 max-w-[180px] border border-rose-500/30">
-        {/* Votes - Clickable */}
-        <button 
-          onClick={onVoteClick}
-          className="flex items-center justify-between hover:scale-105 transition-transform cursor-pointer group w-full"
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-rose-400 text-xs group-hover:text-rose-300">🗳️</span>
-            <span className="text-[8px] text-rose-300/80 uppercase group-hover:text-rose-200">Votes</span>
-          </div>
-          <div className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
-            {Math.round(animatedVotes).toLocaleString()}
-          </div>
-        </button>
+        {shouldShowVotes() && (
+          <button 
+            onClick={onVoteClick}
+            className="flex items-center justify-between hover:scale-105 transition-transform cursor-pointer group w-full"
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="text-rose-400 text-xs group-hover:text-rose-300">🗳️</span>
+              <span className="text-[8px] text-rose-300/80 uppercase group-hover:text-rose-200">Votes</span>
+            </div>
+            <div className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
+              {Math.round(animatedVotes).toLocaleString()}
+            </div>
+          </button>
+        )}
         
-        {/* Gifts - Clickable */}
-        <button 
-          onClick={onGiftClick}
-          className="flex items-center justify-between hover:scale-105 transition-transform cursor-pointer group w-full"
-        >
-          <div className="flex items-center gap-1.5">
-            <span className="text-rose-400 text-xs group-hover:text-rose-300">🎁</span>
-            <span className="text-[8px] text-rose-300/80 uppercase group-hover:text-rose-200">Gifts</span>
-          </div>
-          <div className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
-            {Math.round(animatedGifts).toLocaleString()}
-          </div>
-        </button>
+        {shouldShowGifts() && (
+          <button 
+            onClick={onGiftClick}
+            className="flex items-center justify-between hover:scale-105 transition-transform cursor-pointer group w-full"
+          >
+            <div className="flex items-center gap-1.5">
+              <span className="text-rose-400 text-xs group-hover:text-rose-300">🎁</span>
+              <span className="text-[8px] text-rose-300/80 uppercase group-hover:text-rose-200">Gifts</span>
+            </div>
+            <div className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100 group-hover:from-rose-200 group-hover:to-rose-50">
+              {Math.round(animatedGifts).toLocaleString()}
+            </div>
+          </button>
+        )}
         
-        {/* Gift Worth - Not Clickable */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="text-rose-400 text-xs">💰</span>
-            <span className="text-[8px] text-rose-300/80 uppercase">Worth</span>
+        {shouldShowWorth() && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <span className="text-rose-400 text-xs">💰</span>
+              <span className="text-[8px] text-rose-300/80 uppercase">Worth</span>
+            </div>
+            <div className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100">
+              {formatNaira(Math.round(animatedWorth))}
+            </div>
           </div>
-          <div className="text-xs font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-300 to-rose-100">
-            {formatNaira(Math.round(animatedWorth))}
-          </div>
-        </div>
+        )}
 
         {/* Share Button */}
         <button
@@ -673,6 +697,7 @@ export default function CandidateProfile() {
           {/* Digital Stats Overlay - Now includes Share button */}
           <DigitalStats 
             candidate={candidate} 
+            currentUser={currentUser}
             formatNaira={formatNaira} 
             onVoteClick={scrollToVote}
             onGiftClick={scrollToGift}

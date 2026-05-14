@@ -544,6 +544,7 @@ export default function VotePage() {
                             country={candidate.country}
                             votes={candidate.votes}
                             imageUrl={candidate.imageUrl}
+                            secret={candidate.secret}   // ✅ ADDED: passes the secret to control vote count visibility
                           />
                         </motion.div>
                       ))}
