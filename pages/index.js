@@ -27,7 +27,7 @@ export default function Home() {
     seconds: 0
   });
   const [registrationStatus, setRegistrationStatus] = useState('not_started'); // 'not_started', 'open', 'closed'
-  const [hasVotableCandidates, setHasVotableCandidates] = useState(false);
+  const [hasVisibleVotableCandidates, setHasVisibleVotableCandidates] = useState(false);
 
   // Fetch top fans
   const fetchTopFans = async () => {
@@ -99,11 +99,11 @@ export default function Home() {
       setCandidates(candidatesData || []);
       setNews(newsData || []);
       
-      // Check if there are any candidates with role "Yes" and votes > 0
-      const hasVotable = candidatesData?.some(
-        candidate => candidate.role === "Yes" && candidate.votes > 0
+      // Check if there are any visible candidates with role "Yes" and votes > 0
+      const hasVisible = candidatesData?.some(
+        candidate => candidate.role === "Yes" && candidate.visibility === true && candidate.votes > 0
       );
-      setHasVotableCandidates(hasVotable);
+      setHasVisibleVotableCandidates(hasVisible);
 
       // Fetch top fans
       await fetchTopFans();
@@ -488,8 +488,8 @@ export default function Home() {
         {/* Featured Post Carousel - Before Top Candidates */}
         <FeaturedPost images={featuredImages} />
 
-        {/* Top Candidates - Only render if there are votable candidates */}
-        {hasVotableCandidates && (
+        {/* Top Candidates - Only render if there are visible, approved candidates with votes */}
+        {hasVisibleVotableCandidates && (
           <>
             <TopCandidates />
             {/* Add gap after TopCandidates on mobile only */}
