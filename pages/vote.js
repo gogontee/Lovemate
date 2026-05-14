@@ -3,7 +3,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import SponsorCarousel from "../components/SponsorCarousel";
 import CandidateCard from "../components/CandidateCard";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 import Image from "next/image";
@@ -11,10 +11,12 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
 const PAGE_SIZE = 50;
+const DEBOUNCE_DELAY = 500; // milliseconds
 
 export default function VotePage() {
-  const [candidates, setCandidates] = useState([]);
-  const [filteredCandidates, setFilteredCandidates] = useState([]);
+  const [candidates, setCandidates] = useState([]);          // paginated visible candidates
+  const [searchResults, setSearchResults] = useState(null);  // null = not searching, array = search results
+  const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState("");
   const [candidateCode, setCandidateCode] = useState("");
   const [codeError, setCodeError] = useState("");
@@ -33,6 +35,8 @@ export default function VotePage() {
   });
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
+
+  const debounceTimer = useRef(null);
 
   // Check admin status from profiles table
   useEffect(() => {
@@ -74,7 +78,7 @@ export default function VotePage() {
     fetchHeroContent();
   }, []);
 
-  // Fetch ONLY visible candidates (visibility = true)
+  // Fetch ONLY visible candidates (visibility = true) – paginated
   const fetchCandidates = async (pageNum = 1, reset = true) => {
     if (reset) setCandidatesLoading(true);
     const from = (pageNum - 1) * PAGE_SIZE;
@@ -109,6 +113,67 @@ export default function VotePage() {
       setCandidates((prev) => (reset ? updated : [...prev, ...updated]));
     }
     setCandidatesLoading(false);
+  };
+
+  // Search candidates by name (across ALL visible candidates, ignores pagination)
+  const searchCandidatesByName = async (searchTerm) => {
+    if (!searchTerm.trim()) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from("candidates")
+        .select("*")
+        .eq("role", "Yes")
+        .eq("visibility", true)
+        .ilike("name", `%${searchTerm.trim()}%`)
+        .order("votes", { ascending: false });
+
+      if (error) throw error;
+
+      const processed = data.map((item) => ({
+        ...item,
+        imageUrl:
+          item.image_url && item.image_url.startsWith("http")
+            ? item.image_url
+            : item.image_url
+            ? `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${item.image_url}`
+            : fallbackImage,
+      }));
+      setSearchResults(processed);
+    } catch (error) {
+      console.error("Error searching candidates:", error);
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  // Debounced name search
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearch(value);
+    setCandidateCode("");
+    setCodeMatchCandidate(null);
+    setCodeError("");
+
+    // Clear previous timer
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+
+    // If search is empty, clear results immediately
+    if (!value.trim()) {
+      setSearchResults(null);
+      return;
+    }
+
+    // Debounce search
+    debounceTimer.current = setTimeout(() => {
+      searchCandidatesByName(value);
+    }, DEBOUNCE_DELAY);
   };
 
   // Fetch a single candidate by code (ignores visibility)
@@ -173,6 +238,7 @@ export default function VotePage() {
           table: "candidates",
         },
         (payload) => {
+          // Update paginated candidates list
           setCandidates((prev) =>
             prev.map((c) =>
               c.id === payload.new.id
@@ -185,6 +251,20 @@ export default function VotePage() {
                 : c
             )
           );
+          // Update search results if any
+          setSearchResults((prev) => {
+            if (!prev) return prev;
+            return prev.map((c) =>
+              c.id === payload.new.id
+                ? {
+                    ...c,
+                    votes: payload.new.votes,
+                    gifts: payload.new.gifts,
+                    gift_worth: payload.new.gift_worth,
+                  }
+                : c
+            );
+          });
           if (codeMatchCandidate && codeMatchCandidate.id === payload.new.id) {
             setCodeMatchCandidate((prev) => ({
               ...prev,
@@ -203,24 +283,20 @@ export default function VotePage() {
     };
   }, [codeMatchCandidate, isAdmin]);
 
-  // Filtering: code match takes precedence, then name search among visible candidates
-  useEffect(() => {
-    if (codeMatchCandidate) {
-      setFilteredCandidates([codeMatchCandidate]);
-      return;
-    }
+  // Determine which candidates to display
+  const getDisplayCandidates = () => {
+    // Code match always takes precedence
+    if (codeMatchCandidate) return [codeMatchCandidate];
+    // If name search has results, show them
+    if (searchResults !== null) return searchResults;
+    // Otherwise show paginated visible candidates
+    return candidates;
+  };
 
-    if (search.trim() !== "") {
-      const filtered = candidates.filter((candidate) =>
-        candidate.name.toLowerCase().includes(search.toLowerCase())
-      );
-      setFilteredCandidates(filtered);
-    } else {
-      setFilteredCandidates(candidates);
-    }
-  }, [codeMatchCandidate, search, candidates]);
+  // Filtering for UI display (no further filtering needed – we already have correct set)
+  const displayCandidates = getDisplayCandidates();
 
-  // Handle code search from either the global row or the empty state card
+  // Handle code search submit
   const handleCodeSubmit = async (e, codeValue = null) => {
     e?.preventDefault();
     const val = (codeValue || candidateCode).toUpperCase();
@@ -244,6 +320,7 @@ export default function VotePage() {
       setCodeMatchCandidate(found);
       setSearch("");
       setCandidateCode("");
+      setSearchResults(null); // clear name search results
     } else {
       setCodeError("No candidate found with that code");
       setCodeMatchCandidate(null);
@@ -258,13 +335,8 @@ export default function VotePage() {
       setCodeMatchCandidate(null);
       setCodeError("");
     }
-  };
-
-  const handleSearchChange = (e) => {
-    setSearch(e.target.value);
-    setCandidateCode("");
-    setCodeMatchCandidate(null);
-    setCodeError("");
+    // Clear name search when code is entered
+    setSearchResults(null);
   };
 
   const formatNumber = (num) => {
@@ -283,7 +355,7 @@ export default function VotePage() {
       <Header />
 
       <main className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen">
-        {/* Desktop Hero */}
+        {/* Desktop Hero - unchanged */}
         <div className="hidden md:block relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
           {heroDesktop?.image ? (
             <div className="relative w-full h-full">
@@ -321,7 +393,6 @@ export default function VotePage() {
                 {heroDesktop?.subtitle || "Cast your votes and make your voice count"}
               </motion.p>
 
-              {/* Admin‑only stats bar (existing) */}
               {isAdmin && hasEligibleCandidates && candidates.length > 0 && (
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -358,7 +429,7 @@ export default function VotePage() {
           </div>
         </div>
 
-        {/* Mobile Hero */}
+        {/* Mobile Hero - unchanged */}
         <div className="md:hidden relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
           {heroMobile?.image ? (
             <div className="relative w-full h-full">
@@ -394,7 +465,6 @@ export default function VotePage() {
               {heroMobile?.subtitle || "Cast your votes and make your voice count"}
             </motion.p>
 
-            {/* Admin‑only stats grid (mobile) */}
             {isAdmin && hasEligibleCandidates && candidates.length > 0 && (
               <AnimatePresence mode="wait">
                 <motion.div
@@ -427,22 +497,24 @@ export default function VotePage() {
           </div>
         </div>
 
-        {/* Search Row – only visible when there are public candidates */}
-        {hasEligibleCandidates && candidates.length > 0 && (
+        {/* Search Row – always visible when there are eligible candidates (even if none loaded yet) */}
+        {hasEligibleCandidates && (
           <section className="py-6 px-4">
             <div className="max-w-xl md:max-w-2xl mx-auto">
               <div className="flex gap-2 md:gap-3">
+                {/* Name search input */}
                 <div className="relative group flex-1">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
                   <input
                     type="text"
-                    placeholder="🔍 Search name..."
+                    placeholder="🔍 Search by name..."
                     className="relative w-full px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 text-white border border-purple-500/30 rounded-full text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
                     value={search}
                     onChange={handleSearchChange}
                   />
                 </div>
 
+                {/* Code search form */}
                 <form onSubmit={handleCodeSubmit} className="flex gap-1 md:gap-2">
                   <div className="relative group">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
@@ -466,6 +538,9 @@ export default function VotePage() {
                 </form>
               </div>
               {codeError && <p className="text-red-400 text-xs mt-2 text-center">{codeError}</p>}
+              {searching && search.trim() && (
+                <p className="text-gray-400 text-xs mt-2 text-center">Searching...</p>
+              )}
             </div>
           </section>
         )}
@@ -521,17 +596,17 @@ export default function VotePage() {
               </motion.div>
             )}
 
-            {/* Candidate Display – either visible list or code match */}
+            {/* Candidate Display – using displayCandidates */}
             {(hasEligibleCandidates || codeMatchCandidate) && (
               <>
-                {candidatesLoading && candidates.length === 0 ? (
+                {candidatesLoading && displayCandidates.length === 0 && !searching ? (
                   <div className="flex justify-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
                   </div>
                 ) : (
                   <>
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                      {filteredCandidates.map((candidate, index) => (
+                      {displayCandidates.map((candidate, index) => (
                         <motion.div
                           key={candidate.id}
                           initial={{ opacity: 0, y: 20 }}
@@ -544,18 +619,20 @@ export default function VotePage() {
                             country={candidate.country}
                             votes={candidate.votes}
                             imageUrl={candidate.imageUrl}
-                            secret={candidate.secret}   // ✅ ADDED: passes the secret to control vote count visibility
+                            secret={candidate.secret}
                           />
                         </motion.div>
                       ))}
                     </div>
 
-                    {filteredCandidates.length === 0 && (search || candidateCode) && (
+                    {/* Show "no results" only when search has been performed and returns empty */}
+                    {!codeMatchCandidate && search.trim() && !searching && searchResults !== null && searchResults.length === 0 && (
                       <div className="text-center py-12">
-                        <p className="text-gray-400 text-lg">No candidates match your search.</p>
+                        <p className="text-gray-400 text-lg">No candidates match your name search.</p>
                         <button
                           onClick={() => {
                             setSearch("");
+                            setSearchResults(null);
                             setCandidateCode("");
                             setCodeMatchCandidate(null);
                             setCodeError("");
@@ -566,10 +643,28 @@ export default function VotePage() {
                         </button>
                       </div>
                     )}
+
+                    {/* Show standard "no results" for code search */}
+                    {codeMatchCandidate === null && candidateCode && !search && displayCandidates.length === 0 && !searching && (
+                      <div className="text-center py-12">
+                        <p className="text-gray-400 text-lg">No candidate found with that code.</p>
+                        <button
+                          onClick={() => {
+                            setCandidateCode("");
+                            setCodeError("");
+                            setCodeMatchCandidate(null);
+                          }}
+                          className="mt-4 text-rose-400 underline hover:text-rose-300"
+                        >
+                          Clear code
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
 
-                {hasMore && !codeMatchCandidate && filteredCandidates.length === candidates.length && !candidatesLoading && (
+                {/* Load More – only when NOT in code match mode, NOT in name search, and more visible candidates exist */}
+                {!codeMatchCandidate && searchResults === null && hasMore && displayCandidates.length === candidates.length && !candidatesLoading && (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mt-8">
                     <button
                       onClick={() => {

@@ -44,7 +44,11 @@ export default function TopCandidate() {
     fetchTopCandidates();
   }, []);
 
-  // Loading state
+  // Helper to determine if vote count should be shown for a candidate
+  const shouldShowVotes = (candidate) => {
+    return candidate.secret !== 'hidevote' && candidate.secret !== 'hideall';
+  };
+
   if (loading) {
     return (
       <section className="py-8 px-4 max-w-6xl mx-auto">
@@ -59,8 +63,8 @@ export default function TopCandidate() {
     );
   }
 
-  // Empty state - no candidates with votes yet
   if (topCandidates.length === 0) {
+    // Empty state remains unchanged (same as original)
     return (
       <section className="py-8 px-4 max-w-6xl mx-auto">
         <div className="bg-gradient-to-br from-rose-50 via-white to-rose-100 rounded-2xl p-6 shadow-lg border border-rose-200">
@@ -71,11 +75,9 @@ export default function TopCandidate() {
             </h2>
             
             <div className="relative py-6 px-4">
-              {/* Decorative hearts */}
               <div className="absolute top-0 left-0 text-4xl opacity-10 text-rose-400">❤️</div>
               <div className="absolute bottom-0 right-0 text-4xl opacity-10 text-rose-400">❤️</div>
               
-              {/* Main content */}
               <div className="max-w-2xl mx-auto">
                 <div className="mb-4">
                   <span className="inline-block text-5xl">💝</span>
@@ -110,7 +112,6 @@ export default function TopCandidate() {
               </div>
             </div>
 
-            {/* See All Candidates Button - with responsive spacing */}
             <div className="mt-8 md:mt-4">
               <Link href="/vote" className="inline-block">
                 <motion.button
@@ -158,50 +159,52 @@ export default function TopCandidate() {
           <div className="w-16 h-0.5 bg-gradient-to-r from-rose-400 to-rose-600 mx-auto mt-3 rounded-full"></div>
         </div>
 
-        {/* Responsive grid: 2 columns on mobile, 4 on desktop */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-          {topCandidates.map((candidate, index) => (
-            <div key={candidate.id} className="relative group">
-              {/* Rank badge */}
-              <div className="absolute -top-2 -left-2 z-10">
-                <div className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm
-                  ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : 
-                    index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500' :
-                    index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-800' :
-                    'bg-gradient-to-br from-rose-400 to-pink-600'}
-                  shadow-md border border-white
-                `}>
-                  #{index + 1}
+          {topCandidates.map((candidate, index) => {
+            const showVoteBadge = shouldShowVotes(candidate);
+            return (
+              <div key={candidate.id} className="relative group">
+                <div className="absolute -top-2 -left-2 z-10">
+                  <div className={`
+                    w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm
+                    ${index === 0 ? 'bg-gradient-to-br from-yellow-400 to-yellow-600' : 
+                      index === 1 ? 'bg-gradient-to-br from-gray-300 to-gray-500' :
+                      index === 2 ? 'bg-gradient-to-br from-amber-600 to-amber-800' :
+                      'bg-gradient-to-br from-rose-400 to-pink-600'}
+                    shadow-md border border-white
+                  `}>
+                    #{index + 1}
+                  </div>
                 </div>
+                
+                {index === 0 && (
+                  <div className="absolute -top-5 right-2 text-xl animate-bounce">
+                    👑
+                  </div>
+                )}
+                
+                <CandidateCard
+                  id={candidate.id}
+                  name={candidate.name}
+                  country={candidate.country}
+                  votes={candidate.votes}
+                  imageUrl={candidate.imageUrl}
+                  secret={candidate.secret}   // Pass secret to CandidateCard
+                />
+                
+                {/* Only show vote count badge if allowed by secret */}
+                {showVoteBadge && (
+                  <div className="absolute -bottom-2 right-2 bg-white px-2 py-0.5 rounded-full shadow-sm border border-rose-200">
+                    <span className="text-xs font-semibold text-rose-600">
+                      ❤️ {candidate.votes}
+                    </span>
+                  </div>
+                )}
               </div>
-              
-              {/* Crown for 1st place */}
-              {index === 0 && (
-                <div className="absolute -top-5 right-2 text-xl animate-bounce">
-                  👑
-                </div>
-              )}
-              
-              <CandidateCard
-                id={candidate.id}
-                name={candidate.name}
-                country={candidate.country}
-                votes={candidate.votes}
-                imageUrl={candidate.imageUrl}
-              />
-              
-              {/* Vote count badge */}
-              <div className="absolute -bottom-2 right-2 bg-white px-2 py-0.5 rounded-full shadow-sm border border-rose-200">
-                <span className="text-xs font-semibold text-rose-600">
-                  ❤️ {candidate.votes}
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         
-        {/* See All Candidates Button - Added responsive padding for mobile */}
         <div className="text-center mt-8 md:mt-6">
           <Link href="/vote" className="inline-block">
             <motion.button
