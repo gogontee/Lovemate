@@ -11,11 +11,11 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
 const PAGE_SIZE = 50;
-const DEBOUNCE_DELAY = 500; // milliseconds
+const DEBOUNCE_DELAY = 500;
 
 export default function VotePage() {
-  const [candidates, setCandidates] = useState([]);          // paginated visible candidates
-  const [searchResults, setSearchResults] = useState(null);  // null = not searching, array = search results
+  const [candidates, setCandidates] = useState([]);
+  const [searchResults, setSearchResults] = useState(null);
   const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState("");
   const [candidateCode, setCandidateCode] = useState("");
@@ -161,16 +161,13 @@ export default function VotePage() {
     setCodeMatchCandidate(null);
     setCodeError("");
 
-    // Clear previous timer
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
-    // If search is empty, clear results immediately
     if (!value.trim()) {
       setSearchResults(null);
       return;
     }
 
-    // Debounce search
     debounceTimer.current = setTimeout(() => {
       searchCandidatesByName(value);
     }, DEBOUNCE_DELAY);
@@ -238,7 +235,6 @@ export default function VotePage() {
           table: "candidates",
         },
         (payload) => {
-          // Update paginated candidates list
           setCandidates((prev) =>
             prev.map((c) =>
               c.id === payload.new.id
@@ -251,7 +247,6 @@ export default function VotePage() {
                 : c
             )
           );
-          // Update search results if any
           setSearchResults((prev) => {
             if (!prev) return prev;
             return prev.map((c) =>
@@ -285,15 +280,11 @@ export default function VotePage() {
 
   // Determine which candidates to display
   const getDisplayCandidates = () => {
-    // Code match always takes precedence
     if (codeMatchCandidate) return [codeMatchCandidate];
-    // If name search has results, show them
     if (searchResults !== null) return searchResults;
-    // Otherwise show paginated visible candidates
     return candidates;
   };
 
-  // Filtering for UI display (no further filtering needed – we already have correct set)
   const displayCandidates = getDisplayCandidates();
 
   // Handle code search submit
@@ -320,7 +311,7 @@ export default function VotePage() {
       setCodeMatchCandidate(found);
       setSearch("");
       setCandidateCode("");
-      setSearchResults(null); // clear name search results
+      setSearchResults(null);
     } else {
       setCodeError("No candidate found with that code");
       setCodeMatchCandidate(null);
@@ -335,7 +326,6 @@ export default function VotePage() {
       setCodeMatchCandidate(null);
       setCodeError("");
     }
-    // Clear name search when code is entered
     setSearchResults(null);
   };
 
@@ -355,7 +345,7 @@ export default function VotePage() {
       <Header />
 
       <main className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen">
-        {/* Desktop Hero - unchanged */}
+        {/* Desktop Hero - unchanged height */}
         <div className="hidden md:block relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
           {heroDesktop?.image ? (
             <div className="relative w-full h-full">
@@ -429,8 +419,8 @@ export default function VotePage() {
           </div>
         </div>
 
-        {/* Mobile Hero - unchanged */}
-        <div className="md:hidden relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
+        {/* Mobile Hero - height reduced by 30% (300px → 210px) */}
+        <div className="md:hidden relative w-full h-[210px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
           {heroMobile?.image ? (
             <div className="relative w-full h-full">
               <Image
@@ -452,7 +442,7 @@ export default function VotePage() {
             <motion.h1
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-xl font-bold text-white mb-1"
+              className="text-base sm:text-xl font-bold text-white mb-1"
             >
               {heroMobile?.title || "Ready to Vote?"}
             </motion.h1>
@@ -460,7 +450,7 @@ export default function VotePage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="text-xs text-gray-300 mb-3"
+              className="text-[10px] sm:text-xs text-gray-300 mb-3"
             >
               {heroMobile?.subtitle || "Cast your votes and make your voice count"}
             </motion.p>
@@ -497,12 +487,11 @@ export default function VotePage() {
           </div>
         </div>
 
-        {/* Search Row – always visible when there are eligible candidates (even if none loaded yet) */}
+        {/* Search Row – only visible when there are public candidates */}
         {hasEligibleCandidates && (
           <section className="py-6 px-4">
             <div className="max-w-xl md:max-w-2xl mx-auto">
               <div className="flex gap-2 md:gap-3">
-                {/* Name search input */}
                 <div className="relative group flex-1">
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
                   <input
@@ -514,7 +503,6 @@ export default function VotePage() {
                   />
                 </div>
 
-                {/* Code search form */}
                 <form onSubmit={handleCodeSubmit} className="flex gap-1 md:gap-2">
                   <div className="relative group">
                     <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
