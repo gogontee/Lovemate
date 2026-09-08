@@ -7,6 +7,45 @@ import { supabase } from "@/utils/supabaseClient";
 export default function ProfileHeader({ profile, avatarUrl, onUpload, stats }) {
   const fileInputRef = useRef(null);
   const [isHovering, setIsHovering] = useState(false);
+  const [isCandidate, setIsCandidate] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Check if user is a candidate
+  useEffect(() => {
+    const checkCandidateStatus = async () => {
+      if (!profile?.id) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('candidates')
+          .select('user_id')
+          .eq('user_id', profile.id)
+          .single();
+
+        if (error) {
+          // If error is "not found", user is not a candidate
+          if (error.code === 'PGRST116') {
+            setIsCandidate(false);
+          } else {
+            console.error('Error checking candidate status:', error);
+            setIsCandidate(false);
+          }
+        } else {
+          setIsCandidate(!!data);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        setIsCandidate(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkCandidateStatus();
+  }, [profile?.id]);
 
   // Format currency
   const formatCurrency = (amount) => {
@@ -29,12 +68,77 @@ export default function ProfileHeader({ profile, avatarUrl, onUpload, stats }) {
     return num.toString();
   };
 
+  // Generate random positions for floating hearts
+  const getRandomPosition = () => ({
+    top: Math.random() * 100,
+    left: Math.random() * 100,
+    size: 20 + Math.random() * 40,
+    duration: 15 + Math.random() * 25,
+    delay: Math.random() * 20,
+    rotation: Math.random() * 360
+  });
+
+  const hearts = Array.from({ length: 8 }, (_, i) => ({
+    id: i,
+    ...getRandomPosition(),
+    isBroken: i % 2 === 0
+  }));
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       className="bg-gradient-to-r from-rose-600 to-pink-600 rounded-2xl md:rounded-3xl shadow-xl p-3 md:p-6 text-white relative overflow-hidden"
     >
+      {/* Floating Hearts Background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {hearts.map((heart) => (
+          <motion.div
+            key={heart.id}
+            className="absolute opacity-50"
+            style={{
+              top: `${heart.top}%`,
+              left: `${heart.left}%`,
+              width: `${heart.size}px`,
+              height: `${heart.size}px`,
+            }}
+            animate={{
+              y: [0, -30, 0, 30, 0],
+              x: [0, 20, 0, -20, 0],
+              rotate: [0, heart.rotation, 360],
+            }}
+            transition={{
+              duration: heart.duration,
+              delay: heart.delay,
+              repeat: Infinity,
+              ease: "linear"
+            }}
+          >
+            {heart.isBroken ? (
+              // Broken heart icon (using SVG path)
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-full h-full text-white/50"
+              >
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                <path d="M12 14.5l-3-3 3-3 3 3-3 3z" fill="white" opacity="0.3" />
+                <path d="M9 11.5l3-3 3 3-3 3-3-3z" fill="white" opacity="0.5" />
+              </svg>
+            ) : (
+              // Regular heart
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="w-full h-full text-white/50"
+              >
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
+            )}
+          </motion.div>
+        ))}
+      </div>
+
       {/* Background Pattern */}
       <div className="absolute top-0 right-0 w-48 md:w-64 h-48 md:h-64 bg-white/10 rounded-full -mr-16 md:-mr-20 -mt-16 md:-mt-20"></div>
       <div className="absolute bottom-0 left-0 w-36 md:w-48 h-36 md:h-48 bg-white/5 rounded-full -ml-12 md:-ml-16 -mb-12 md:-mb-16"></div>
@@ -107,56 +211,68 @@ export default function ProfileHeader({ profile, avatarUrl, onUpload, stats }) {
           </div>
         </div>
 
-        {/* Stats - Using passed stats prop */}
-        <div className="flex gap-1.5 md:gap-3 lg:gap-4 flex-shrink-0">
-          {/* Votes Stats */}
-          <div className="text-center min-w-[45px] md:min-w-[60px] lg:min-w-[80px]">
-            {stats?.loading ? (
-              <div className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center">
-                <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-center gap-0.5 md:gap-1">
-                  <TrendingUp className="w-2.5 h-2.5 md:w-3 md:h-3 lg:w-4 lg:h-4 text-rose-200" />
-                  <p className="text-xs sm:text-sm md:text-base lg:text-lg font-bold leading-tight">
-                    {formatCompactNumber(stats?.votesCount || 0)}
-                  </p>
+        {/* Stats - Only show if user is a candidate */}
+        {isCandidate && !isLoading && (
+          <div className="flex gap-1.5 md:gap-3 lg:gap-4 flex-shrink-0">
+            {/* Votes Stats */}
+            <div className="text-center min-w-[45px] md:min-w-[60px] lg:min-w-[80px]">
+              {stats?.loading ? (
+                <div className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center">
+                  <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-rose-100 whitespace-nowrap">
-                  Votes
-                </p>
-                <p className="text-[6px] sm:text-[7px] md:text-[8px] lg:text-[10px] text-rose-200 whitespace-nowrap">
-                  {formatCurrency(stats?.votesWorth || 0)}
-                </p>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-center gap-0.5 md:gap-1">
+                    <TrendingUp className="w-2.5 h-2.5 md:w-3 md:h-3 lg:w-4 lg:h-4 text-rose-200" />
+                    <p className="text-xs sm:text-sm md:text-base lg:text-lg font-bold leading-tight">
+                      {formatCompactNumber(stats?.votesCount || 0)}
+                    </p>
+                  </div>
+                  <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-rose-100 whitespace-nowrap">
+                    Votes
+                  </p>
+                  <p className="text-[6px] sm:text-[7px] md:text-[8px] lg:text-[10px] text-rose-200 whitespace-nowrap">
+                    {formatCurrency(stats?.votesWorth || 0)}
+                  </p>
+                </>
+              )}
+            </div>
 
-          {/* Gifts Stats */}
-          <div className="text-center min-w-[45px] md:min-w-[60px] lg:min-w-[80px]">
-            {stats?.loading ? (
-              <div className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center">
-                <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-center gap-0.5 md:gap-1">
-                  <Gift className="w-2.5 h-2.5 md:w-3 md:h-3 lg:w-4 lg:h-4 text-rose-200" />
-                  <p className="text-xs sm:text-sm md:text-base lg:text-lg font-bold leading-tight">
-                    {formatCompactNumber(stats?.giftsCount || 0)}
-                  </p>
+            {/* Gifts Stats */}
+            <div className="text-center min-w-[45px] md:min-w-[60px] lg:min-w-[80px]">
+              {stats?.loading ? (
+                <div className="w-6 h-6 md:w-8 md:h-8 flex items-center justify-center">
+                  <div className="w-3 h-3 md:w-4 md:h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                 </div>
-                <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-rose-100 whitespace-nowrap">
-                  Gifts
-                </p>
-                <p className="text-[6px] sm:text-[7px] md:text-[8px] lg:text-[10px] text-rose-200 whitespace-nowrap">
-                  {formatCurrency(stats?.giftsWorth || 0)}
-                </p>
-              </>
-            )}
+              ) : (
+                <>
+                  <div className="flex items-center justify-center gap-0.5 md:gap-1">
+                    <Gift className="w-2.5 h-2.5 md:w-3 md:h-3 lg:w-4 lg:h-4 text-rose-200" />
+                    <p className="text-xs sm:text-sm md:text-base lg:text-lg font-bold leading-tight">
+                      {formatCompactNumber(stats?.giftsCount || 0)}
+                    </p>
+                  </div>
+                  <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-rose-100 whitespace-nowrap">
+                    Gifts
+                  </p>
+                  <p className="text-[6px] sm:text-[7px] md:text-[8px] lg:text-[10px] text-rose-200 whitespace-nowrap">
+                    {formatCurrency(stats?.giftsWorth || 0)}
+                  </p>
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Show a message or badge for non-candidates */}
+        {!isCandidate && !isLoading && (
+          <div className="flex-shrink-0">
+            <div className="bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-1">
+              <Heart className="w-3 h-3 md:w-4 md:h-4 text-rose-200" />
+              <span className="text-[8px] sm:text-[10px] md:text-xs font-medium">Fan</span>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );

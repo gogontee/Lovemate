@@ -4,9 +4,9 @@ import { supabase } from "../utils/supabaseClient";
 import CandidateWindow from "../components/CandidateWindow";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Shield } from "lucide-react";
+import { Shield, Heart, Sparkles, Crown, Star, Users, UserCog } from "lucide-react";
 
 // Import dashboard components
 import ProfileHeader from "../components/dashboard/ProfileHeader";
@@ -51,16 +51,22 @@ export default function Dashboard() {
     loading: true
   });
 
+  // Progressive Onboarding States
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [isCandidate, setIsCandidate] = useState(false);
+
   // Check if current user is a director
   const checkDirectorStatus = async (userId) => {
     try {
       setCheckingDirector(true);
       
-      // Fetch directors_id from lovemate table
       const { data, error } = await supabase
         .from("lovemate")
         .select("directors_id")
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error("Error fetching directors list:", error);
@@ -68,9 +74,7 @@ export default function Dashboard() {
         return;
       }
 
-      // Check if directors_id exists and is an array
       if (data?.directors_id && Array.isArray(data.directors_id)) {
-        // Check if current user ID is in the directors array
         const hasAccess = data.directors_id.includes(userId);
         setIsDirector(hasAccess);
         
@@ -88,18 +92,85 @@ export default function Dashboard() {
     }
   };
 
-  const fetchWallet = async (userId) => {
-    const { data, error } = await supabase
-      .from("wallets")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
+  // Check if user is a candidate
+  const checkCandidateStatus = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from("candidates")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    if (error) {
-      console.error("Error fetching wallet:", error);
+      if (error) {
+        console.error("Error checking candidate status:", error);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error("Error:", error);
+      return false;
+    }
+  };
+
+  // Check if user has seen onboarding
+  const checkOnboardingStatus = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from("profile")
+        .select("has_seen_onboarding")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error checking onboarding status:", error);
+        return false;
+      }
+
+      return data?.has_seen_onboarding || false;
+    } catch (error) {
+      console.error("Error:", error);
+      return false;
+    }
+  };
+
+  // Update onboarding status
+  const updateOnboardingStatus = async (userId) => {
+    try {
+      const { error } = await supabase
+        .from("profile")
+        .update({ has_seen_onboarding: true })
+        .eq("id", userId);
+
+      if (error) {
+        console.error("Error updating onboarding status:", error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error:", error);
+      return false;
+    }
+  };
+
+  const fetchWallet = async (userId) => {
+    try {
+      const { data, error } = await supabase
+        .from("wallets")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching wallet:", error);
+        return null;
+      }
+      return data;
+    } catch (error) {
+      console.error("Error in fetchWallet:", error);
       return null;
     }
-    return data;
   };
 
   // Fetch user stats for profile header
@@ -108,8 +179,6 @@ export default function Dashboard() {
 
     try {
       setProfileStats(prev => ({ ...prev, loading: true }));
-
-      console.log("🔍 Fetching stats for user:", profileId);
 
       // Fetch vote transactions
       const { data: votesData, error: votesError } = await supabase
@@ -131,8 +200,6 @@ export default function Dashboard() {
         console.error("Error fetching gifts:", giftsError);
       }
 
-      console.log("📦 Gifts data received:", giftsData);
-
       // Calculate vote stats
       const votesCount = votesData?.reduce((sum, transaction) => sum + (transaction.votes || 0), 0) || 0;
       const votesWorth = votesData?.reduce((sum, transaction) => sum + (transaction.total_amount || 0), 0) || 0;
@@ -140,13 +207,6 @@ export default function Dashboard() {
       // Calculate gift stats
       const giftsCount = giftsData?.length || 0;
       const giftsWorth = giftsData?.reduce((sum, transaction) => sum + (transaction.amount || 0), 0) || 0;
-
-      console.log("📊 Profile Stats calculated:", {
-        votesCount,
-        votesWorth,
-        giftsCount,
-        giftsWorth
-      });
 
       setProfileStats({
         votesCount,
@@ -167,10 +227,8 @@ export default function Dashboard() {
     if (!profileId) return;
 
     try {
-      // Get user's points from profile
       const points = profile?.points || 0;
       
-      // Get SUM of votes from vote_transactions
       const { data: voteData, error: voteError } = await supabase
         .from('vote_transactions')
         .select('votes')
@@ -180,10 +238,8 @@ export default function Dashboard() {
         console.error("Error fetching vote data:", voteError);
       }
       
-      // Calculate total votes by summing the votes column
       const totalVotes = voteData?.reduce((sum, item) => sum + (item.votes || 0), 0) || 0;
       
-      // Get total gifts data
       const { data: giftsData, error: giftError } = await supabase
         .from('gift_transactions')
         .select('id, amount')
@@ -193,10 +249,8 @@ export default function Dashboard() {
         console.error("Error fetching gift data:", giftError);
       }
       
-      // Calculate total gifts count from actual data
       const totalGifts = giftsData?.length || 0;
       
-      // Get user's rank based on points
       const { data: allUsers, error: usersError } = await supabase
         .from('profile')
         .select('id, points')
@@ -215,13 +269,27 @@ export default function Dashboard() {
           userRank,
           totalUsers
         });
-        
-        console.log("📊 Rank Data:", { points, totalVotes, totalGifts, userRank, totalUsers });
       }
     } catch (err) {
       console.error("Error in fetchRankData:", err);
     }
   };
+
+  // Generate random positions for floating hearts
+  const getRandomPosition = () => ({
+    top: Math.random() * 100,
+    left: Math.random() * 100,
+    size: 12 + Math.random() * 25,
+    duration: 12 + Math.random() * 20,
+    delay: Math.random() * 15,
+    rotation: Math.random() * 360
+  });
+
+  const floatingHearts = Array.from({ length: 10 }, (_, i) => ({
+    id: i,
+    ...getRandomPosition(),
+    isBroken: i % 3 === 0
+  }));
 
   useEffect(() => {
     if (profile) {
@@ -231,6 +299,47 @@ export default function Dashboard() {
       fetchUserStats(profile.id);
     }
   }, [profile]);
+
+  // Initialize onboarding when profile loads - ONLY ONCE
+  useEffect(() => {
+    const initializeOnboarding = async () => {
+      if (profile?.id && !onboardingChecked) {
+        // Check if user is a candidate
+        const isUserCandidate = await checkCandidateStatus(profile.id);
+        setIsCandidate(isUserCandidate);
+        
+        // Check if user has seen onboarding
+        const hasSeen = await checkOnboardingStatus(profile.id);
+        setHasSeenOnboarding(hasSeen);
+        setOnboardingChecked(true);
+        
+        // Skip onboarding for candidates
+        if (isUserCandidate) {
+          console.log("🎯 User is a candidate - skipping onboarding");
+          return;
+        }
+        
+        // Skip onboarding if already seen
+        if (hasSeen) {
+          console.log("🎯 User has already seen onboarding - skipping");
+          return;
+        }
+        
+        // Show onboarding after a short delay
+        setTimeout(() => {
+          setShowOnboarding(true);
+          // If user is admin, start with admin welcome step
+          if (profile?.role === 'admin') {
+            setOnboardingStep(5); // Admin step
+          } else {
+            setOnboardingStep(0); // Regular user step
+          }
+        }, 500);
+      }
+    };
+
+    initializeOnboarding();
+  }, [profile?.id, onboardingChecked]);
 
   useEffect(() => {
     if (!profile?.id) return;
@@ -267,11 +376,12 @@ export default function Dashboard() {
 
       const { data: fetchedProfile, error: profileError } = await supabase
         .from("profile")
-        .select("id, email, role, photo_url, full_name, phone, points")
+        .select("id, email, role, photo_url, full_name, phone, points, has_seen_onboarding")
         .eq("id", authUser.id)
-        .single();
+        .maybeSingle();
 
       if (profileError || !fetchedProfile || fetchedProfile.role !== "fan") {
+        console.error("Profile fetch error:", profileError);
         router.push("/auth/login");
         return;
       }
@@ -344,13 +454,13 @@ export default function Dashboard() {
         },
         async () => {
           const { data, error } = await supabase
-            .from("wallet_summary")
+            .from("wallets")
             .select("balance")
             .eq("user_id", profile.id)
             .maybeSingle();
 
-          if (!error) {
-            setWalletBalance(data?.balance || 0);
+          if (!error && data) {
+            setWalletBalance(data.balance || 0);
           }
         }
       )
@@ -453,6 +563,362 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Onboarding Handlers
+  const handleOnboardingNext = () => {
+    setOnboardingStep(prev => prev + 1);
+  };
+
+  const handleOnboardingChoice = (choice) => {
+    if (choice === 'contest') {
+      setOnboardingStep(2);
+    } else if (choice === 'fan') {
+      setOnboardingStep(3);
+    }
+  };
+
+  const handleOnboardingComplete = async () => {
+    setShowOnboarding(false);
+    
+    if (profile?.id) {
+      const updated = await updateOnboardingStatus(profile.id);
+      
+      if (updated) {
+        setHasSeenOnboarding(true);
+        setOnboardingChecked(true);
+        
+        // Update the profile state
+        setProfile(prev => ({
+          ...prev,
+          has_seen_onboarding: true
+        }));
+      }
+    }
+  };
+
+  const handleAdminOnboardingComplete = async () => {
+    setShowOnboarding(false);
+    
+    if (profile?.id) {
+      const updated = await updateOnboardingStatus(profile.id);
+      
+      if (updated) {
+        setHasSeenOnboarding(true);
+        setOnboardingChecked(true);
+        
+        // Update the profile state
+        setProfile(prev => ({
+          ...prev,
+          has_seen_onboarding: true
+        }));
+      }
+    }
+  };
+
+  const handleContestRegistration = () => {
+    setShowOnboarding(false);
+    router.push('/register');
+  };
+
+  // Get first name from full name
+  const getFirstName = (fullName) => {
+    if (!fullName) return "User";
+    return fullName.split(' ')[0];
+  };
+
+  // Onboarding Popup Component
+  const OnboardingPopup = () => {
+    const firstName = getFirstName(profile?.full_name);
+
+    const renderStep = () => {
+      switch(onboardingStep) {
+        // STEP 0: Welcome Popup
+        case 0:
+          return (
+            <motion.div
+              key="step0"
+              initial={{ scale: 0.9, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="text-center relative z-10"
+            >
+              <div className="flex justify-center mb-3">
+                <div className="relative">
+                  <Heart className="w-14 h-14 text-white" fill="#fff" />
+                  <Sparkles className="w-6 h-6 text-white/80 absolute -top-2 -right-2 animate-pulse" />
+                </div>
+              </div>
+              <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
+                Welcome to <span className="text-white/90">Lovemate</span>
+              </h2>
+              <p className="text-white/90 text-sm md:text-base mb-5 leading-relaxed">
+                Where passion, fame, and true connection collides. ✨
+              </p>
+              <button
+                onClick={handleOnboardingNext}
+                className="w-full bg-white text-rose-600 py-2.5 px-6 rounded-xl font-semibold text-sm md:text-base hover:shadow-2xl transition-all transform hover:scale-105"
+              >
+                Thank You ❤️
+              </button>
+            </motion.div>
+          );
+        
+        // STEP 1: Choice Popup
+        case 1:
+          return (
+            <motion.div
+              key="step1"
+              initial={{ scale: 0.9, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="text-center relative z-10"
+            >
+              <div className="flex justify-center mb-3">
+                <Users className="w-14 h-14 text-white" />
+              </div>
+              <h2 className="text-lg md:text-xl font-bold text-white mb-2">
+                What brings you to Lovemate?
+              </h2>
+              <p className="text-white/90 text-sm md:text-base mb-5 leading-relaxed">
+                Would you love to become one of the housemates for this edition or are you here to support someone?
+              </p>
+              <div className="space-y-2.5">
+                <button
+                  onClick={() => handleOnboardingChoice('contest')}
+                  className="w-full bg-white text-rose-600 py-2.5 px-6 rounded-xl font-semibold text-sm md:text-base hover:shadow-2xl transition-all transform hover:scale-105"
+                >
+                  <Crown className="inline-block w-4 h-4 mr-2" />
+                  I Am Here to Contest
+                </button>
+                <button
+                  onClick={() => handleOnboardingChoice('fan')}
+                  className="w-full bg-white/20 backdrop-blur-sm text-white border-2 border-white/50 py-2.5 px-6 rounded-xl font-semibold text-sm md:text-base hover:bg-white/30 transition-all transform hover:scale-105"
+                >
+                  <Star className="inline-block w-4 h-4 mr-2" />
+                  I Am Just a Fan
+                </button>
+              </div>
+            </motion.div>
+          );
+        
+        // STEP 2: Contest Registration Popup
+        case 2:
+          return (
+            <motion.div
+              key="step2"
+              initial={{ scale: 0.9, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="text-center relative z-10"
+            >
+              <div className="flex justify-center mb-3">
+                <div className="relative">
+                  <Crown className="w-14 h-14 text-white" />
+                  <Sparkles className="w-6 h-6 text-white/80 absolute -top-2 -right-2 animate-pulse" />
+                </div>
+              </div>
+              <h2 className="text-lg md:text-xl font-bold text-white mb-2">
+                That Was a Good Decision, <span className="text-white/90">{firstName}</span>! 🎯
+              </h2>
+              <p className="text-white/90 text-sm md:text-base mb-5 leading-relaxed">
+                Now click the button below to complete your registration.
+                Make sure you provide all required information and be genuine, okay? 💪
+              </p>
+              <button
+                onClick={handleContestRegistration}
+                className="w-full bg-white text-rose-600 py-2.5 px-6 rounded-xl font-semibold text-sm md:text-base hover:shadow-2xl transition-all transform hover:scale-105"
+              >
+                Understood! Let's Go 🚀
+              </button>
+            </motion.div>
+          );
+
+        // STEP 3: Fan Welcome Popup
+        case 3:
+          return (
+            <motion.div
+              key="step3"
+              initial={{ scale: 0.9, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="text-center relative z-10"
+            >
+              <div className="flex justify-center mb-3">
+                <div className="relative">
+                  <Star className="w-14 h-14 text-white" />
+                  <Sparkles className="w-6 h-6 text-white/80 absolute -top-2 -right-2 animate-pulse" />
+                </div>
+              </div>
+              <h2 className="text-lg md:text-xl font-bold text-white mb-2">
+                I Am So Happy You'll Be Supporting Someone on This Show! 🎉
+              </h2>
+              <p className="text-white/90 text-sm md:text-base mb-5 leading-relaxed">
+                Kindly note that there are lots of goodies for fans on this show.
+                You're in for an amazing experience! 🌟
+              </p>
+              <button
+                onClick={handleOnboardingNext}
+                className="w-full bg-white text-rose-600 py-2.5 px-6 rounded-xl font-semibold text-sm md:text-base hover:shadow-2xl transition-all transform hover:scale-105"
+              >
+                Yes, I Know! 💫
+              </button>
+            </motion.div>
+          );
+
+        // STEP 4: Final Welcome Popup
+        case 4:
+          return (
+            <motion.div
+              key="step4"
+              initial={{ scale: 0.9, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="text-center relative z-10"
+            >
+              <div className="flex justify-center mb-3">
+                <div className="relative">
+                  <Heart className="w-14 h-14 text-white" fill="#fff" />
+                  <Sparkles className="w-6 h-6 text-white/80 absolute -top-2 -right-2 animate-pulse" />
+                </div>
+              </div>
+              <h2 className="text-lg md:text-xl font-bold text-white mb-2">
+                Once Again, Welcome Aboard, {firstName}! 🎊
+              </h2>
+              <p className="text-white/90 text-sm md:text-base mb-5 leading-relaxed">
+                Expect maximum entertainment as we progress into the show.
+                Let the love and excitement begin! 💖
+              </p>
+              <button
+                onClick={handleOnboardingComplete}
+                className="w-full bg-white text-rose-600 py-2.5 px-6 rounded-xl font-semibold text-sm md:text-base hover:shadow-2xl transition-all transform hover:scale-105"
+              >
+                Got It! Let's Enjoy the Show 🎭
+              </button>
+            </motion.div>
+          );
+
+        // STEP 5: Admin Welcome Popup
+        case 5:
+          return (
+            <motion.div
+              key="step5"
+              initial={{ scale: 0.9, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 10 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="text-center relative z-10"
+            >
+              <div className="flex justify-center mb-3">
+                <div className="relative">
+                  <UserCog className="w-14 h-14 text-white" />
+                  <Sparkles className="w-6 h-6 text-white/80 absolute -top-2 -right-2 animate-pulse" />
+                </div>
+              </div>
+              <h2 className="text-lg md:text-xl font-bold text-white mb-2">
+                Welcome, <span className="text-white/90">{firstName}</span>! 👋
+              </h2>
+              <p className="text-white/90 text-sm md:text-base mb-5 leading-relaxed">
+                I can see you are an admin. That's a huge responsibility and I hope you work to make sure that this show becomes one of the most anticipated lover reality shows in Africa. 🌍
+              </p>
+              <button
+                onClick={handleAdminOnboardingComplete}
+                className="w-full bg-white text-rose-600 py-2.5 px-6 rounded-xl font-semibold text-sm md:text-base hover:shadow-2xl transition-all transform hover:scale-105"
+              >
+                I Understand 🙌
+              </button>
+            </motion.div>
+          );
+
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <AnimatePresence>
+        {showOnboarding && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+          >
+            {/* Blurred Backdrop */}
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+            
+            {/* Modal Container */}
+            <div className="relative w-full max-w-sm pointer-events-auto z-10">
+              {/* Vibrant Pink/Crimson Background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-500 via-pink-500 to-rose-600 rounded-2xl shadow-2xl overflow-hidden">
+                {/* Floating Hearts in Background */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                  {floatingHearts.map((heart) => (
+                    <motion.div
+                      key={heart.id}
+                      className="absolute opacity-25"
+                      style={{
+                        top: `${heart.top}%`,
+                        left: `${heart.left}%`,
+                        width: `${heart.size}px`,
+                        height: `${heart.size}px`,
+                      }}
+                      animate={{
+                        y: [0, -30, 0, 30, 0],
+                        x: [0, 15, 0, -15, 0],
+                        rotate: [0, heart.rotation, 360],
+                      }}
+                      transition={{
+                        duration: heart.duration,
+                        delay: heart.delay,
+                        repeat: Infinity,
+                        ease: "linear"
+                      }}
+                    >
+                      {heart.isBroken ? (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-full h-full text-white/20"
+                        >
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                          <path d="M12 14.5l-3-3 3-3 3 3-3 3z" fill="white" opacity="0.3" />
+                          <path d="M9 11.5l3-3 3 3-3 3-3-3z" fill="white" opacity="0.5" />
+                        </svg>
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-full h-full text-white/20"
+                        >
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                        </svg>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Subtle Pattern Overlay */}
+                <div className="absolute inset-0 opacity-5" style={{
+                  backgroundImage: `radial-gradient(circle at 20px 20px, white 1px, transparent 1px)`,
+                  backgroundSize: '40px 40px'
+                }} />
+              </div>
+
+              {/* Content */}
+              <div className="relative p-5 md:p-6">
+                {renderStep()}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
   };
 
   if (loading || checkingDirector) {
@@ -586,6 +1052,9 @@ export default function Dashboard() {
         onClose={() => setShowFundModal(false)}
         user={user}
       />
+
+      {/* Onboarding Popup */}
+      <OnboardingPopup />
 
       <Footer />
     </>
