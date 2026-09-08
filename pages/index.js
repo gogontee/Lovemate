@@ -136,8 +136,8 @@ export default function Home() {
 
   // Registration countdown timer - First to opening, then to closure
   useEffect(() => {
-    const registrationOpenDate = new Date("2026-04-20T00:00:00").getTime();
-    const registrationCloseDate = new Date("2026-05-20T23:59:59").getTime();
+    const registrationOpenDate = new Date("2026-08-20T00:00:00").getTime();
+    const registrationCloseDate = new Date("2026-10-20T23:59:59").getTime();
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
