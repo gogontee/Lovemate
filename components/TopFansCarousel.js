@@ -1,7 +1,7 @@
 // components/TopFansCarousel.js
-import { useState, useEffect } from "react";
-import { User, Crown, Heart, Sparkles, ArrowRight } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { User, Crown, Heart, ArrowRight, Ticket, Star, Award, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -16,10 +16,10 @@ const formatName = (fullName) => {
 // Helper to get rank icon and color based on position
 const getRankStyle = (index) => {
   const styles = [
-    { icon: <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />, bg: "bg-red-700", border: "border-red-700" },
-    { icon: <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />, bg: "bg-blue-600", border: "border-blue-600" },
-    { icon: <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />, bg: "bg-green-600", border: "border-green-600" },
-    { icon: <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />, bg: "bg-orange-500", border: "border-orange-500" },
+    { icon: <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />, bg: "bg-[#DC143C] shadow-[0_0_15px_rgba(220,20,60,0.6)]" },
+    { icon: <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />, bg: "bg-rose-600" },
+    { icon: <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />, bg: "bg-rose-700" },
+    { icon: <Crown className="w-4 h-4 md:w-5 md:h-5 text-white" />, bg: "bg-rose-800" },
   ];
   return styles[index] || styles[0];
 };
@@ -27,10 +27,10 @@ const getRankStyle = (index) => {
 // Helper to get motivational message
 const getMotivation = (index) => {
   const messages = [
-    { text: "Leading the Pack! 👑", icon: "👑" },
-    { text: "Rising Star! ⭐", icon: "⭐" },
-    { text: "Top Contender! 🚀", icon: "🚀" },
-    { text: "Fan Favorite! 💝", icon: "💝" },
+    { text: "Leading the Pack", icon: "👑" },
+    { text: "Rising Star", icon: "⭐" },
+    { text: "Top Contender", icon: "🚀" },
+    { text: "Fan Favorite", icon: "💝" },
   ];
   return messages[index] || messages[0];
 };
@@ -53,10 +53,7 @@ export default function TopFansCarousel({ fans = [] }) {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
-      }
+      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
     }
   };
 
@@ -65,39 +62,27 @@ export default function TopFansCarousel({ fans = [] }) {
     visible: { 
       opacity: 1, 
       y: 0,
-      transition: { 
-        type: "spring",
-        stiffness: 300,
-        damping: 20
-      }
+      transition: { type: "spring", stiffness: 300, damping: 20 }
     }
   };
 
-  // If no fans yet, show call-to-action
+  // --- EMPTY STATE: Top Fan Challenge ---
   if (!fans || fans.length === 0) {
     return (
-      <section className="bg-gradient-to-b from-white to-rose-50 py-8 md:py-12 px-4 relative overflow-hidden">
+      <section className="bg-[#0a0a0f] py-12 md:py-20 px-4 relative overflow-hidden">
+        {/* Reddish Glow Background Effects */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#DC143C]/10 rounded-full blur-[120px] pointer-events-none translate-x-1/3 -translate-y-1/3 z-0"></div>
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-rose-600/10 rounded-full blur-[100px] pointer-events-none -translate-x-1/4 translate-y-1/4 z-0"></div>
+
         {/* Animated Background Hearts */}
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 opacity-10 pointer-events-none z-0">
           {[...Array(6)].map((_, i) => (
             <motion.div
               key={i}
-              initial={{ 
-                x: Math.random() * 100 + "vw", 
-                y: Math.random() * 100 + "vh",
-                scale: 0
-              }}
-              animate={{ 
-                y: ["0vh", "-20vh", "0vh"],
-                rotate: [0, 360],
-                scale: [0, 1, 0]
-              }}
-              transition={{
-                duration: 15 + i * 2,
-                repeat: Infinity,
-                delay: i * 2
-              }}
-              className="absolute text-rose-200"
+              initial={{ x: Math.random() * 100 + "vw", y: Math.random() * 100 + "vh", scale: 0 }}
+              animate={{ y: ["0vh", "-20vh", "0vh"], rotate: [0, 360], scale: [0, 1, 0] }}
+              transition={{ duration: 15 + i * 2, repeat: Infinity, delay: i * 2 }}
+              className="absolute text-[#DC143C]"
             >
               <Heart size={30 + i * 10} fill="currentColor" />
             </motion.div>
@@ -108,62 +93,84 @@ export default function TopFansCarousel({ fans = [] }) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="max-w-3xl mx-auto text-center relative z-10"
+          className="max-w-4xl mx-auto text-center relative z-10"
         >
           {/* Decorative Crown */}
           <motion.div
             animate={{ y: [0, -8, 0] }}
             transition={{ duration: 3, repeat: Infinity }}
-            className="inline-block mb-3"
+            className="inline-block mb-4"
           >
-            <Crown className="w-10 h-10 md:w-12 md:h-12 text-rose-400" />
+            <Crown className="w-12 h-12 md:w-16 md:h-16 text-[#DC143C] drop-shadow-[0_0_15px_rgba(220,20,60,0.5)]" />
           </motion.div>
 
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3">
-            <span className="text-gray-900">Top</span>{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-rose-600">
-              Fans
+          <h2 className="text-3xl md:text-5xl font-bold mb-4">
+            <span className="text-white">The Ultimate </span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#DC143C] to-rose-500">
+              Fan Challenge
             </span>
           </h2>
+
+          <p className="text-gray-400 text-sm md:text-lg mb-8 max-w-2xl mx-auto">
+            The leaderboard is waiting for its first legends! Step up, support your favorite LoveMate, and unlock insane rewards.
+          </p>
 
           <motion.div
             initial={{ scale: 0.95 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="bg-white/80 backdrop-blur-lg rounded-xl shadow-xl p-5 md:p-8 border border-rose-200 max-w-lg mx-auto"
+            className="bg-[#121216]/90 backdrop-blur-xl rounded-2xl shadow-2xl p-6 md:p-10 border border-[#DC143C]/30 max-w-3xl mx-auto"
           >
-            <div className="text-5xl mb-3">🏆</div>
-            <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2">
-              Be the First Fan Leader!
+            <h3 className="text-xl md:text-2xl font-bold text-white mb-6">
+              Why Join the Top Fan Ranks?
             </h3>
             
-            <p className="text-xs md:text-sm text-gray-600 mb-3">
-              The leaderboard is empty and waiting for YOU! 🎯
-            </p>
-
-            <div className="bg-gradient-to-r from-rose-100 to-red-100 rounded-lg p-3 mb-4">
-              <p className="text-xs text-gray-700">
-                Get ready to support your favorite Mate with votes and gifts to earn lovepoints and climb the ranks. 
-                The top 4 fans will be crowned here for all to see! 👑
-              </p>
+            {/* Perks Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 text-left">
+              <div className="flex items-start gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
+                <Award className="w-5 h-5 text-[#DC143C] shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white text-sm font-semibold">Exclusive Top Fan Badge</h4>
+                  <p className="text-xs text-gray-400">Stand out with a unique profile badge.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
+                <Ticket className="w-5 h-5 text-[#DC143C] shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white text-sm font-semibold">Free VIP Grand Finale Tickets</h4>
+                  <p className="text-xs text-gray-400">Watch the LoveMate finale live in VIP style.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
+                <Star className="w-5 h-5 text-[#DC143C] shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white text-sm font-semibold">Exclusive Recognition</h4>
+                  <p className="text-xs text-gray-400">Get a shoutout on the official broadcast.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 bg-white/5 p-3 rounded-lg border border-white/5">
+                <Sparkles className="w-5 h-5 text-[#DC143C] shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-white text-sm font-semibold">LoveMate Top Prizes</h4>
+                  <p className="text-xs text-gray-400">Mystery boxes, merch, and so much more.</p>
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link
+                href="/auth/signup"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#DC143C] to-rose-600 text-white rounded-full text-sm font-bold hover:from-rose-600 hover:to-[#DC143C] transition-all shadow-[0_0_20px_rgba(220,20,60,0.4)] hover:shadow-[0_0_30px_rgba(220,20,60,0.6)] transform hover:-translate-y-0.5 group"
+              >
+                <User className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                Sign Up as a Fan & Support Your Mate
+              </Link>
               <Link
                 href="/vote"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-lg text-sm font-semibold hover:from-red-700 hover:to-rose-700 transition-all shadow-md hover:shadow-lg group"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-transparent text-white rounded-full text-sm font-semibold border border-white/20 hover:bg-white/10 transition-all"
               >
-                <Heart className="w-3 h-3 group-hover:scale-110 transition-transform" />
+                <Heart className="w-4 h-4 text-[#DC143C]" />
                 Vote Now
-                <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              
-              <Link
-                href="/auth/login"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white text-rose-600 rounded-lg text-sm font-semibold border border-rose-200 hover:bg-rose-50 transition-all"
-              >
-                <User className="w-3 h-3" />
-                Login to Support
               </Link>
             </div>
           </motion.div>
@@ -172,31 +179,27 @@ export default function TopFansCarousel({ fans = [] }) {
     );
   }
 
-  // Render top fans
+  // --- ACTIVE STATE: Render Top Fans ---
   return (
-    <section className="bg-gradient-to-b from-white to-rose-50 py-8 md:py-12 px-4 relative overflow-hidden">
-      {/* Floating Hearts Background - Reduced opacity */}
-      <div className="absolute inset-0 opacity-5">
+    <section className="bg-[#0a0a0f] py-12 md:py-20 px-4 relative overflow-hidden">
+      {/* Reddish Glow Background Effects */}
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-[#DC143C]/10 rounded-full blur-[120px] pointer-events-none translate-x-1/3 -translate-y-1/3 z-0"></div>
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-rose-600/10 rounded-full blur-[100px] pointer-events-none -translate-x-1/4 translate-y-1/4 z-0"></div>
+
+      {/* Floating Hearts Background */}
+      <div className="absolute inset-0 opacity-10 pointer-events-none z-0">
         {[...Array(8)].map((_, i) => (
           <motion.div
             key={i}
-            initial={{ 
-              x: Math.random() * 100 + "vw", 
-              y: Math.random() * 100 + "vh"
-            }}
+            initial={{ x: Math.random() * 100 + "vw", y: Math.random() * 100 + "vh" }}
             animate={{ 
               y: ["0vh", "-30vh", "0vh"],
               x: ["0vw", `${(Math.random() - 0.5) * 20}vw`, "0vw"],
               rotate: [0, 360],
               scale: [1, 1.2, 1]
             }}
-            transition={{
-              duration: 20 + i * 3,
-              repeat: Infinity,
-              delay: i * 2,
-              ease: "easeInOut"
-            }}
-            className="absolute text-rose-300"
+            transition={{ duration: 20 + i * 3, repeat: Infinity, delay: i * 2, ease: "easeInOut" }}
+            className="absolute text-[#DC143C]"
           >
             <Heart size={20 + i * 5} fill="currentColor" />
           </motion.div>
@@ -209,31 +212,32 @@ export default function TopFansCarousel({ fans = [] }) {
         transition={{ duration: 0.6 }}
         className="max-w-6xl mx-auto relative z-10"
       >
-        <div className="text-center mb-6 md:mb-8">
+        <div className="text-center mb-10">
           <motion.div
             animate={{ rotate: [0, 5, -5, 0] }}
             transition={{ duration: 4, repeat: Infinity }}
-            className="inline-block mb-1"
+            className="inline-block mb-2"
           >
-            <Crown className="w-6 h-6 md:w-8 md:h-8 text-yellow-500" />
+            <Crown className="w-8 h-8 md:w-10 md:h-10 text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" />
           </motion.div>
           
-          <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-1">
-            <span className="text-gray-900">Top</span>{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-rose-600">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-2">
+            <span className="text-white">Top </span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#DC143C] to-rose-500">
               Fans
             </span>
           </h2>
-          <p className="text-xs md:text-sm text-gray-500">
-            The most dedicated supporters this season
+          <p className="text-sm md:text-base text-gray-400">
+            The most dedicated supporters leading the charge this season
           </p>
         </div>
 
+        {/* Grid designed for up to 4 fans */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6"
         >
           {fans.slice(0, 4).map((fan, index) => {
             const rankStyle = getRankStyle(index);
@@ -243,34 +247,34 @@ export default function TopFansCarousel({ fans = [] }) {
               <motion.div
                 key={fan.id || index}
                 variants={itemVariants}
-                whileHover={{ y: -4 }}
+                whileHover={{ y: -6 }}
                 onHoverStart={() => setHoveredIndex(index)}
                 onHoverEnd={() => setHoveredIndex(null)}
                 className="relative group"
               >
-                {/* Reddish Glow Effect */}
+                {/* Glow Effect behind the card */}
                 <motion.div
                   animate={{ 
                     scale: hoveredIndex === index ? 1.05 : 1,
                     opacity: hoveredIndex === index ? 0.5 : 0.2
                   }}
-                  className="absolute inset-0 bg-red-500 rounded-xl blur-lg -z-10"
+                  className="absolute inset-0 bg-[#DC143C] rounded-2xl blur-xl -z-10 transition-all duration-300"
                 />
 
-                {/* Card */}
-                <div className="relative bg-white rounded-lg shadow-md overflow-hidden border border-rose-100">
+                {/* Redesigned Card */}
+                <div className="relative bg-[#121216] rounded-2xl shadow-xl overflow-hidden border border-[#DC143C]/30 group-hover:border-[#DC143C]/60 transition-colors duration-300">
                   
-                  {/* Image Section - 70% of card */}
-                  <div className="relative h-32 sm:h-40 md:h-48 w-full bg-gradient-to-br from-rose-100 to-red-100">
+                  {/* Image Section */}
+                  <div className="relative h-40 sm:h-52 md:h-64 w-full bg-[#181820]">
                     
                     {/* Rank Icon - Top Right */}
-                    <div className={`absolute top-2 right-2 z-20 ${rankStyle.bg} rounded-full p-1.5 shadow-lg`}>
+                    <div className={`absolute top-3 right-3 z-20 ${rankStyle.bg} rounded-full p-2 shadow-lg border border-white/20`}>
                       {rankStyle.icon}
                     </div>
                     
                     {/* Milestone Tag - Top Left */}
-                    <div className="absolute top-2 left-2 z-20 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full">
-                      <span className="text-[8px] md:text-[10px] font-medium text-white">
+                    <div className="absolute top-3 left-3 z-20 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 shadow-md">
+                      <span className="text-[9px] md:text-[11px] font-bold tracking-wider text-white uppercase">
                         {getMilestone(fan.points)}
                       </span>
                     </div>
@@ -282,33 +286,33 @@ export default function TopFansCarousel({ fans = [] }) {
                           src={fan.photo_url}
                           alt={fan.full_name || "Fan"}
                           fill
-                          unoptimized // ✅ Added unoptimized prop to skip Next.js image optimization
-                          className="object-cover"
+                          unoptimized 
+                          className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-rose-200 to-red-200">
-                          <User className="w-10 h-10 md:w-12 md:h-12 text-rose-600" />
+                        <div className="w-full h-full flex items-center justify-center bg-[#181820]">
+                          <User className="w-12 h-12 md:w-16 md:h-16 text-[#DC143C]/50" />
                         </div>
                       )}
+                      {/* Gradient Overlay for text readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#121216] via-[#121216]/40 to-transparent" />
                     </div>
                   </div>
 
-                  {/* Info Section - 30% of card */}
-                  <div className="p-2 md:p-3 text-center bg-white">
+                  {/* Info Section */}
+                  <div className="relative p-3 md:p-4 text-center -mt-6 z-20">
                     {/* Name */}
-                    <h3 className="text-xs md:text-sm font-bold text-gray-800 truncate">
+                    <h3 className="text-sm md:text-lg font-bold text-white truncate mb-1">
                       {formatName(fan.full_name)}
                     </h3>
 
                     {/* Motivational Badge */}
-                    <motion.div
-                      animate={{ scale: [1, 1.03, 1] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                      className="mt-0.5 text-[8px] md:text-[10px] text-rose-600 font-medium flex items-center justify-center gap-0.5"
-                    >
-                      <Heart className="w-2 h-2 fill-current" />
-                      {motivation.text}
-                    </motion.div>
+                    <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#DC143C]/10 border border-[#DC143C]/20">
+                      <span className="text-xs">{motivation.icon}</span>
+                      <span className="text-[9px] md:text-xs font-bold text-[#DC143C] uppercase tracking-wide">
+                        {motivation.text}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -321,15 +325,15 @@ export default function TopFansCarousel({ fans = [] }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          className="text-center mt-6 md:mt-8"
+          className="text-center mt-10"
         >
           <Link
             href="/vote"
-            className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-red-600 to-rose-600 text-white rounded-lg text-sm font-semibold hover:from-red-700 hover:to-rose-700 transition-all shadow-md hover:shadow-lg group"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#DC143C] to-rose-600 text-white rounded-full text-sm font-bold hover:from-rose-600 hover:to-[#DC143C] transition-all shadow-[0_0_20px_rgba(220,20,60,0.3)] hover:shadow-[0_0_30px_rgba(220,20,60,0.5)] transform hover:-translate-y-0.5 group"
           >
-            <Heart className="w-3 h-3 group-hover:scale-110 transition-transform" />
-            Support Your Favorite Mate
-            <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+            <Heart className="w-4 h-4 group-hover:scale-110 transition-transform" />
+            Climb the Leaderboard - Vote Now
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </motion.div>
       </motion.div>

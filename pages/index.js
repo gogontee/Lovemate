@@ -3,7 +3,7 @@ import Header from "../components/Header";
 import Footer from "../components/Footer";
 import VideoCarousel from "../components/VideoCarousel";
 import SponsorCarousel from "../components/SponsorCarousel";
-import TopFansCarousel from "../components/TopFansCarousel";
+// import TopFansCarousel from "../components/TopFansCarousel"; // Commented out
 import NewsCard from "@/components/NewsCard";
 import { motion } from "framer-motion";
 import Slider from "react-slick";
@@ -12,32 +12,37 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/utils/supabaseClient";
 import TopCandidates from "@/components/TopCandidates";
 import FeaturedPost from "@/components/FeaturedPost";
+import Description from "@/components/Description"; // <-- Imported Description
 import Image from "next/image";
+import { Heart, Tv, Users, Trophy } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
   const [candidates, setCandidates] = useState([]);
   const [news, setNews] = useState([]);
-  const [topFans, setTopFans] = useState([]);
-  const [loadingFans, setLoadingFans] = useState(true);
+  // const [topFans, setTopFans] = useState([]); // Commented out
+  // const [loadingFans, setLoadingFans] = useState(true); // Commented out
+  
+  const [isMounted, setIsMounted] = useState(false);
+
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
     minutes: 0,
     seconds: 0
   });
-  const [registrationStatus, setRegistrationStatus] = useState('not_started'); // 'not_started', 'open', 'closed'
+  const [registrationStatus, setRegistrationStatus] = useState('not_started');
   const [hasVisibleVotableCandidates, setHasVisibleVotableCandidates] = useState(false);
 
-  // Fetch top fans
+  /* 
+  // Commented out entire fetchTopFans function
   const fetchTopFans = async () => {
     try {
-      // Get top 3 profiles by points
       const { data: profiles, error } = await supabase
         .from('profile')
         .select('id, full_name, photo_url, points')
         .order('points', { ascending: false })
-        .limit(3);
+        .limit(4);
 
       if (error) {
         console.error("Error fetching top fans:", error);
@@ -52,7 +57,6 @@ export default function Home() {
         return;
       }
 
-      // Get total votes for each fan
       const fansWithVotes = await Promise.all(
         profiles.map(async (fan) => {
           const { data: voteData, error: voteError } = await supabase
@@ -65,19 +69,16 @@ export default function Home() {
             return { ...fan, totalVotes: 0 };
           }
 
-          // Sum up all votes
           const totalVotes = voteData?.reduce((sum, item) => sum + (item.votes || 0), 0) || 0;
           
           return { 
             ...fan, 
             totalVotes,
-            // Only include fans with at least 1 point
             points: fan.points || 0
           };
         })
       );
 
-      // Filter out fans with less than 1 point
       const qualifiedFans = fansWithVotes.filter(fan => fan.points >= 1);
       setTopFans(qualifiedFans);
       setLoadingFans(false);
@@ -87,8 +88,11 @@ export default function Home() {
       setLoadingFans(false);
     }
   };
+  */
 
   useEffect(() => {
+    setIsMounted(true);
+
     const fetchData = async () => {
       const { data: candidatesData } = await supabase.from("candidates").select("*");
       const { data: newsData } = await supabase
@@ -99,19 +103,18 @@ export default function Home() {
       setCandidates(candidatesData || []);
       setNews(newsData || []);
       
-      // Check if there are any visible candidates with role "Yes" and votes > 0
       const hasVisible = candidatesData?.some(
         candidate => candidate.role === "Yes" && candidate.visibility === true && candidate.votes > 0
       );
       setHasVisibleVotableCandidates(hasVisible);
 
-      // Fetch top fans
-      await fetchTopFans();
+      // await fetchTopFans(); // Commented out
     };
 
     fetchData();
 
-    // Set up realtime subscription for points updates
+    /* 
+    // Commented out realtime subscription for top fans
     const channel = supabase
       .channel('top-fans-updates')
       .on(
@@ -123,7 +126,6 @@ export default function Home() {
           filter: 'points=gt.0'
         },
         () => {
-          // Refetch top fans when points change
           fetchTopFans();
         }
       )
@@ -132,21 +134,21 @@ export default function Home() {
     return () => {
       supabase.removeChannel(channel);
     };
+    */
   }, []);
 
-  // Registration countdown timer - First to opening, then to closure
   useEffect(() => {
+    if (!isMounted) return;
+
     const registrationOpenDate = new Date("2026-08-20T00:00:00").getTime();
     const registrationCloseDate = new Date("2026-10-20T23:59:59").getTime();
 
     const timer = setInterval(() => {
       const now = new Date().getTime();
       
-      // Check if registration hasn't started yet
       if (now < registrationOpenDate) {
         setRegistrationStatus('not_started');
         const distance = registrationOpenDate - now;
-        
         if (distance < 0) {
           setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
         } else {
@@ -158,11 +160,9 @@ export default function Home() {
           });
         }
       } 
-      // Check if registration is open
       else if (now >= registrationOpenDate && now < registrationCloseDate) {
         setRegistrationStatus('open');
         const distance = registrationCloseDate - now;
-        
         if (distance < 0) {
           setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
         } else {
@@ -174,7 +174,6 @@ export default function Home() {
           });
         }
       }
-      // Registration closed
       else {
         setRegistrationStatus('closed');
         clearInterval(timer);
@@ -183,7 +182,7 @@ export default function Home() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [isMounted]);
 
   const handleVote = async (candidateId, voteCost = 100) => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -221,31 +220,35 @@ export default function Home() {
   };
 
   const heroSlides = [
-    {
-      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero10.jpg",
-      title: "Love or Betrayal?",
-      highlight: "Your Game, Your Fate",
+    { 
+      image: "/hero/hero5.jpg", 
+      title: "Love or Betrayal", 
+      highlight: "Your Game, Your Fate." 
     },
-    {
-      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero6.jpg",
-      title: "Love under spotlight",
-      highlight: "The Ultimate Test",
+    { 
+      image: "/hero/hero10.jpg", 
+      title: "Take a Spot", 
+      highlight: "Experience the butterfly effect" 
     },
-    {
-      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero7.jpg",
-      title: "Time to paint the Screen",
-      highlight: "Registration Has Beguns",
+    { 
+      image: "/hero/hero7.jpg", 
+      title: "Lets Go Hunting", 
+      highlight: "Who is in the garden?" 
     },
-    {
-      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero8.jpg",
-      title: "If Your Oxygen is Love?",
-      highlight: "Then take a spot",
+    { 
+      image: "/hero/hero8.jpg", 
+      title: "Love in spotlight", 
+      highlight: "The Ultimate Test" 
+    }, 
+    { 
+      image: "/hero/hero9.jpg", 
+      title: "Guard Your Heart", 
+      highlight: "Betrayal is part of the Game" 
     },
-    {
-      image: "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero9.jpg",
-      title: "Hot and spicy Mates",
-      highlight: "On Lovemate Show",
-      subtitle: "coming to your screen.",
+    { 
+      image: "/hero/hero6.jpg", 
+      title: "LoveMate Show!", 
+      highlight: "coming soon" 
     },
   ];
 
@@ -275,15 +278,10 @@ export default function Home() {
     "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero10.jpg",
   ];
 
-  // Get timer label based on registration status
   const getTimerLabel = () => {
-    if (registrationStatus === 'not_started') {
-      return "Registration Starts In";
-    } else if (registrationStatus === 'open') {
-      return "Registration Closes In";
-    } else {
-      return "Registration Closed";
-    }
+    if (registrationStatus === 'not_started') return "Registration Starts In";
+    if (registrationStatus === 'open') return "Registration Closes In";
+    return "Registration Closed";
   };
 
   return (
@@ -298,219 +296,138 @@ export default function Home() {
 
       <Header />
 
-      <main className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-20 md:pb-0">
-        {/* Hero Section with Timer - Height reduced by 20% */}
-        <section className="relative">
+      <main className="bg-[#0a0a0f] min-h-screen pb-20 md:pb-0 overflow-hidden">
+        {/* Hero Section */}
+        <section className="relative w-full mb-10 sm:mb-12">
           <Slider {...sliderSettings}>
             {heroSlides.map((slide, index) => (
               <div key={index}>
-                <div className="relative h-[192px] sm:h-[320px] overflow-hidden">
+                {/* Aspect ratio: 14:9 on mobile, fixed heights on desktop */}
+                <div className="relative w-full aspect-[14/9] sm:aspect-auto sm:h-[55vh] sm:min-h-[400px] sm:max-h-[600px] overflow-hidden">
+                  
+                  {/* Background Image */}
                   <Image
                     src={slide.image}
                     alt={slide.title}
                     fill
-                    className="object-cover"
+                    className="object-cover object-center"
                     priority={index === 0}
                     unoptimized={true}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
                   
-                  {/* Hero Content */}
-                  <div className="absolute inset-0 max-w-7xl mx-auto px-4 sm:px-6">
-                    <div className="h-full flex flex-col justify-center items-start max-w-2xl">
-                      <motion.h1
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="text-xl sm:text-4xl md:text-5xl font-bold text-white mb-2"
-                      >
-                        <span className="block">{slide.title}</span>
-                        <span className="block text-red-600">{slide.highlight}</span>
-                        <span className="block">{slide.subtitle}</span>
-                      </motion.h1>
-                      
-                      <motion.p
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="text-xs sm:text-base text-gray-300 mb-4 max-w-lg bg-black/20 backdrop-blur-sm p-2 sm:p-3 rounded-lg w-1/2 sm:w-full"
-                      >
-                        24 LoveMates. 360 hours. 1 Winner. Watch love unfold under
-                        the spotlight in this thrilling reality show.
-                      </motion.p>
-                      
-                      {registrationStatus !== 'closed' && (
-                        <motion.a
-                          href={registrationStatus === 'open' ? "/register" : "#"}
-                          onClick={(e) => {
-                            if (registrationStatus === 'not_started') {
-                              e.preventDefault();
-                              alert(`Registration will open on April 20, 2026. Stay tuned!`);
-                            }
-                          }}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.3 }}
-                          className="relative group"
-                        >
-                          <div className="absolute -inset-0.5 bg-gradient-to-r from-rose-500 to-rose-600 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300" />
-                          <span className="relative inline-block bg-gray-900 text-white px-4 sm:px-8 py-2 sm:py-3 rounded-full text-xs sm:text-base font-semibold">
-                            {registrationStatus === 'open' ? 'Register Now' : 'Register Opens Soon'}
-                          </span>
-                        </motion.a>
-                      )}
-
-                      {registrationStatus === 'closed' && (
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/60 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-transparent to-transparent opacity-90" />
+                  
+                  {/* Hero Content Container - Pushed down tight to the stats */}
+                  <div className="absolute inset-0 flex flex-col justify-end items-start pb-[60px] sm:pb-[80px]">
+                    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+                      <div className="flex flex-col items-start w-full">
+                        
+                        {/* Dynamic Titles */}
                         <motion.div
+                          key={index} 
+                          initial={{ opacity: 0, x: -30 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1, duration: 0.6 }}
+                          className="max-w-xl text-left"
+                        >
+                          <h1 className="text-2xl sm:text-5xl md:text-6xl font-bold text-white mb-1 sm:mb-2 leading-tight">
+                            {slide.title}
+                          </h1>
+                          <p className="text-sm sm:text-xl md:text-2xl text-red-600 font-semibold italic mb-3 sm:mb-5">
+                            {slide.highlight}
+                          </p>
+                        </motion.div>
+                        
+                        {/* Call to Action Buttons */}
+                        <motion.div
+                          key={`btn-${index}`}
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: 0.3 }}
-                          className="relative group"
+                          transition={{ delay: 0.3, duration: 0.6 }}
+                          className="flex flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto"
                         >
-                          <div className="absolute -inset-0.5 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full opacity-75 blur transition duration-300" />
-                          <span className="relative inline-block bg-gray-900 text-gray-400 px-4 sm:px-8 py-2 sm:py-3 rounded-full text-xs sm:text-base font-semibold cursor-not-allowed">
-                            Registration Closed
-                          </span>
+                          <button
+                            onClick={() => router.push("/register")}
+                            className="flex-1 sm:flex-none flex items-center justify-center bg-red-600 text-white px-4 py-1.5 sm:px-6 sm:py-2.5 rounded-full font-bold text-[11px] sm:text-sm hover:bg-green-600 transition-all shadow-lg hover:shadow-green-500/30 transform hover:-translate-y-0.5"
+                          >
+                            REGISTER HERE
+                          </button>
+                          <button
+                            onClick={() => router.push("/about")}
+                            className="flex-1 sm:flex-none flex items-center justify-center bg-transparent border border-white/40 text-white px-4 py-1.5 sm:px-6 sm:py-2.5 rounded-full font-semibold text-[11px] sm:text-sm hover:bg-white/10 hover:border-white transition-all backdrop-blur-sm"
+                          >
+                            Learn More
+                          </button>
                         </motion.div>
-                      )}
+                      </div>
                     </div>
                   </div>
-
-                  {/* Timer - Bottom Right */}
-                  {registrationStatus !== 'closed' && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.4 }}
-                      className="absolute bottom-4 right-4 sm:bottom-8 sm:right-8 z-20"
-                    >
-                      <div className="bg-black/40 backdrop-blur-md rounded-xl sm:rounded-2xl p-2 sm:p-4 border border-rose-500/30">
-                        <div className="text-[8px] sm:text-xs text-rose-300/80 uppercase tracking-wider mb-1 sm:mb-2 text-center">
-                          {getTimerLabel()}
-                        </div>
-                        <div className="flex gap-1 sm:gap-3">
-                          <div className="text-center">
-                            <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.days}</div>
-                            <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Days</div>
-                          </div>
-                          <div className="text-rose-500/50 text-xs sm:text-base">:</div>
-                          <div className="text-center">
-                            <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.hours}</div>
-                            <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Hrs</div>
-                          </div>
-                          <div className="text-rose-500/50 text-xs sm:text-base">:</div>
-                          <div className="text-center">
-                            <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.minutes}</div>
-                            <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Min</div>
-                          </div>
-                          <div className="text-rose-500/50 text-xs sm:text-base">:</div>
-                          <div className="text-center">
-                            <div className="text-xs sm:text-xl font-bold text-red-600">{timeLeft.seconds}</div>
-                            <div className="text-[6px] sm:text-[10px] text-gray-400 uppercase">Sec</div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Registration Closed Message */}
-                  {registrationStatus === 'closed' && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.4 }}
-                      className="absolute bottom-4 right-4 sm:bottom-8 sm:right-8 z-20"
-                    >
-                      <div className="bg-black/60 backdrop-blur-md rounded-xl sm:rounded-2xl p-2 sm:p-4 border border-gray-500/30">
-                        <div className="text-[8px] sm:text-xs text-gray-300/80 uppercase tracking-wider mb-1 sm:mb-2 text-center">
-                          Registration Closed
-                        </div>
-                        <div className="text-[10px] sm:text-sm text-gray-400 text-center whitespace-nowrap">
-                          See you next season!
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
                 </div>
               </div>
             ))}
           </Slider>
-        </section>
 
-        {/* Stats Section - 24 Strangers, 1 Mansion, Diverse Mission, $10K Prizes */}
-        <section className="py-6 sm:py-8 px-4">
-          <div className="max-w-4xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="grid grid-cols-4 gap-1 sm:gap-3 bg-black/30 backdrop-blur-md rounded-xl sm:rounded-2xl p-2 sm:p-4 border border-rose-500/20"
-            >
-              {/* 24 Strangers */}
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
-                  <span className="text-rose-300 text-xs sm:text-base">👥</span>
-                  <span className="text-xs sm:text-base font-bold text-red-600">24</span>
+          {/* Floating Stats Bar - Intersecting the bottom edge */}
+          <div className="absolute bottom-0 left-0 right-0 z-20 translate-y-1/2">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="bg-[#0f0f13]/95 backdrop-blur-xl border border-rose-500/30 rounded-xl sm:rounded-2xl px-2 pt-2 sm:px-4 sm:pt-4 pb-0 shadow-2xl"
+              >
+                <div className="flex items-center justify-between sm:justify-around overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full gap-4 sm:gap-8 px-1 pb-0">
+                  <div className="flex flex-col items-center justify-center text-center space-y-0.5 sm:space-y-1 min-w-[80px] snap-center shrink-0 pb-1 sm:pb-0">
+                    <Heart className="text-[#DC143C] w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <div className="text-[10px] sm:text-xs font-semibold text-white whitespace-nowrap">Real People</div>
+                    <div className="text-[8px] sm:text-[10px] text-gray-400 whitespace-nowrap">Real Emotions</div>
+                  </div>
+                  <div className="flex flex-col items-center justify-center text-center space-y-0.5 sm:space-y-1 min-w-[80px] snap-center shrink-0 border-l border-white/10 pl-3 sm:pl-0 sm:border-0 pb-1 sm:pb-0">
+                    <Tv className="text-[#DC143C] w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <div className="text-[10px] sm:text-xs font-semibold text-white whitespace-nowrap">Unfiltered Drama</div>
+                    <div className="text-[8px] sm:text-[10px] text-gray-400 whitespace-nowrap">24/7</div>
+                  </div>
+                  <div className="flex flex-col items-center justify-center text-center space-y-0.5 sm:space-y-1 min-w-[80px] snap-center shrink-0 border-l border-white/10 pl-3 sm:pl-0 sm:border-0 pb-1 sm:pb-0">
+                    <Users className="text-[#DC143C] w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <div className="text-[10px] sm:text-xs font-semibold text-white whitespace-nowrap">Love, Alliance</div>
+                    <div className="text-[8px] sm:text-[10px] text-gray-400 whitespace-nowrap">and Betrayal</div>
+                  </div>
+                  <div className="flex flex-col items-center justify-center text-center space-y-0.5 sm:space-y-1 min-w-[80px] snap-center shrink-0 border-l border-white/10 pl-3 sm:pl-0 sm:border-0 pb-1 sm:pb-0">
+                    <Trophy className="text-[#DC143C] w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
+                    <div className="text-[10px] sm:text-xs font-semibold text-white whitespace-nowrap">One Winner</div>
+                    <div className="text-[8px] sm:text-[10px] text-gray-400 whitespace-nowrap">A Lifetime Story</div>
+                  </div>
                 </div>
-                <div className="text-[8px] sm:text-xs text-rose-100/70 uppercase tracking-wider">Strangers</div>
-              </div>
-
-              {/* 1 Mansion */}
-              <div className="text-center border-l border-rose-500/20">
-                <div className="flex items-center justify-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
-                  <span className="text-rose-300 text-xs sm:text-base">🏰</span>
-                  <span className="text-xs sm:text-base font-bold text-red-600">1</span>
-                </div>
-                <div className="text-[8px] sm:text-xs text-rose-100/70 uppercase tracking-wider">Mansion</div>
-              </div>
-
-              {/* Diverse Mission */}
-              <div className="text-center border-l border-rose-500/20">
-                <div className="flex items-center justify-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
-                  <span className="text-rose-300 text-xs sm:text-base">🎯</span>
-                  <span className="text-[8px] sm:text-xs font-bold text-red-600">Diverse</span>
-                </div>
-                <div className="text-[8px] sm:text-xs text-rose-100/70 uppercase tracking-wider">Mission</div>
-              </div>
-
-              {/* $10K Prizes */}
-              <div className="text-center border-l border-rose-500/20">
-                <div className="flex items-center justify-center gap-1 sm:gap-2 mb-0.5 sm:mb-1">
-                  <span className="text-rose-300 text-xs sm:text-base">🏆</span>
-                  <span className="text-xs sm:text-base font-bold text-red-600">$10K</span>
-                </div>
-                <div className="text-[8px] sm:text-xs text-rose-100/70 uppercase tracking-wider">Prizes</div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </div>
+
         </section>
 
-        {/* Featured Post Carousel - Before Top Candidates */}
         <FeaturedPost images={featuredImages} />
 
-        {/* Top Candidates - Only render if there are visible, approved candidates with votes */}
+        {/* Description Component - Placed Immediately After FeaturedPost */}
+        <Description />
+
         {hasVisibleVotableCandidates && (
           <>
             <TopCandidates />
-            {/* Add gap after TopCandidates on mobile only */}
             <div className="block sm:hidden h-16"></div>
           </>
         )}
 
-        {/* Video Carousel */}
         <VideoCarousel videos={[
           { url: "https://www.youtube.com/embed/MWzBjSfsLsE?loop=1&playlist=MWzBjSfsLsE" },
           { url: "https://www.youtube.com/embed/C-dWkLFEEw0?loop=1&playlist=C-dWkLFEEw0" },
           { url: "https://www.youtube.com/embed/JfDes65L3Zg?loop=1&playlist=JfDes65L3Zg" },
         ]} />
 
-        {/* Sponsors - Direct CTA without dark background */}
         <SponsorCarousel />
 
-        {/* Top Fans - Now with real data */}
-        <TopFansCarousel fans={topFans} />
+        {/* <TopFansCarousel fans={topFans} /> */}
 
-        {/* Latest News */}
         <section className="py-12 sm:py-20 px-4">
           <div className="max-w-7xl mx-auto">
             <motion.h2
@@ -560,13 +477,11 @@ export default function Home() {
               </a>
             </motion.div>
             
-            {/* Add gap after news button on mobile only */}
             <div className="block sm:hidden h-16"></div>
           </div>
         </section>
       </main>
 
-      {/* Footer - Hidden on mobile, visible on desktop */}
       <div className="hidden md:block">
         <Footer />
       </div>
