@@ -172,7 +172,7 @@ export default function Footer() {
               <span className="w-8 h-0.5 bg-[#DC143C]"></span>
               Quick Links
             </h4>
-            <ul className="space-y-2">
+            <ul className="grid grid-cols-2 md:grid-cols-1 gap-x-4 gap-y-2">
               {quickLinks.map((link) => (
                 <li key={link.href}>
                   <Link

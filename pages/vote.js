@@ -347,22 +347,18 @@ export default function VotePage() {
       <main className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen">
         {/* Desktop Hero - unchanged height */}
         <div className="hidden md:block relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
-          {heroDesktop?.image ? (
-            <div className="relative w-full h-full">
-              <Image
-                src={heroDesktop.image}
-                alt={heroDesktop.title || "Vote for your favorite"}
-                fill
-                className="object-cover opacity-70"
-                priority
-                sizes="100vw"
-                unoptimized={true}
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
-            </div>
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-pink-900 to-rose-900" />
-          )}
+          <div className="relative w-full h-full">
+            <Image
+              src="/hero/hero11.jpg"
+              alt={heroDesktop?.title || "Vote for your favorite"}
+              fill
+              className="object-cover opacity-70"
+              priority
+              sizes="100vw"
+              unoptimized={true}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
+          </div>
 
           <div className="absolute inset-0 flex items-center">
             <div className="max-w-7xl mx-auto px-8 w-full">
@@ -421,22 +417,18 @@ export default function VotePage() {
 
         {/* Mobile Hero - height reduced by 30% (300px → 210px) */}
         <div className="md:hidden relative w-full h-[210px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
-          {heroMobile?.image ? (
-            <div className="relative w-full h-full">
-              <Image
-                src={heroMobile.image}
-                alt={heroMobile.title || "Vote for your favorite"}
-                fill
-                className="object-cover opacity-70"
-                priority
-                sizes="100vw"
-                unoptimized={true}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-            </div>
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-pink-900 to-rose-900" />
-          )}
+          <div className="relative w-full h-full">
+            <Image
+              src="/hero/hero11.jpg"
+              alt={heroMobile?.title || "Vote for your favorite"}
+              fill
+              className="object-cover opacity-70"
+              priority
+              sizes="100vw"
+              unoptimized={true}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
+          </div>
 
           <div className="absolute inset-0 flex flex-col justify-end p-5">
             <motion.h1
