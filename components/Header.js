@@ -3,7 +3,7 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import { useEffect, useState, useRef } from "react";
 import { supabase } from "../utils/supabaseClient";
-import { Menu, X, UserCircle, Home, Heart, Eye, LayoutDashboard, Tv } from "lucide-react";
+import { Menu, X, UserCircle, Home, Heart, LayoutDashboard, Tv, ChevronDown } from "lucide-react";
 
 export default function Header() {
   const router = useRouter();
@@ -144,7 +144,7 @@ export default function Header() {
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setDropdownOpen(!dropdownOpen)} 
-                  className="hidden md:flex items-center gap-2 px-2 py-0 rounded-full hover:bg-gradient-to-r hover:from-red-600/20 hover:to-rose-600/20 transition"
+                  className="hidden md:flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gradient-to-r hover:from-red-600/20 hover:to-rose-600/20 transition-all"
                 >
                   {avatarUrl ? (
                     <Image
@@ -155,11 +155,17 @@ export default function Header() {
                       sizes="36px"
                       loading="eager"
                       unoptimized
-                      className="rounded-full border-2 border-rose-300 object-cover"
+                      className="rounded-full border-2 border-[#DC143C] object-cover"
                     />
                   ) : (
                     <UserCircle size={36} className="text-white hover:text-rose-400 transition" />
                   )}
+                  
+                  {/* Added Chevron Icon to indicate dropdown */}
+                  <ChevronDown 
+                    size={16} 
+                    className={`text-white/70 transition-transform duration-300 ${dropdownOpen ? 'rotate-180' : ''}`} 
+                  />
                 </button>
 
                 {dropdownOpen && (
@@ -206,7 +212,6 @@ export default function Header() {
               className="absolute right-0 top-0 h-full w-64 bg-[#0a0a0f] shadow-2xl flex flex-col border-l border-rose-900/30"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header with Menu title and Close button */}
               <div className="flex justify-between items-center p-4 border-b border-rose-900/50">
                 <span className="text-base font-semibold text-white">Menu</span>
                 <button
@@ -217,7 +222,6 @@ export default function Header() {
                 </button>
               </div>
 
-              {/* Scrollable Menu Items with bottom padding to avoid bottom nav */}
               <div className="flex-1 overflow-y-auto py-2 pb-24">
                 {navLinks.map((link) => (
                   <Link
@@ -230,7 +234,6 @@ export default function Header() {
                   </Link>
                 ))}
                 
-                {/* Live link in mobile menu - TV icon white */}
                 <Link
                   href="/gallery?tab=stream#livestream"
                   className="block px-4 py-2 text-sm text-white hover:bg-gradient-to-r hover:from-red-600/20 hover:to-rose-600/20 hover:text-rose-400 transition"
@@ -290,7 +293,6 @@ export default function Header() {
       {/* Mobile & Tablet Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0a0a0f]/95 backdrop-blur-lg border-t border-rose-900/50 shadow-2xl shadow-rose-900/20 z-50">
         <div className="flex justify-around items-center h-20 px-2 relative">
-          {/* Home - Left */}
           <Link
             href="/"
             className={`
@@ -323,7 +325,6 @@ export default function Header() {
             )}
           </Link>
 
-          {/* Vote - Center */}
           <Link
             href="/vote"
             className="relative -top-6 flex flex-col items-center group"
@@ -353,7 +354,6 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* Dashboard - Right */}
           <Link
             href={user ? "/dashboard" : "/auth/login"}
             onClick={(e) => {
@@ -393,7 +393,6 @@ export default function Header() {
           </Link>
         </div>
         
-        {/* Safe area padding for modern phones */}
         <div className="h-[env(safe-area-inset-bottom)] bg-[#0a0a0f]/95"></div>
       </nav>
     </>

@@ -1,3 +1,4 @@
+// components/Footer.js
 import Image from "next/image";
 import {
   Instagram,
@@ -42,11 +43,11 @@ export default function Footer() {
   ];
 
   const socialLinks = [
-    { icon: Instagram, href: "https://instagram.com/lovemateshow", label: "Instagram", color: "hover:text-pink-600" },
-    { icon: Twitter, href: "https://twitter.com/lovemateshow", label: "Twitter", color: "hover:text-sky-500" },
-    { icon: Facebook, href: "https://facebook.com/lovemateshow", label: "Facebook", color: "hover:text-blue-600" },
-    { icon: Music, href: "https://tiktok.com/@lovemateshow", label: "TikTok", color: "hover:text-gray-900" },
-    { icon: Youtube, href: "https://youtube.com/@lovemateshow", label: "YouTube", color: "hover:text-red-600" },
+    { icon: Instagram, href: "https://instagram.com/lovemateshow", label: "Instagram", color: "hover:text-[#DC143C]" },
+    { icon: Twitter, href: "https://twitter.com/lovemateshow", label: "Twitter", color: "hover:text-[#DC143C]" },
+    { icon: Facebook, href: "https://facebook.com/lovemateshow", label: "Facebook", color: "hover:text-[#DC143C]" },
+    { icon: Music, href: "https://tiktok.com/@lovemateshow", label: "TikTok", color: "hover:text-[#DC143C]" },
+    { icon: Youtube, href: "https://youtube.com/@lovemateshow", label: "YouTube", color: "hover:text-[#DC143C]" },
   ];
 
   const handleChange = (e) => {
@@ -56,55 +57,29 @@ export default function Footer() {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      setStatus({
-        submitting: false,
-        success: false,
-        error: true,
-        message: "Please enter your name",
-      });
+      setStatus({ submitting: false, success: false, error: true, message: "Please enter your name" });
       return false;
     }
     
     if (!formData.email.trim()) {
-      setStatus({
-        submitting: false,
-        success: false,
-        error: true,
-        message: "Please enter your email address",
-      });
+      setStatus({ submitting: false, success: false, error: true, message: "Please enter your email address" });
       return false;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      setStatus({
-        submitting: false,
-        success: false,
-        error: true,
-        message: "Please enter a valid email address",
-      });
+      setStatus({ submitting: false, success: false, error: true, message: "Please enter a valid email address" });
       return false;
     }
     
     if (!formData.whatsapp.trim()) {
-      setStatus({
-        submitting: false,
-        success: false,
-        error: true,
-        message: "Please enter your WhatsApp number",
-      });
+      setStatus({ submitting: false, success: false, error: true, message: "Please enter your WhatsApp number" });
       return false;
     }
     
-    // Basic WhatsApp number validation (accepts international format)
     const whatsappRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,5}[-\s\.]?[0-9]{1,5}$/;
     if (!whatsappRegex.test(formData.whatsapp)) {
-      setStatus({
-        submitting: false,
-        success: false,
-        error: true,
-        message: "Please enter a valid WhatsApp number",
-      });
+      setStatus({ submitting: false, success: false, error: true, message: "Please enter a valid WhatsApp number" });
       return false;
     }
     
@@ -114,19 +89,11 @@ export default function Footer() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
     
-    setStatus({
-      submitting: true,
-      success: false,
-      error: false,
-      message: "Subscribing...",
-    });
+    setStatus({ submitting: true, success: false, error: false, message: "Subscribing..." });
     
     try {
-      // Insert data into newsletter_subscribers table
       const { data, error } = await supabase
         .from('newsletter_subscribers')
         .insert([
@@ -141,76 +108,43 @@ export default function Footer() {
         .select();
       
       if (error) {
-        // Check if it's a duplicate email error
         if (error.code === '23505') {
-          setStatus({
-            submitting: false,
-            success: false,
-            error: true,
-            message: "This email is already subscribed to our newsletter!",
-          });
+          setStatus({ submitting: false, success: false, error: true, message: "This email is already subscribed to our newsletter!" });
         } else {
-          console.error("Supabase error:", error);
-          setStatus({
-            submitting: false,
-            success: false,
-            error: true,
-            message: "Something went wrong. Please try again later.",
-          });
+          setStatus({ submitting: false, success: false, error: true, message: "Something went wrong. Please try again later." });
         }
         return;
       }
       
-      // Success
-      setStatus({
-        submitting: false,
-        success: true,
-        error: false,
-        message: "Thank you for subscribing! Stay tuned for updates.",
-      });
+      setStatus({ submitting: false, success: true, error: false, message: "Thank you for subscribing! Stay tuned for updates." });
+      setFormData({ name: "", email: "", whatsapp: "" });
       
-      // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        whatsapp: "",
-      });
-      
-      // Clear success message after 5 seconds
       setTimeout(() => {
         setStatus(prev => ({ ...prev, success: false, message: "" }));
       }, 5000);
       
     } catch (err) {
-      console.error("Subscription error:", err);
-      setStatus({
-        submitting: false,
-        success: false,
-        error: true,
-        message: "An unexpected error occurred. Please try again.",
-      });
+      setStatus({ submitting: false, success: false, error: true, message: "An unexpected error occurred. Please try again." });
     }
   };
 
   return (
-    <footer className="relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-gray-300 pt-16 pb-8 px-4 overflow-hidden">
-      {/* Decorative Background Elements */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-0 left-0 w-64 h-64 bg-rose-500 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 right-0 w-80 h-80 bg-rose-600 rounded-full blur-3xl"></div>
-      </div>
+    <footer className="relative bg-[#0a0a0f] text-gray-300 pt-16 pb-8 px-4 overflow-hidden border-t border-[#DC143C]/20">
+      {/* Decorative Background Glows */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-[#DC143C]/5 rounded-full blur-[120px] pointer-events-none -translate-y-1/2 z-0"></div>
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-[#DC143C]/5 rounded-full blur-[100px] pointer-events-none translate-y-1/2 z-0"></div>
       
       {/* Animated Hearts */}
-      <div className="absolute top-20 right-20 opacity-10 hidden lg:block">
-        <Heart className="w-32 h-32 text-rose-400 animate-pulse" />
+      <div className="absolute top-20 right-20 opacity-10 hidden lg:block z-0 pointer-events-none">
+        <Heart className="w-32 h-32 text-[#DC143C] animate-pulse" />
       </div>
-      <div className="absolute bottom-20 left-20 opacity-10 hidden lg:block">
-        <Heart className="w-24 h-24 text-rose-400 animate-bounce" />
+      <div className="absolute bottom-20 left-20 opacity-10 hidden lg:block z-0 pointer-events-none">
+        <Heart className="w-24 h-24 text-[#DC143C] animate-bounce" />
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto">
-        {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12">
+          
           {/* Brand Column */}
           <div className="md:col-span-3">
             <div className="flex items-center gap-3 mb-4">
@@ -220,6 +154,7 @@ export default function Footer() {
                   alt="Lovemate Show Logo"
                   fill
                   className="object-contain"
+                  unoptimized
                 />
               </div>
               <h3 className="text-2xl font-bold text-white">Lovemate Show</h3>
@@ -234,7 +169,7 @@ export default function Footer() {
           {/* Quick Links */}
           <div className="md:col-span-2">
             <h4 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="w-8 h-0.5 bg-rose-500"></span>
+              <span className="w-8 h-0.5 bg-[#DC143C]"></span>
               Quick Links
             </h4>
             <ul className="space-y-2">
@@ -242,9 +177,9 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-400 hover:text-rose-400 transition-colors inline-flex items-center gap-1 group"
+                    className="text-sm text-gray-400 hover:text-white transition-colors inline-flex items-center gap-1 group"
                   >
-                    <span className="w-1 h-1 bg-rose-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    <span className="w-1 h-1 bg-[#DC143C] rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     {link.label}
                   </Link>
                 </li>
@@ -255,28 +190,22 @@ export default function Footer() {
           {/* Contact Info */}
           <div className="md:col-span-3">
             <h4 className="text-white text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="w-8 h-0.5 bg-rose-500"></span>
+              <span className="w-8 h-0.5 bg-[#DC143C]"></span>
               Contact Us
             </h4>
             
-            {/* Email Contact */}
-            <div className="flex items-center gap-3 mb-4 bg-white/5 rounded-lg p-3 border border-white/10">
-              <Mail className="w-5 h-5 text-rose-400 flex-shrink-0" />
-              <a 
-                href="mailto:lovemateshow@gmail.com" 
-                className="text-sm text-gray-300 hover:text-rose-400 transition-colors truncate"
-              >
+            <div className="flex items-center gap-3 mb-4 bg-white/5 rounded-lg p-3 border border-white/10 hover:border-[#DC143C]/30 transition-colors">
+              <Mail className="w-5 h-5 text-[#DC143C] flex-shrink-0" />
+              <a href="mailto:lovemateshow@gmail.com" className="text-sm text-gray-300 hover:text-white transition-colors truncate">
                 lovemateshow@gmail.com
               </a>
             </div>
 
-            {/* Location */}
-            <div className="flex items-center gap-3 mb-4 bg-white/5 rounded-lg p-3 border border-white/10">
-              <MapPin className="w-5 h-5 text-rose-400 flex-shrink-0" />
+            <div className="flex items-center gap-3 mb-4 bg-white/5 rounded-lg p-3 border border-white/10 hover:border-[#DC143C]/30 transition-colors">
+              <MapPin className="w-5 h-5 text-[#DC143C] flex-shrink-0" />
               <span className="text-sm text-gray-300">Lagos, Nigeria</span>
             </div>
 
-            {/* Social Icons */}
             <div className="flex flex-wrap gap-2">
               {socialLinks.map((social) => (
                 <a
@@ -285,7 +214,7 @@ export default function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={social.label}
-                  className={`bg-white/10 hover:bg-white/20 p-2 rounded-lg text-gray-400 ${social.color} transition-all hover:scale-110`}
+                  className={`bg-white/5 hover:bg-white/10 p-2 rounded-lg text-gray-400 ${social.color} transition-all hover:scale-110 border border-white/5 hover:border-[#DC143C]/30`}
                 >
                   <social.icon className="w-5 h-5" />
                 </a>
@@ -293,17 +222,16 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Newsletter Subscription - Horizontal Layout on Desktop */}
+          {/* Newsletter Subscription */}
           <div className="md:col-span-4">
-            <div className="bg-gradient-to-br from-rose-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl p-5 border border-rose-500/20">
+            <div className="bg-[#DC143C]/5 backdrop-blur-sm rounded-xl p-5 border border-[#DC143C]/20">
               <div className="flex items-center gap-2 mb-3">
-                <Send className="w-5 h-5 text-rose-400" />
+                <Send className="w-5 h-5 text-[#DC143C]" />
                 <h4 className="text-white font-semibold">Stay Updated</h4>
               </div>
               <p className="text-xs text-gray-400 mb-4">Get the latest news, updates, and exclusive content</p>
               
               <form onSubmit={handleSubmit}>
-                {/* 2 Column Grid for Name and Email on Desktop */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div>
                     <input
@@ -313,7 +241,7 @@ export default function Footer() {
                       onChange={handleChange}
                       placeholder="Your full name"
                       disabled={status.submitting}
-                      className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#DC143C] transition-colors disabled:opacity-50"
                     />
                   </div>
                   
@@ -325,12 +253,11 @@ export default function Footer() {
                       onChange={handleChange}
                       placeholder="Email address"
                       disabled={status.submitting}
-                      className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#DC143C] transition-colors disabled:opacity-50"
                     />
                   </div>
                 </div>
                 
-                {/* WhatsApp Field - Full Width */}
                 <div className="mb-3">
                   <input
                     type="tel"
@@ -339,15 +266,14 @@ export default function Footer() {
                     onChange={handleChange}
                     placeholder="WhatsApp number (e.g., +234 801 234 5678)"
                     disabled={status.submitting}
-                    className="w-full bg-white/10 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-rose-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#DC143C] transition-colors disabled:opacity-50"
                   />
                 </div>
                 
-                {/* Submit Button - Full Width */}
                 <button
                   type="submit"
                   disabled={status.submitting}
-                  className="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group"
+                  className="w-full bg-[#DC143C] hover:bg-[#B80B35] text-white px-4 py-2 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 group font-semibold"
                 >
                   {status.submitting ? (
                     <>
@@ -362,7 +288,6 @@ export default function Footer() {
                   )}
                 </button>
                 
-                {/* Status Messages */}
                 {status.error && (
                   <div className="flex items-center gap-2 text-red-400 text-xs bg-red-500/10 rounded-lg p-2 mt-3">
                     <XCircle className="w-4 h-4 flex-shrink-0" />
@@ -392,13 +317,13 @@ export default function Footer() {
               © {currentYear} Lovemate Show. All rights reserved.
             </p>
             <div className="flex gap-6 text-xs text-gray-500">
-              <Link href="/policy" className="hover:text-rose-400 transition-colors">
+              <Link href="/policy" className="hover:text-[#DC143C] transition-colors">
                 Privacy Policy
               </Link>
-              <Link href="/termsofparticipation" className="hover:text-rose-400 transition-colors">
+              <Link href="/termsofparticipation" className="hover:text-[#DC143C] transition-colors">
                 Terms of Service
               </Link>
-              <Link href="/policy" className="hover:text-rose-400 transition-colors">
+              <Link href="/policy" className="hover:text-[#DC143C] transition-colors">
                 Cookie Policy
               </Link>
             </div>
