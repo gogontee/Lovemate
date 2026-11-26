@@ -119,7 +119,7 @@ const approvedMessages = [
     id: 1,
     icon: <Zap className="w-4 h-4" />,
     message: "⚡ APPROVED! The cosmic energy is with you. Time to prove you're worthy of the green star!",
-    action: "Share your profile and gather those votes!",
+    action: "Share your profile and gather those gifts!",
     animation: confettiAnimation,
     animationType: "confetti"
   },
@@ -134,7 +134,7 @@ const approvedMessages = [
   {
     id: 3,
     icon: <Heart className="w-4 h-4" />,
-    message: "💖 The Lovemate nation is waiting to meet you! Let them feel your energy!",
+    message: "💖 The Lovemate house is waiting to meet you! Let them feel your energy!",
     action: "Share your story, share your dreams!",
     animation: starsWinnerAnimation,
     animationType: "stars"
@@ -143,7 +143,7 @@ const approvedMessages = [
     id: 4,
     icon: <Star className="w-4 h-4" />,
     message: "⭐ The yellow light shines upon you! One step closer to stardom!",
-    action: "Get your fans ready. The cosmic battle begins soon!",
+    action: "Get your fans ready. The love battle begins soon!",
     animation: confettiAnimation,
     animationType: "confetti"
   },
@@ -151,7 +151,7 @@ const approvedMessages = [
     id: 5,
     icon: <Trophy className="w-4 h-4" />,
     message: "🏆 Orakul sees greatness in your future! The journey to the top 24 starts today!",
-    action: "Dream big, vote bigger!",
+    action: "Dream big, Hunt for Greatness!",
     animation: celebrationAnimation,
     animationType: "celebration"
   }
