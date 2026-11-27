@@ -8,8 +8,9 @@ import Footer from "../../components/Footer";
 import VoteSection from "../../components/candidate/VoteSection";
 import GiftSection from "../../components/candidate/GiftSection";
 import Gallery from "../../components/candidate/Gallery";
+import CrushChallenge from "../../components/CrushChallenge"; // <-- Imported Crush Challenge
 import { motion, AnimatePresence } from "framer-motion";
-import { Share2, CheckCircle, MoreHorizontal, Heart, Eye, X } from "lucide-react";
+import { Share2, CheckCircle, MoreHorizontal, Heart, Eye, X, AlertTriangle } from "lucide-react";
 
 function formatNaira(n) {
   if (n == null) return "₦0";
@@ -17,8 +18,58 @@ function formatNaira(n) {
   return `₦${formatted}`;
 }
 
+// ─── Qualification helper ──────────────────────────────────────────
+const QUALIFICATION_WINDOW_DAYS = 5;
+const GRACE_WINDOW_DAYS = 3;
+const MIN_GIFTS = 2;
+
+function computeQualification(candidate) {
+  if (!candidate) return null;
+
+  const gifts = candidate.gifts || 0;
+  const created = candidate.created_at ? new Date(candidate.created_at) : new Date();
+  const now = new Date();
+  const daysSinceCreated = (now - created) / (1000 * 60 * 60 * 24);
+
+  if (gifts >= MIN_GIFTS) {
+    return { status: "approved", graceActive: false, daysLeft: 0 };
+  }
+
+  if (daysSinceCreated < QUALIFICATION_WINDOW_DAYS) {
+    return {
+      status: "pending",
+      graceActive: false,
+      daysLeft: QUALIFICATION_WINDOW_DAYS - daysSinceCreated,
+    };
+  }
+
+  if (gifts === 1 && daysSinceCreated < QUALIFICATION_WINDOW_DAYS + GRACE_WINDOW_DAYS) {
+    return {
+      status: "grace",
+      graceActive: true,
+      daysLeft: QUALIFICATION_WINDOW_DAYS + GRACE_WINDOW_DAYS - daysSinceCreated,
+    };
+  }
+
+  return { status: "disqualified", graceActive: false, daysLeft: 0 };
+}
+
 // Approval Badge Component
-function ApprovalBadge({ approval }) {
+function ApprovalBadge({ approval, qualification, status }) {
+  if (status === "disqualified" || qualification?.status === "disqualified") {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        className="absolute top-4 left-4 z-30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-gray-800 text-red-400 border border-red-500/50 shadow-lg flex items-center gap-1.5"
+      >
+        <span className="w-2 h-2 rounded-full bg-red-500" />
+        Disqualified
+      </motion.div>
+    );
+  }
+
   if (approval === true) {
     return (
       <motion.div
@@ -45,6 +96,21 @@ function ApprovalBadge({ approval }) {
       </motion.div>
     );
   }
+  if (qualification?.graceActive) {
+    const days = Math.ceil(qualification.daysLeft);
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        className="absolute top-4 left-4 z-30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-orange-500 text-white shadow-lg flex items-center gap-1.5"
+      >
+        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+        Grace · {days}d left
+      </motion.div>
+    );
+  }
+  const days = Math.ceil(qualification?.daysLeft || 0);
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -53,7 +119,7 @@ function ApprovalBadge({ approval }) {
       className="absolute top-4 left-4 z-30 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-yellow-400 text-yellow-900 shadow-lg flex items-center gap-1.5"
     >
       <span className="w-2 h-2 rounded-full bg-yellow-800 animate-pulse" />
-      Pending Approval
+      Pending · {days}d left
     </motion.div>
   );
 }
@@ -142,7 +208,6 @@ function PendingApprovalPopup({ onDismiss, onLearnMore }) {
           transition={{ type: "spring", damping: 22, stiffness: 300 }}
           className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8"
         >
-          {/* Dismiss Icon */}
           <button
             onClick={onDismiss}
             className="absolute top-3 right-3 p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
@@ -151,7 +216,6 @@ function PendingApprovalPopup({ onDismiss, onLearnMore }) {
             <X className="w-5 h-5" />
           </button>
 
-          {/* Icon */}
           <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-red-100">
             <Heart className="w-8 h-8 text-red-600" />
           </div>
@@ -182,17 +246,77 @@ function PendingApprovalPopup({ onDismiss, onLearnMore }) {
   );
 }
 
-// Digital Stats Component - Integrated into Hero
-function DigitalStats({ candidate, currentUser, formatNaira, onVoteClick, onGiftClick }) {
+// Disqualification warning popup
+function QualificationWarningPopup({ onDismiss, onLearnMore, daysLeft, graceActive }) {
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4"
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ type: "spring", damping: 22, stiffness: 300 }}
+          className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-8 border-2 border-orange-400"
+        >
+          <button
+            onClick={onDismiss}
+            className="absolute top-3 right-3 p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+            aria-label="Dismiss"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-orange-100">
+            <AlertTriangle className="w-8 h-8 text-orange-600" />
+          </div>
+
+          <h2 className="text-xl md:text-2xl font-extrabold text-center text-gray-900 mb-3">
+            ⏳ Time Is Running Out
+          </h2>
+
+          <p className="text-gray-700 text-sm md:text-base text-center leading-relaxed mb-3">
+            You have{" "}
+            <span className="font-bold text-orange-600">
+              {Math.ceil(daysLeft)} day{Math.ceil(daysLeft) === 1 ? "" : "s"}
+            </span>{" "}
+            {graceActive ? "of grace period left" : "left"} to collect at least{" "}
+            <span className="font-bold text-red-600">2 gifts</span>.
+          </p>
+
+          <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg p-3 mb-5">
+            <p className="text-xs md:text-sm text-gray-700 text-center">
+              If you cannot get at least 2 gifts before the deadline, it means you
+              cannot match the energy of the LoveMate Show and you will be{" "}
+              <span className="font-bold text-red-600">automatically disqualified</span>.
+            </p>
+          </div>
+
+          <button
+            onClick={onLearnMore}
+            className="w-full py-3 rounded-xl bg-red-600 hover:bg-green-600 text-white font-bold text-sm md:text-base shadow-lg transition-colors"
+          >
+            Learn More
+          </button>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// Digital Stats Component
+function DigitalStats({ candidate, currentUser, formatNaira, onVoteClick, onGiftClick, isApproved }) {
   const [animatedVotes, setAnimatedVotes] = useState(0);
   const [animatedGifts, setAnimatedGifts] = useState(0);
   const [animatedWorth, setAnimatedWorth] = useState(0);
 
   const isOwner = currentUser && candidate.user_id === currentUser.id;
   const secret = candidate.secret;
-  const isApproved = candidate.approval === true;
 
-  // Votes: hidden when not approved
   const shouldShowVotes = () => {
     if (!isApproved) return false;
     if (secret === 'hidevote') return isOwner;
@@ -200,13 +324,11 @@ function DigitalStats({ candidate, currentUser, formatNaira, onVoteClick, onGift
     return true;
   };
 
-  // Gifts: ALWAYS visible regardless of approval
   const shouldShowGifts = () => {
     if (secret === 'hideall') return isOwner;
     return true;
   };
 
-  // Gift Worth: hidden when not approved
   const shouldShowWorth = () => {
     if (!isApproved) return false;
     if (secret === 'hideall') return isOwner;
@@ -295,7 +417,6 @@ function DigitalStats({ candidate, currentUser, formatNaira, onVoteClick, onGift
           >
             <div className="flex items-center gap-1.5">
               <span className="text-red-600 text-sm group-hover:text-red-300">🎁</span>
-              
             </div>
             <div className="text-base font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-red-100 group-hover:from-red-200 group-hover:to-red-50 drop-shadow-[0_0_4px_rgba(220,38,38,0.6)]">
               {Math.round(animatedGifts).toLocaleString()}
@@ -319,7 +440,7 @@ function DigitalStats({ candidate, currentUser, formatNaira, onVoteClick, onGift
   );
 }
 
-// Send Gift Tab Button with glowing pulse (same as profile picture border)
+// Send Gift Tab Button
 function SendGiftTabButton({ isActive, onClick, isApproved }) {
   if (!isApproved) {
     return (
@@ -382,14 +503,20 @@ export default function CandidateProfile() {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [isOwner, setIsOwner] = useState(false);
-  const [activeTab, setActiveTab] = useState("gallery");
+  const [activeTab, setActiveTab] = useState("send gift");
   const [uploading, setUploading] = useState(false);
   const [galleryImages, setGalleryImages] = useState([]);
   const refreshIntervalRef = useRef(null);
   const [shareToast, setShareToast] = useState(false);
-  const [crushToast, setCrushToast] = useState(false);
+  
+  // ✅ New State for Crush Challenge Modal
+  const [challengeOpen, setChallengeOpen] = useState(false);
+
   const [showPendingPopup, setShowPendingPopup] = useState(false);
+  const [showQualificationWarning, setShowQualificationWarning] = useState(false);
   const pendingPopupTimerRef = useRef(null);
+  const qualificationTimerRef = useRef(null);
+  const qualificationCheckRef = useRef(null);
 
   const defaultBanner = "https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/lovemateshow/logo/banner.png";
 
@@ -470,13 +597,46 @@ export default function CandidateProfile() {
     else setIsOwner(false);
   }, [candidate, currentUser]);
 
-  // Pending approval popup — triggers every 20 minutes using localStorage timestamp
+  useEffect(() => {
+    if (!candidate) return;
+    if (candidate.status === "disqualified") return;
+    if (qualificationCheckRef.current) clearTimeout(qualificationCheckRef.current);
+
+    qualificationCheckRef.current = setTimeout(async () => {
+      const q = computeQualification(candidate);
+      if (!q) return;
+
+      const gifts = candidate.gifts || 0;
+      const isApprovedInDb = candidate.approval === true;
+      const isDisqualified = candidate.status === "disqualified";
+
+      if (gifts >= MIN_GIFTS && !isApprovedInDb) {
+        const { error } = await supabase
+          .from("candidates")
+          .update({ approval: true, status: "approved" })
+          .eq("id", candidate.id);
+        if (error) console.error("Auto-approve failed:", error);
+      } else if (q.status === "disqualified" && !isDisqualified) {
+        const { error } = await supabase
+          .from("candidates")
+          .update({ approval: false, status: "disqualified" })
+          .eq("id", candidate.id);
+        if (error) console.error("Auto-disqualify failed:", error);
+      }
+    }, 2000);
+
+    return () => {
+      if (qualificationCheckRef.current) clearTimeout(qualificationCheckRef.current);
+    };
+  }, [candidate]);
+
   useEffect(() => {
     if (!candidate) return;
     if (candidate.approval !== null) return;
+    if (candidate.status === "disqualified") return;
 
     const storageKey = `pending-popup-last-shown-${candidate.id}`;
-    const intervalMs = 20 * 60 * 1000; // 20 minutes
+    const intervalMs = 20 * 60 * 1000; 
     const now = Date.now();
     const lastShown = Number(localStorage.getItem(storageKey) || 0);
 
@@ -489,16 +649,38 @@ export default function CandidateProfile() {
     };
 
     if (now - lastShown >= intervalMs) {
-      // 20 minutes have passed (or never shown) — show after a short delay for page render
       schedulePopup(1200);
     } else {
-      // Still within the 20-minute window — schedule for the remaining time
       schedulePopup(intervalMs - (now - lastShown));
     }
 
     return () => {
       if (pendingPopupTimerRef.current) clearTimeout(pendingPopupTimerRef.current);
     };
+  }, [candidate]);
+
+  useEffect(() => {
+    if (!candidate) return;
+    if (candidate.status === "disqualified") return;
+    if (candidate.approval === true) return;
+    if ((candidate.gifts || 0) >= MIN_GIFTS) return;
+
+    const q = computeQualification(candidate);
+    if (!q) return;
+    if (q.status !== "pending" && q.status !== "grace") return;
+
+    const sessionKey = `qual-warn-${candidate.id}`;
+    if (sessionStorage.getItem(sessionKey)) return;
+
+    const threshold = q.status === "grace" ? 3 : 2;
+    if (q.daysLeft > threshold) return;
+
+    const timer = setTimeout(() => {
+      setShowQualificationWarning(true);
+      sessionStorage.setItem(sessionKey, "1");
+    }, 2500);
+
+    return () => clearTimeout(timer);
   }, [candidate]);
 
   useEffect(() => {
@@ -551,9 +733,9 @@ export default function CandidateProfile() {
     setTimeout(() => setShareToast(false), 3000);
   };
 
+  // ✅ Trigger the Crush Challenge Modal
   const handleCrushChallenge = () => {
-    setCrushToast(true);
-    setTimeout(() => setCrushToast(false), 3000);
+    setChallengeOpen(true);
   };
 
   const handleSeeGifters = () => {
@@ -699,7 +881,9 @@ export default function CandidateProfile() {
     );
   }
 
-  const isApproved = candidate.approval === true;
+  const isApproved = (candidate.gifts || 0) >= MIN_GIFTS || candidate.approval === true;
+  const qualification = computeQualification(candidate);
+  const isDisqualified = candidate.status === "disqualified" || qualification?.status === "disqualified";
 
   const candidateImageUrl = candidate.image_url?.startsWith('http')
     ? candidate.image_url
@@ -749,7 +933,11 @@ export default function CandidateProfile() {
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
 
-          <ApprovalBadge approval={candidate.approval} />
+          <ApprovalBadge
+            approval={candidate.approval}
+            qualification={qualification}
+            status={candidate.status}
+          />
 
           {isOwner && (
             <div className="absolute top-4 right-4 z-30">
@@ -766,6 +954,7 @@ export default function CandidateProfile() {
             formatNaira={formatNaira}
             onVoteClick={scrollToVote}
             onGiftClick={scrollToGift}
+            isApproved={isApproved}
           />
 
           <div className="absolute bottom-4 md:bottom-8 left-4 md:left-8 z-10 flex items-end gap-4 md:gap-6">
@@ -859,7 +1048,6 @@ export default function CandidateProfile() {
                 );
               })}
 
-              {/* More menu placed after About toggle */}
               <MoreMenu
                 onShare={handleShare}
                 onCrushChallenge={handleCrushChallenge}
@@ -936,6 +1124,29 @@ export default function CandidateProfile() {
         />
       )}
 
+      {/* Qualification Warning Popup */}
+      {showQualificationWarning && qualification && (
+        <QualificationWarningPopup
+          daysLeft={qualification.daysLeft}
+          graceActive={qualification.graceActive}
+          onDismiss={() => setShowQualificationWarning(false)}
+          onLearnMore={() => {
+            setShowQualificationWarning(false);
+            router.push('/learnmore');
+          }}
+        />
+      )}
+
+      {/* ✅ Crush Challenge Modal */}
+      <CrushChallenge
+        candidateId={candidate.id}
+        candidateName={candidate.name}
+        imageUrl={candidate.image_url}
+        isOpen={challengeOpen}
+        onClose={() => setChallengeOpen(false)}
+      />
+
+      {/* Share Toast */}
       <AnimatePresence>
         {shareToast && (
           <motion.div
@@ -946,20 +1157,6 @@ export default function CandidateProfile() {
           >
             <CheckCircle className="w-4 h-4 text-green-600" />
             Link copied to clipboard!
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {crushToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm"
-          >
-            <Heart className="w-4 h-4 text-white" />
-            Crush challenge sent! 💕
           </motion.div>
         )}
       </AnimatePresence>

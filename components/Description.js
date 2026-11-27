@@ -12,19 +12,19 @@ export default function Description() {
       id: 1,
       icon: <Heart className="w-5 h-5 md:w-6 md:h-6 text-white" fill="currentColor" />,
       title: "The Arena of Hearts",
-      text: "LoveMate is an emotional battleground where passion collides under the spotlight. Think you have what it takes? Join the show and let your magical journey begin. Remember, in this game, betrayal isn't just a risk—it's a strategy.",
+      text: "For 360 unforgettable hours, 24 hearts shall chase love under the unrelenting emotional spotlight. Each moment is raw as betrayal is seen as a strategy. This is where soulmates are unveiled and destinies are rewritten. +18 only.",
     },
     {
       id: 2,
       icon: <UserPlus className="w-5 h-5 md:w-6 md:h-6 text-white" />,
       title: "Enter the Villa",
-      text: "Ready to step into the spotlight? Click Sign Up, complete your details, and craft your unique Mate Profile. Your first step toward stardom and love starts here.",
+      text: "Ready to step into the spotlight? Click Register, complete your details, and craft your unique lovemate Profile page. Your first step toward the ultimate love hunt starts here.",
     },
     {
       id: 3,
       icon: <Gift className="w-5 h-5 md:w-6 md:h-6 text-white" />,
       title: "Secure Your Spot",
-      text: "To emerge as a housemate, you must prove you are lovable. Share your profile to get at least 2 people to send you a gift. Once you start earning gifts, your profile is officially locked in for the show!",
+      text: "To emerge as a housemate, you must prove you are lovable. Share your lovemate profile to get at least 2 gift from lovers. Once you start earning gifts, your profile is officially locked in for the show!", 
     },
   ];
 

@@ -376,12 +376,74 @@ export default function Home() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
-                className="bg-[#0f0f13]/95 backdrop-blur-xl border border-rose-500/30 rounded-xl sm:rounded-2xl px-2 pt-2 sm:px-4 sm:pt-4 pb-0 shadow-2xl"
+                className="relative bg-[#0f0f13]/95 backdrop-blur-xl border border-rose-500/30 rounded-xl sm:rounded-2xl px-2 pt-2 sm:px-4 sm:pt-4 pb-0 shadow-2xl overflow-hidden"
               >
-                <div className="flex items-center justify-between sm:justify-around overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full gap-4 sm:gap-8 px-1 pb-0">
+                {/* --- Floating Love Icons --- */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                  {[...Array(8)].map((_, i) => (
+                    <motion.div
+                      key={`love-${i}`}
+                      className="absolute text-rose-500 select-none"
+                      style={{
+                        left: `${8 + ((i * 13) % 85)}%`,
+                        bottom: `${5 + ((i * 7) % 30)}%`,
+                        fontSize: `${0.7 + (i % 3) * 0.15}rem`,
+                      }}
+                      initial={{ opacity: 0, y: 10, scale: 0.6 }}
+                      animate={{
+                        opacity: [0, 0.9, 0.7, 0.3, 0],
+                        y: [10, 0, -18, -32, -48],
+                        scale: [0.6, 1, 1.1, 0.9, 0.5],
+                        rotate: [-10, 0, 5, -5, -10],
+                      }}
+                      transition={{
+                        duration: 5 + (i % 3) * 0.7,
+                        delay: i * 0.8,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      }}
+                    >
+                      ❤️
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* --- Background Bubble Pop Sparks --- */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+                  {[...Array(12)].map((_, i) => (
+                    <motion.div
+                      key={`spark-${i}`}
+                      className="absolute rounded-full"
+                      style={{
+                        left: `${5 + ((i * 17) % 90)}%`,
+                        top: `${10 + ((i * 11) % 70)}%`,
+                        width: `${4 + (i % 4)}px`,
+                        height: `${4 + (i % 4)}px`,
+                        background: `radial-gradient(circle, ${i % 2 === 0 ? '#fda4af' : '#f43f5e'}, #e11d48)`,
+                        boxShadow: '0 0 6px #f43f5e',
+                      }}
+                      initial={{ opacity: 0, scale: 0.3 }}
+                      animate={{
+                        opacity: [0, 1, 0.9, 0.4, 0],
+                        scale: [0.3, 1.2, 1.5, 1, 0.2],
+                        x: [0, 2, 6, 10, 14],
+                        y: [0, -2, -6, -10, -14],
+                      }}
+                      transition={{
+                        duration: 3.5 + (i % 4) * 0.5,
+                        delay: i * 0.35,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Stats content row - unchanged size */}
+                <div className="relative z-10 flex items-center justify-between sm:justify-around overflow-x-auto snap-x snap-mandatory scrollbar-hide w-full gap-4 sm:gap-8 px-1 pb-0">
                   <div className="flex flex-col items-center justify-center text-center space-y-0.5 sm:space-y-1 min-w-[80px] snap-center shrink-0 pb-1 sm:pb-0">
                     <Heart className="text-[#DC143C] w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
-                    <div className="text-[10px] sm:text-xs font-semibold text-white whitespace-nowrap">Real People</div>
+                    <div className="text-[10px] sm:text-xs font-semibold text-white whitespace-nowrap">24 Lovemates</div>
                     <div className="text-[8px] sm:text-[10px] text-gray-400 whitespace-nowrap">Real Emotions</div>
                   </div>
                   <div className="flex flex-col items-center justify-center text-center space-y-0.5 sm:space-y-1 min-w-[80px] snap-center shrink-0 border-l border-white/10 pl-3 sm:pl-0 sm:border-0 pb-1 sm:pb-0">
@@ -397,7 +459,7 @@ export default function Home() {
                   <div className="flex flex-col items-center justify-center text-center space-y-0.5 sm:space-y-1 min-w-[80px] snap-center shrink-0 border-l border-white/10 pl-3 sm:pl-0 sm:border-0 pb-1 sm:pb-0">
                     <Trophy className="text-[#DC143C] w-5 h-5 sm:w-6 sm:h-6" strokeWidth={2} />
                     <div className="text-[10px] sm:text-xs font-semibold text-white whitespace-nowrap">One Winner</div>
-                    <div className="text-[8px] sm:text-[10px] text-gray-400 whitespace-nowrap">A Lifetime Story</div>
+                    <div className="text-[8px] sm:text-[10px] text-gray-400 whitespace-nowrap">$10,000 Prize</div>
                   </div>
                 </div>
               </motion.div>

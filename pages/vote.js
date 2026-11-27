@@ -8,6 +8,7 @@ import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { Search, ChevronRight, X } from "lucide-react";
 
 const fallbackImage = "https://via.placeholder.com/300x400?text=No+Image";
 const PAGE_SIZE = 50;
@@ -18,13 +19,8 @@ export default function VotePage() {
   const [searchResults, setSearchResults] = useState(null);
   const [searching, setSearching] = useState(false);
   const [search, setSearch] = useState("");
-  const [candidateCode, setCandidateCode] = useState("");
-  const [codeError, setCodeError] = useState("");
-  const [codeMatchCandidate, setCodeMatchCandidate] = useState(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [heroDesktop, setHeroDesktop] = useState(null);
-  const [heroMobile, setHeroMobile] = useState(null);
   const [hasEligibleCandidates, setHasEligibleCandidates] = useState(true);
   const [candidatesLoading, setCandidatesLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -58,24 +54,6 @@ export default function VotePage() {
       }
     };
     checkAdmin();
-  }, []);
-
-  // Fetch hero content
-  useEffect(() => {
-    const fetchHeroContent = async () => {
-      const { data, error } = await supabase
-        .from("lovemate")
-        .select("vote_hero_desktop, vote_hero_mobile")
-        .single();
-
-      if (error) {
-        console.error("Error fetching hero content:", error);
-      } else {
-        if (data?.vote_hero_desktop) setHeroDesktop(data.vote_hero_desktop);
-        if (data?.vote_hero_mobile) setHeroMobile(data.vote_hero_mobile);
-      }
-    };
-    fetchHeroContent();
   }, []);
 
   // Fetch ONLY visible candidates (visibility = true) – paginated
@@ -115,8 +93,8 @@ export default function VotePage() {
     setCandidatesLoading(false);
   };
 
-  // Search candidates by name (across ALL visible candidates, ignores pagination)
-  const searchCandidatesByName = async (searchTerm) => {
+  // Unified search across name, full_name, and code
+  const searchCandidates = async (searchTerm) => {
     if (!searchTerm.trim()) {
       setSearchResults(null);
       setSearching(false);
@@ -125,12 +103,14 @@ export default function VotePage() {
 
     setSearching(true);
     try {
+      const term = searchTerm.trim();
+      
+      // Search by name, full_name, or code (ignores visibility for direct code match)
       const { data, error } = await supabase
         .from("candidates")
         .select("*")
         .eq("role", "Yes")
-        .eq("visibility", true)
-        .ilike("name", `%${searchTerm.trim()}%`)
+        .or(`name.ilike.%${term}%,full_name.ilike.%${term}%,code.ilike.%${term}%`)
         .order("votes", { ascending: false });
 
       if (error) throw error;
@@ -153,13 +133,10 @@ export default function VotePage() {
     }
   };
 
-  // Debounced name search
+  // Debounced search handling
   const handleSearchChange = (e) => {
     const value = e.target.value;
     setSearch(value);
-    setCandidateCode("");
-    setCodeMatchCandidate(null);
-    setCodeError("");
 
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
@@ -169,29 +146,19 @@ export default function VotePage() {
     }
 
     debounceTimer.current = setTimeout(() => {
-      searchCandidatesByName(value);
+      searchCandidates(value);
     }, DEBOUNCE_DELAY);
   };
 
-  // Fetch a single candidate by code (ignores visibility)
-  const fetchCandidateByCode = async (code) => {
-    const { data, error } = await supabase
-      .from("candidates")
-      .select("*")
-      .ilike("code", code)
-      .maybeSingle();
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    searchCandidates(search);
+  };
 
-    if (error || !data) return null;
-
-    return {
-      ...data,
-      imageUrl:
-        data.image_url && data.image_url.startsWith("http")
-          ? data.image_url
-          : data.image_url
-          ? `https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/candidates/${data.image_url}`
-          : fallbackImage,
-    };
+  const clearSearch = () => {
+    setSearch("");
+    setSearchResults(null);
   };
 
   // Fetch global stats (all candidates, visible or not) – only if admin
@@ -223,7 +190,7 @@ export default function VotePage() {
     if (isAdmin) fetchStats();
   }, [isAdmin]);
 
-  // Real-time updates for visible candidates + code-matched candidate
+  // Real-time updates for visible candidates + search results
   useEffect(() => {
     const channel = supabase
       .channel("votes-realtime")
@@ -260,14 +227,6 @@ export default function VotePage() {
                 : c
             );
           });
-          if (codeMatchCandidate && codeMatchCandidate.id === payload.new.id) {
-            setCodeMatchCandidate((prev) => ({
-              ...prev,
-              votes: payload.new.votes,
-              gifts: payload.new.gifts,
-              gift_worth: payload.new.gift_worth,
-            }));
-          }
           if (isAdmin) fetchStats();
         }
       )
@@ -276,58 +235,15 @@ export default function VotePage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [codeMatchCandidate, isAdmin]);
+  }, [isAdmin]);
 
   // Determine which candidates to display
   const getDisplayCandidates = () => {
-    if (codeMatchCandidate) return [codeMatchCandidate];
     if (searchResults !== null) return searchResults;
     return candidates;
   };
 
   const displayCandidates = getDisplayCandidates();
-
-  // Handle code search submit
-  const handleCodeSubmit = async (e, codeValue = null) => {
-    e?.preventDefault();
-    const val = (codeValue || candidateCode).toUpperCase();
-
-    if (val.length !== 4) {
-      setCodeError("Code must be exactly 4 characters");
-      setCodeMatchCandidate(null);
-      return;
-    }
-
-    if (!/^[A-Z0-9]{4}$/.test(val)) {
-      setCodeError("Use only capital letters A-Z and numbers 0-9");
-      setCodeMatchCandidate(null);
-      return;
-    }
-
-    setCodeError("");
-    const found = await fetchCandidateByCode(val);
-
-    if (found) {
-      setCodeMatchCandidate(found);
-      setSearch("");
-      setCandidateCode("");
-      setSearchResults(null);
-    } else {
-      setCodeError("No candidate found with that code");
-      setCodeMatchCandidate(null);
-    }
-  };
-
-  const handleCodeChange = (e) => {
-    let value = e.target.value.toUpperCase().slice(0, 4);
-    setCandidateCode(value);
-    setSearch("");
-    if (value.length === 0) {
-      setCodeMatchCandidate(null);
-      setCodeError("");
-    }
-    setSearchResults(null);
-  };
 
   const formatNumber = (num) => {
     if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -342,334 +258,197 @@ export default function VotePage() {
         <meta name="description" content="Vote for your favorite Lovemate contestant." />
       </Head>
 
+      <style jsx global>{`
+        @media (max-width: 767px) {
+          header,
+          .site-header,
+          [data-site-header] {
+            position: relative;
+            z-index: 9999;
+          }
+        }
+      `}</style>
+
       <Header />
 
-      <main className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen">
-        {/* Desktop Hero - unchanged height */}
-        <div className="hidden md:block relative w-full h-[300px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
-          <div className="relative w-full h-full">
+      <main className="bg-[#0a0a0a] min-h-screen pb-32 md:pb-0 font-sans">
+        {/* ===== HERO SECTION ===== */}
+        <section className="relative w-full min-h-[85vh] flex items-center overflow-hidden">
+          {/* Background Image & Overlays */}
+          <div className="absolute inset-0 w-full h-full">
             <Image
               src="/hero/hero11.jpg"
-              alt={heroDesktop?.title || "Vote for your favorite"}
+              alt="Ready to show Solidarity?"
               fill
-              className="object-cover opacity-70"
+              className="object-cover object-[75%_center] md:object-center opacity-80"
               priority
               sizes="100vw"
               unoptimized={true}
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
+            {/* Dark gradient from left to right to make text readable */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-90" />
           </div>
 
-          <div className="absolute inset-0 flex items-center">
-            <div className="max-w-7xl mx-auto px-8 w-full">
+          {/* Hero Content */}
+          <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-8 pt-20 pb-12">
+            <div className="max-w-3xl">
               <motion.h1
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="text-4xl md:text-5xl font-bold text-white mb-2"
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="text-5xl sm:text-6xl md:text-7xl font-extrabold text-white leading-[1.1] mb-4"
               >
-                {heroDesktop?.title || "Ready to Vote?"}
+                Ready to show <br />
+                <span className="text-red-600 italic pr-2">Solidarity?</span>
               </motion.h1>
+              
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="text-lg text-gray-300 mb-4 max-w-2xl"
+                transition={{ duration: 0.6, delay: 0.1, ease: "easeOut" }}
+                className="text-lg md:text-2xl text-gray-200 font-medium mb-8"
               >
-                {heroDesktop?.subtitle || "Cast your votes and make your voice count"}
+                Send some gift to support your <span className="text-red-600 italic font-semibold">Favorite</span> candidate.
               </motion.p>
 
-              {isAdmin && hasEligibleCandidates && candidates.length > 0 && (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key="desktop-stats"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: 0.3 }}
-                    className="flex gap-6 bg-black/30 backdrop-blur-md rounded-2xl p-3 border border-purple-500/30 max-w-2xl"
-                  >
-                    <div className="flex-1 text-center">
-                      <div className="text-sm font-bold text-red-500">{formatNumber(stats.totalVotes)}</div>
-                      <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Votes</div>
-                    </div>
-                    <div className="w-px bg-purple-500/30" />
-                    <div className="flex-1 text-center">
-                      <div className="text-sm font-bold text-red-500">{formatNumber(stats.totalGifts)}</div>
-                      <div className="text-[8px] text-gray-400 uppercase tracking-wider">Total Gifts</div>
-                    </div>
-                    <div className="w-px bg-purple-500/30" />
-                    <div className="flex-1 text-center">
-                      <div className="text-sm font-bold text-red-500">₦{formatNumber(stats.totalGiftWorth)}</div>
-                      <div className="text-[8px] text-gray-400 uppercase tracking-wider">Gift Worth</div>
-                    </div>
-                    <div className="w-px bg-purple-500/30" />
-                    <div className="flex-1 text-center">
-                      <div className="text-sm font-bold text-red-500">{formatNumber(stats.activeVoters)}</div>
-                      <div className="text-[8px] text-gray-400 uppercase tracking-wider">Active Voters</div>
-                    </div>
-                  </motion.div>
-                </AnimatePresence>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile Hero - height reduced by 30% (300px → 210px) */}
-        <div className="md:hidden relative w-full h-[210px] overflow-hidden bg-gradient-to-r from-gray-900 to-gray-800">
-          <div className="relative w-full h-full">
-            <Image
-              src="/hero/hero11.jpg"
-              alt={heroMobile?.title || "Vote for your favorite"}
-              fill
-              className="object-cover opacity-70"
-              priority
-              sizes="100vw"
-              unoptimized={true}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-          </div>
-
-          <div className="absolute inset-0 flex flex-col justify-end p-5">
-            <motion.h1
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-base sm:text-xl font-bold text-white mb-1"
-            >
-              {heroMobile?.title || "Ready to Vote?"}
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="text-[10px] sm:text-xs text-gray-300 mb-3"
-            >
-              {heroMobile?.subtitle || "Cast your votes and make your voice count"}
-            </motion.p>
-
-            {isAdmin && hasEligibleCandidates && candidates.length > 0 && (
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key="mobile-stats"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ delay: 0.2 }}
-                  className="grid grid-cols-4 gap-1 bg-black/30 backdrop-blur-md rounded-xl p-2 border border-purple-500/20"
-                >
-                  <div className="text-center">
-                    <div className="text-[10px] font-bold text-red-500">{formatNumber(stats.totalVotes)}</div>
-                    <div className="text-[6px] text-gray-400 uppercase">Votes</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[10px] font-bold text-red-500">{formatNumber(stats.totalGifts)}</div>
-                    <div className="text-[6px] text-gray-400 uppercase">Gifts</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[10px] font-bold text-red-500">₦{formatNumber(stats.totalGiftWorth)}</div>
-                    <div className="text-[6px] text-gray-400 uppercase">Worth</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-[10px] font-bold text-red-500">{formatNumber(stats.activeVoters)}</div>
-                    <div className="text-[6px] text-gray-400 uppercase">Voters</div>
-                  </div>
-                </motion.div>
-              </AnimatePresence>
-            )}
-          </div>
-        </div>
-
-        {/* Search Row – only visible when there are public candidates */}
-        {hasEligibleCandidates && (
-          <section className="py-6 px-4">
-            <div className="max-w-xl md:max-w-2xl mx-auto">
-              <div className="flex gap-2 md:gap-3">
-                <div className="relative group flex-1">
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
+              {/* Unified Search Bar */}
+              <motion.form
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                onSubmit={handleSearchSubmit}
+                className="relative w-full max-w-2xl group"
+              >
+                {/* Glow effect behind input */}
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-rose-500 rounded-full opacity-40 group-hover:opacity-70 blur transition duration-500" />
+                
+                <div className="relative flex items-center bg-[#111] border border-red-600/30 rounded-full p-1.5 pr-2 shadow-2xl">
+                  <Search className="w-5 h-5 md:w-6 md:h-6 text-gray-400 ml-3 md:ml-4 shrink-0" />
+                  
                   <input
                     type="text"
-                    placeholder="🔍 Search by name..."
-                    className="relative w-full px-3 md:px-4 py-1.5 md:py-2 bg-gray-800 text-white border border-purple-500/30 rounded-full text-xs md:text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 placeholder-gray-400"
+                    placeholder="Search for candidates name, nick name or use their code..."
+                    className="w-full bg-transparent text-white px-3 md:px-4 py-2 md:py-3 text-sm md:text-base focus:outline-none placeholder-gray-500"
                     value={search}
                     onChange={handleSearchChange}
                   />
-                </div>
+                  
+                  {/* Clear Button */}
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={clearSearch}
+                      className="p-2 text-gray-500 hover:text-white transition-colors"
+                    >
+                      <X className="w-4 h-4 md:w-5 md:h-5" />
+                    </button>
+                  )}
 
-                <form onSubmit={handleCodeSubmit} className="flex gap-1 md:gap-2">
-                  <div className="relative group">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
-                    <input
-                      type="text"
-                      placeholder="Code"
-                      className="relative w-24 md:w-32 px-2 md:px-3 py-1.5 md:py-2 bg-gray-800 text-white border border-cyan-500/30 rounded-full text-xs md:text-sm uppercase focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-400 text-center"
-                      value={candidateCode}
-                      onChange={handleCodeChange}
-                      maxLength={4}
-                      pattern="[A-Z0-9]{4}"
-                      title="4 characters: A-Z and 0-9"
-                    />
-                  </div>
+                  {/* Submit Button */}
                   <button
                     type="submit"
-                    className="px-3 md:px-4 py-1.5 md:py-2 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-full text-xs md:text-sm font-semibold hover:from-cyan-700 hover:to-blue-700 transition-all"
+                    className="flex items-center gap-1 md:gap-2 bg-red-600 text-white px-4 md:px-6 py-2.5 md:py-3 rounded-full font-bold text-sm md:text-base hover:bg-red-700 transition-all shrink-0"
                   >
-                    Go
+                    Search
+                    <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />
                   </button>
-                </form>
-              </div>
-              {codeError && <p className="text-red-400 text-xs mt-2 text-center">{codeError}</p>}
-              {searching && search.trim() && (
-                <p className="text-gray-400 text-xs mt-2 text-center">Searching...</p>
+                </div>
+              </motion.form>
+
+              {/* Admin Stats Overlay (Optional, placed subtly below search) */}
+              {isAdmin && hasEligibleCandidates && candidates.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="mt-8 flex flex-wrap gap-4 text-xs md:text-sm text-gray-400 bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/5 w-fit"
+                >
+                  <div><span className="font-bold text-red-500">{formatNumber(stats.totalVotes)}</span> Votes</div>
+                  <div><span className="font-bold text-red-500">{formatNumber(stats.totalGifts)}</span> Gifts</div>
+                  <div><span className="font-bold text-red-500">₦{formatNumber(stats.totalGiftWorth)}</span> Worth</div>
+                  <div><span className="font-bold text-red-500">{formatNumber(stats.activeVoters)}</span> Voters</div>
+                </motion.div>
               )}
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
-        {/* Main Content */}
-        <section className="py-4 px-4">
+        {/* ===== MAIN CONTENT ===== */}
+        <section className="relative isolate py-8 md:py-12 px-4">
           <div className="max-w-7xl mx-auto">
-            {/* Empty State – No public candidates and no code match */}
-            {!hasEligibleCandidates && !codeMatchCandidate && !candidatesLoading && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-3xl p-8 md:p-12 border border-purple-500/20 text-center max-w-3xl mx-auto"
-              >
-                <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-                  Here to support your favorite candidate?
-                </h2>
-                <p className="text-rose-400 text-xl md:text-2xl font-semibold mb-6">
-                  Oya! Enter his/her candidate code here.
-                </p>
-
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const inputEl = e.currentTarget.querySelector('input[type="text"]');
-                    const codeValue = inputEl?.value.toUpperCase() || "";
-                    handleCodeSubmit(e, codeValue);
-                  }}
-                  className="flex flex-col sm:flex-row gap-3 justify-center items-center"
-                >
-                  <div className="relative group w-full sm:w-64">
-                    <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 blur" />
-                    <input
-                      type="text"
-                      placeholder="e.g., A1B2"
-                      className="relative w-full px-4 py-3 bg-gray-800 text-white border border-cyan-500/30 rounded-full text-center text-lg uppercase focus:outline-none focus:ring-2 focus:ring-cyan-500 placeholder-gray-400"
-                      maxLength={4}
-                      pattern="[A-Z0-9]{4}"
-                      title="4 characters: A-Z and 0-9"
-                      onChange={(e) => {
-                        e.target.value = e.target.value.toUpperCase().slice(0, 4);
-                      }}
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-full text-base font-semibold hover:from-cyan-700 hover:to-blue-700 transition-all shadow-lg"
-                  >
-                    Search Candidate
-                  </button>
-                </form>
-                {codeError && <p className="text-red-400 text-sm mt-4">{codeError}</p>}
-              </motion.div>
+            {/* Loading State */}
+            {candidatesLoading && displayCandidates.length === 0 && !searching && (
+              <div className="flex justify-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
+              </div>
             )}
 
-            {/* Candidate Display – using displayCandidates */}
-            {(hasEligibleCandidates || codeMatchCandidate) && (
+            {/* Candidate Grid */}
+            {(!candidatesLoading || displayCandidates.length > 0 || searching) && (
               <>
-                {candidatesLoading && displayCandidates.length === 0 && !searching ? (
-                  <div className="flex justify-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
-                      {displayCandidates.map((candidate, index) => (
-                        <motion.div
-                          key={candidate.id}
-                          initial={{ opacity: 0, y: 20 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                        >
-                          <CandidateCard
-                            id={candidate.id}
-                            name={candidate.name}
-                            country={candidate.country}
-                            votes={candidate.votes}
-                            imageUrl={candidate.imageUrl}
-                            secret={candidate.secret}
-                          />
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    {/* Show "no results" only when search has been performed and returns empty */}
-                    {!codeMatchCandidate && search.trim() && !searching && searchResults !== null && searchResults.length === 0 && (
-                      <div className="text-center py-12">
-                        <p className="text-gray-400 text-lg">No candidates match your name search.</p>
-                        <button
-                          onClick={() => {
-                            setSearch("");
-                            setSearchResults(null);
-                            setCandidateCode("");
-                            setCodeMatchCandidate(null);
-                            setCodeError("");
-                          }}
-                          className="mt-4 text-rose-400 underline hover:text-rose-300"
-                        >
-                          Clear filters
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Show standard "no results" for code search */}
-                    {codeMatchCandidate === null && candidateCode && !search && displayCandidates.length === 0 && !searching && (
-                      <div className="text-center py-12">
-                        <p className="text-gray-400 text-lg">No candidate found with that code.</p>
-                        <button
-                          onClick={() => {
-                            setCandidateCode("");
-                            setCodeError("");
-                            setCodeMatchCandidate(null);
-                          }}
-                          className="mt-4 text-rose-400 underline hover:text-rose-300"
-                        >
-                          Clear code
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Load More – only when NOT in code match mode, NOT in name search, and more visible candidates exist */}
-                {!codeMatchCandidate && searchResults === null && hasMore && displayCandidates.length === candidates.length && !candidatesLoading && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mt-8">
-                    <button
-                      onClick={() => {
-                        const nextPage = page + 1;
-                        fetchCandidates(nextPage, false);
-                        setPage(nextPage);
-                      }}
-                      className="relative group"
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
+                  {displayCandidates.map((candidate, index) => (
+                    <motion.div
+                      key={candidate.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
                     >
-                      <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full opacity-75 group-hover:opacity-100 blur transition duration-300" />
-                      <div className="relative px-8 py-3 bg-gray-900 text-white rounded-full text-sm font-semibold">
-                        Load More Candidates
-                      </div>
+                      <CandidateCard
+  id={candidate.id}
+  name={candidate.name}
+  country={candidate.country}
+  gifts={candidate.gifts}     // <--- Changed from votes
+  imageUrl={candidate.imageUrl}
+  secret={candidate.secret}
+/>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* No Search Results */}
+                {search.trim() && !searching && searchResults !== null && searchResults.length === 0 && (
+                  <div className="text-center py-20">
+                    <p className="text-gray-400 text-lg md:text-xl mb-4">
+                      No candidates found for <span className="text-white font-bold">"{search}"</span>.
+                    </p>
+                    <button
+                      onClick={clearSearch}
+                      className="text-red-500 font-semibold hover:text-red-400 underline underline-offset-4"
+                    >
+                      Clear search and view all candidates
                     </button>
-                  </motion.div>
+                  </div>
                 )}
               </>
+            )}
+
+            {/* Load More (only when not searching) */}
+            {!searchResults && hasMore && displayCandidates.length === candidates.length && !candidatesLoading && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mt-12">
+                <button
+                  onClick={() => {
+                    const nextPage = page + 1;
+                    fetchCandidates(nextPage, false);
+                    setPage(nextPage);
+                  }}
+                  className="relative group inline-block"
+                >
+                  <div className="absolute -inset-0.5 bg-gradient-to-r from-red-600 to-rose-500 rounded-full opacity-50 group-hover:opacity-100 blur transition duration-300" />
+                  <div className="relative px-8 py-3 bg-[#111] text-white rounded-full text-sm font-semibold border border-red-600/30 hover:border-red-600 transition-colors">
+                    Load More Candidates
+                  </div>
+                </button>
+              </motion.div>
             )}
           </div>
         </section>
 
-        {/* Sponsors */}
-        <section className="py-8 px-4">
+        {/* ===== SPONSORS ===== */}
+        <section className="relative isolate py-8 px-4 pb-16">
           <div className="max-w-7xl mx-auto">
-            <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 border border-purple-500/10 md:border-purple-500/5">
+            <div className="bg-white/5 backdrop-blur-sm rounded-3xl p-6 border border-white/5">
               <SponsorCarousel
                 sponsors={["/sponsors/logo1.png", "/sponsors/logo2.png", "/sponsors/logo3.png"]}
               />

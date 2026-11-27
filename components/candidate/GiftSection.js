@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "@/utils/supabaseClient";
 import { motion, AnimatePresence } from "framer-motion";
@@ -29,6 +29,11 @@ const formatPrice = (price) => {
   if (price >= 1000000) return `₦${(price / 1000000).toFixed(0)}M`;
   if (price >= 1000) return `₦${(price / 1000).toFixed(0)}k`;
   return `₦${price}`;
+};
+
+// Generate a simple reference ID (same style as VoteSection)
+const generateReference = () => {
+  return `GIFT_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`.toUpperCase();
 };
 
 // Floating background hearts
@@ -123,16 +128,11 @@ function BubbleBursts() {
 
 export default function GiftSection({ candidate }) {
   const [selectedGift, setSelectedGift] = useState(null);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
-  const [showZeroBalanceModal, setShowZeroBalanceModal] = useState(false);
-  const [showFundWalletModal, setShowFundWalletModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [suggestedGift, setSuggestedGift] = useState(null);
-  const [userBalance, setUserBalance] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [user, setUser] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [burstGift, setBurstGift] = useState(null);
   const router = useRouter();
@@ -151,9 +151,9 @@ export default function GiftSection({ candidate }) {
 
         if (error) {
           console.error("Error fetching wallet:", error);
-          setUserBalance(0);
+          setWalletBalance(0);
         } else if (wallet) {
-          setUserBalance(wallet.balance);
+          setWalletBalance(wallet.balance);
         }
       }
       setLoading(false);
@@ -161,17 +161,12 @@ export default function GiftSection({ candidate }) {
     getUser();
   }, []);
 
-  const findAffordableGifts = (balance, currentGiftPrice) => {
-    return GIFTS.filter(g => g.price <= balance && g.price < currentGiftPrice)
-      .sort((a, b) => b.price - a.price);
-  };
-
   const refreshBalance = async () => {
     if (user) {
       const { data: wallet, error } = await supabase
         .from("wallets").select("balance").eq("user_id", user.id).single();
       if (!error && wallet) {
-        setUserBalance(wallet.balance);
+        setWalletBalance(wallet.balance);
         return wallet.balance;
       }
     }
@@ -183,99 +178,335 @@ export default function GiftSection({ candidate }) {
     setTimeout(() => setBurstGift(null), 900);
   };
 
-  const handleGiftClick = async (gift) => {
-    triggerBurst(gift);
+  // ─────────────────────────────────────────────
+  // Transaction helpers (mirror VoteSection logic)
+  // ─────────────────────────────────────────────
+  const createPendingTransaction = async (paymentMethod, currency = "NGN") => {
+    if (!selectedGift || !candidate) return null;
 
-    if (!user) {
-      setSelectedGift(gift);
-      setShowLoginModal(true);
-      return;
+    const reference = generateReference();
+    const transactionData = {
+      user_id: user?.id || null,
+      candidate_id: candidate.id,
+      gift_type: selectedGift.type,
+      amount: selectedGift.price,
+      status: "pending",
+      payment_method: paymentMethod,
+      currency: currency,
+      reference: reference,
+      metadata: {
+        gift_icon: selectedGift.icon,
+        gift_description: selectedGift.description,
+        candidate_name: candidate.name,
+        timestamp: new Date().toISOString(),
+        guest_email: !user ? "guest" : undefined,
+      },
+    };
+
+    try {
+      let data, error;
+      if (user) {
+        // Auth – direct Supabase insert
+        const response = await supabase
+          .from("gift_transactions")
+          .insert(transactionData)
+          .select()
+          .single();
+        data = response.data;
+        error = response.error;
+      } else {
+        // Guest – API route bypasses RLS
+        const response = await fetch('/api/gift-transaction', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(transactionData),
+        });
+        const json = await response.json();
+        if (!response.ok) throw new Error(json.error || 'API insert failed');
+        data = json[0];
+        error = null;
+      }
+
+      if (error) throw error;
+      return { transaction: data, reference };
+    } catch (error) {
+      console.error("Error creating gift transaction:", error);
+      return null;
     }
-
-    const currentBalance = await refreshBalance();
-
-    if (currentBalance === 0) {
-      setSelectedGift(gift);
-      setShowZeroBalanceModal(true);
-      return;
-    }
-
-    if (currentBalance < gift.price) {
-      setSelectedGift(gift);
-      const affordable = findAffordableGifts(currentBalance, gift.price);
-      setSuggestedGift(affordable[0] || null);
-      setShowInsufficientModal(true);
-      return;
-    }
-
-    setSelectedGift(gift);
-    setShowConfirmModal(true);
   };
 
-  const handleGift = async () => {
+  const completeTransaction = async (reference, paymentDetails) => {
+    try {
+      if (user) {
+        const { error } = await supabase
+          .from("gift_transactions")
+          .update({
+            status: "completed",
+            metadata: { ...paymentDetails, completed_at: new Date().toISOString() },
+          })
+          .eq("reference", reference);
+        if (error) throw error;
+      } else {
+        const response = await fetch('/api/gift-transaction', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reference,
+            updates: {
+              status: "completed",
+              metadata: { ...paymentDetails, completed_at: new Date().toISOString() },
+            },
+          }),
+        });
+        if (!response.ok) {
+          const json = await response.json();
+          throw new Error(json.error);
+        }
+      }
+    } catch (error) {
+      console.error("Error completing gift transaction:", error);
+      throw error;
+    }
+  };
+
+  const failTransaction = async (reference, reason = "user_cancelled") => {
+    try {
+      if (user) {
+        await supabase
+          .from("gift_transactions")
+          .update({
+            status: "failed",
+            metadata: { cancelled_at: new Date().toISOString(), reason },
+          })
+          .eq("reference", reference);
+      } else {
+        await fetch('/api/gift-transaction', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reference,
+            updates: {
+              status: "failed",
+              metadata: { cancelled_at: new Date().toISOString(), reason },
+            },
+          }),
+        });
+      }
+    } catch (err) {
+      console.error("Error failing gift transaction:", err);
+    }
+  };
+
+  // ─────────────────────────────────────────────
+  // Pay with Wallet (auth only – guests have no wallet)
+  // ─────────────────────────────────────────────
+  const handleWalletGift = async () => {
     if (!selectedGift || !user) return;
-
-    const currentBalance = await refreshBalance();
-    if (currentBalance < selectedGift.price) {
-      setShowConfirmModal(false);
-      handleGiftClick(selectedGift);
-      return;
-    }
-
     setIsProcessing(true);
-    const { error } = await supabase.rpc("send_gift", {
-      p_user_id: user.id,
-      p_candidate_id: candidate.id,
-      p_gift_type: selectedGift.type,
-    });
-
-    if (error) {
-      console.error("send_gift error:", error);
-      if (error.message.includes("insufficient_balance")) {
-        setShowConfirmModal(false);
-        await refreshBalance();
-        handleGiftClick(selectedGift);
-      } else {
-        alert("Gift failed. Try again.");
+    try {
+      const currentBalance = await refreshBalance();
+      if (currentBalance < selectedGift.price) {
+        alert(
+          `Insufficient balance. You have ${formatPrice(currentBalance)} but need ${formatPrice(
+            selectedGift.price
+          )}`
+        );
+        setIsProcessing(false);
+        return;
       }
+
+      const result = await createPendingTransaction("wallet", "NGN");
+      if (!result) throw new Error("Failed to create transaction");
+      const { transaction, reference } = result;
+
+      // Use the existing send_gift RPC (auth users only)
+      const { error } = await supabase.rpc("send_gift", {
+        p_user_id: user.id,
+        p_candidate_id: candidate.id,
+        p_gift_type: selectedGift.type,
+      });
+
+      if (error) {
+        await failTransaction(reference, "rpc_failed");
+        throw error;
+      }
+
+      await completeTransaction(reference, {
+        wallet_deduction: true,
+        balance_after: currentBalance - selectedGift.price,
+        transaction_id: transaction.id,
+      });
+
+      await refreshBalance();
       setIsProcessing(false);
-      return;
-    }
-
-    await refreshBalance();
-    setIsProcessing(false);
-    setShowConfirmModal(false);
-    setShowThankYou(true);
-  };
-
-  const handleSuggestedGift = () => {
-    if (suggestedGift) {
-      setShowInsufficientModal(false);
-      handleGiftClick(suggestedGift);
+      setShowPaymentModal(false);
+      setShowThankYou(true);
+    } catch (error) {
+      console.error("Wallet gift error:", error);
+      alert(error.message || "Gift failed. Try again.");
+      setIsProcessing(false);
     }
   };
 
-  const handleFundWallet = () => {
-    setShowZeroBalanceModal(false);
-    setShowInsufficientModal(false);
-    setShowFundWalletModal(true);
-  };
+  // ─────────────────────────────────────────────
+  // Pay with Paystack (works for guests + auth)
+  // ─────────────────────────────────────────────
+  const handlePaystackGift = async () => {
+    if (!selectedGift) return;
+    setIsProcessing(true);
+    try {
+      const result = await createPendingTransaction("paystack", "NGN");
+      if (!result) throw new Error("Failed to create transaction");
+      const { transaction, reference } = result;
 
-  const handleFundWalletSuccess = async () => {
-    const newBalance = await refreshBalance();
-    setShowFundWalletModal(false);
-
-    if (selectedGift) {
-      if (newBalance >= selectedGift.price) {
-        setShowConfirmModal(true);
-      } else if (newBalance > 0) {
-        const affordable = findAffordableGifts(newBalance, selectedGift.price);
-        setSuggestedGift(affordable[0] || null);
-        setShowInsufficientModal(true);
-      } else {
-        setShowZeroBalanceModal(true);
+      if (!window.PaystackPop) {
+        throw new Error("Paystack not loaded. Please refresh the page.");
       }
+
+      const handler = window.PaystackPop.setup({
+        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+        email: user?.email || "guest@example.com",
+        amount: selectedGift.price * 100, // kobo
+        currency: "NGN",
+        ref: reference,
+        metadata: {
+          transaction_id: transaction.id,
+          candidate_id: candidate.id,
+          candidate_name: candidate.name,
+          gift_type: selectedGift.type,
+          user_id: user?.id || "guest",
+        },
+        callback: function (response) {
+          completeTransaction(response.reference, {
+            paystack_ref: response.trxref,
+            status: "success",
+            transaction_id: transaction.id,
+          })
+            .then(() => {
+              setIsProcessing(false);
+              setShowPaymentModal(false);
+              setShowThankYou(true);
+            })
+            .catch((error) => {
+              console.error("Error completing transaction:", error);
+              alert(
+                "Payment successful but failed to record. Please contact support with reference: " +
+                  response.reference
+              );
+              setIsProcessing(false);
+            });
+        },
+        onClose: function () {
+          failTransaction(reference, "user_cancelled").finally(() => setIsProcessing(false));
+        },
+      });
+      handler.openIframe();
+    } catch (error) {
+      console.error("Paystack error:", error);
+      alert(error.message || "Payment initialization failed. Please try again.");
+      setIsProcessing(false);
     }
+  };
+
+  // ─────────────────────────────────────────────
+  // Pay with PayPal (works for guests + auth)
+  // ─────────────────────────────────────────────
+  const handlePayPalGift = async () => {
+    if (!selectedGift) return;
+    setIsProcessing(true);
+    try {
+      if (!window.paypal) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = `https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID}&currency=USD`;
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+
+      // Convert to USD (same 1500 ratio as vote flow)
+      const priceUsd = Math.max(1, Math.round(selectedGift.price / 1500));
+
+      const result = await createPendingTransaction("paypal", "USD");
+      if (!result) throw new Error("Failed to create transaction");
+      const { transaction, reference } = result;
+
+      const response = await fetch('/api/create-paypal-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: priceUsd,
+          currency: 'USD',
+          reference: reference,
+          transaction_id: transaction.id,
+          candidate_id: candidate.id,
+          candidate_name: candidate.name,
+          gift_type: selectedGift.type,
+          user_id: user?.id || 'guest',
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to create PayPal order');
+      const order = await response.json();
+
+      if (order.id) {
+        const container = document.getElementById('paypal-button-container');
+        if (container) container.innerHTML = '';
+        window.paypal.Buttons({
+          createOrder: () => order.id,
+          onApprove: (data) => {
+            fetch('/api/capture-paypal-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderID: data.orderID, reference }),
+            })
+              .then(res => res.json())
+              .then(captureData => {
+                if (captureData.status === 'COMPLETED') {
+                  return completeTransaction(reference, {
+                    paypal_order_id: data.orderID,
+                    paypal_capture_id: captureData.purchase_units[0].payments.captures[0].id,
+                    status: 'completed',
+                    transaction_id: transaction.id,
+                  });
+                }
+              })
+              .then(() => {
+                setIsProcessing(false);
+                setShowPaymentModal(false);
+                setShowThankYou(true);
+              })
+              .catch(error => {
+                console.error("Error capturing PayPal payment:", error);
+                alert("Payment successful but failed to record. Please contact support.");
+                setIsProcessing(false);
+              });
+          },
+          onCancel: () => {
+            failTransaction(reference, 'user_cancelled').finally(() => setIsProcessing(false));
+          },
+          onError: (err) => {
+            console.error("PayPal error:", err);
+            alert("PayPal payment failed. Please try again.");
+            setIsProcessing(false);
+          },
+        }).render('#paypal-button-container');
+      } else {
+        throw new Error("Failed to create PayPal order");
+      }
+    } catch (error) {
+      console.error("PayPal error:", error);
+      alert(error.message || "Payment initialization failed. Please try again.");
+      setIsProcessing(false);
+    }
+  };
+
+  const handleGiftClick = (gift) => {
+    triggerBurst(gift);
+    setSelectedGift(gift);
+    setShowPaymentModal(true);
   };
 
   if (loading) {
@@ -291,12 +522,9 @@ export default function GiftSection({ candidate }) {
   return (
     <>
       <section className="relative py-8 px-4 bg-gradient-to-b from-black via-zinc-950 to-black overflow-hidden">
-        {/* Floating love icons */}
         <FloatingHearts />
-        {/* Red bubble bursts */}
         <BubbleBursts />
 
-        {/* Neon glow accents */}
         <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-red-600/20 rounded-full blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 right-0 w-[400px] h-[400px] bg-fuchsia-600/10 rounded-full blur-3xl" />
 
@@ -318,7 +546,7 @@ export default function GiftSection({ candidate }) {
               >
                 <span className="text-xs text-red-200">💰 Wallet:</span>
                 <span className="text-sm font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-green-300 to-emerald-400">
-                  {formatPrice(userBalance)}
+                  {formatPrice(walletBalance)}
                 </span>
                 <span className="text-[10px] text-red-200/60">available</span>
               </motion.div>
@@ -337,7 +565,6 @@ export default function GiftSection({ candidate }) {
                 onClick={() => handleGiftClick(gift)}
                 className="group relative"
               >
-                {/* Animated outer glow */}
                 <motion.div
                   animate={{
                     boxShadow: [
@@ -351,7 +578,6 @@ export default function GiftSection({ candidate }) {
                 />
 
                 <div className="relative rounded-xl p-2 text-center border border-white/10 bg-gradient-to-br from-white/10 to-white/[0.03] backdrop-blur-md shadow-lg overflow-hidden">
-                  {/* Shimmer sweep */}
                   <motion.div
                     animate={{ x: ["-120%", "120%"] }}
                     transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut", delay: index * 0.15 }}
@@ -381,7 +607,6 @@ export default function GiftSection({ candidate }) {
           </p>
         </div>
 
-        {/* Localized gift burst when clicked */}
         <AnimatePresence>
           {burstGift && (
             <motion.div
@@ -421,265 +646,123 @@ export default function GiftSection({ candidate }) {
         </AnimatePresence>
       </section>
 
-      <FundWalletModal
-        isOpen={showFundWalletModal}
-        onClose={() => setShowFundWalletModal(false)}
-        onSuccess={handleFundWalletSuccess}
-      />
-
-      {/* Login Modal */}
+      {/* Payment Method Modal (works for guest + auth) */}
       <AnimatePresence>
-        {showLoginModal && selectedGift && (
+        {showPaymentModal && selectedGift && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowLoginModal(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4"
+            onClick={() => !isProcessing && setShowPaymentModal(false)}
           >
             <motion.div
               initial={{ scale: 0.9, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 10 }}
-              className="bg-zinc-900 border border-red-500/40 rounded-2xl p-6 max-w-sm w-full shadow-2xl shadow-red-900/40"
+              className="bg-zinc-900 border border-red-500/40 rounded-2xl p-5 max-w-sm w-full shadow-2xl shadow-red-900/40 max-h-[85vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
+              style={{ maxHeight: '85vh', overflowY: 'auto' }}
             >
-              <div className="text-center">
+              <div className="flex items-center justify-center mb-4">
                 <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 1.4, repeat: Infinity }}
-                  className="w-20 h-20 bg-gradient-to-br from-red-500/30 to-fuchsia-500/20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-red-500/50"
-                >
-                  🔐
-                </motion.div>
-                <h3 className="text-xl font-extrabold text-white mb-2">Login Required</h3>
-                <p className="text-sm text-red-100/80 mb-4">
-                  Login or sign up to send a{" "}
-                  <span className="font-bold text-red-400">{selectedGift.type}</span> to{" "}
-                  <span className="font-bold text-red-400">{candidate?.name}</span>!
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => router.push("/auth/login")}
-                    className="flex-1 bg-gradient-to-r from-red-500 to-rose-600 text-white py-2.5 rounded-lg text-sm font-bold hover:from-green-500 hover:to-emerald-600 transition-all shadow-lg shadow-red-900/40"
-                  >
-                    Login
-                  </button>
-                  <button
-                    onClick={() => router.push("/auth/signup")}
-                    className="flex-1 bg-zinc-800 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-green-600 transition-all"
-                  >
-                    Sign Up
-                  </button>
-                </div>
-                <button
-                  onClick={() => setShowLoginModal(false)}
-                  className="mt-3 text-xs text-red-200/60 hover:text-red-300"
-                >
-                  Maybe later
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Zero Balance Modal */}
-      <AnimatePresence>
-        {showZeroBalanceModal && selectedGift && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowZeroBalanceModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 10 }}
-              className="bg-zinc-900 border border-red-500/40 rounded-2xl p-6 max-w-sm w-full shadow-2xl shadow-red-900/40"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="text-center">
-                <motion.div
-                  animate={{ rotate: [0, -10, 10, 0] }}
+                  animate={{ rotate: [0, -10, 10, 0], scale: [1, 1.1, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="w-20 h-20 bg-gradient-to-br from-amber-500/30 to-red-500/20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-red-500/50"
-                >
-                  💝
-                </motion.div>
-                <h3 className="text-xl font-extrabold text-white mb-2">Wallet Empty! 💔</h3>
-                <p className="text-sm text-red-100/80 mb-3">
-                  Your wallet is ₦0. Fund it to send a{" "}
-                  <span className="font-bold text-red-400">{selectedGift.type}</span> to{" "}
-                  <span className="font-bold text-red-400">{candidate?.name}</span>.
-                </p>
-                <div className="bg-gradient-to-r from-red-600/20 to-fuchsia-600/20 border border-red-500/30 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-red-100/80">
-                    💡 Fund your wallet now and make your favorite housemate feel legendary!
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleFundWallet}
-                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 rounded-lg text-sm font-bold hover:from-green-400 hover:to-emerald-500 transition-all shadow-lg shadow-green-900/40"
-                  >
-                    💰 Fund Wallet
-                  </button>
-                  <button
-                    onClick={() => setShowZeroBalanceModal(false)}
-                    className="flex-1 bg-zinc-800 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-zinc-700 transition-all"
-                  >
-                    Maybe Later
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Insufficient Balance Modal */}
-      <AnimatePresence>
-        {showInsufficientModal && selectedGift && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowInsufficientModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 10 }}
-              className="bg-zinc-900 border border-red-500/40 rounded-2xl p-6 max-w-sm w-full shadow-2xl shadow-red-900/40"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gradient-to-br from-amber-500/30 to-red-500/20 rounded-full flex items-center justify-center text-4xl mx-auto mb-4 border border-red-500/50">
-                  😢
-                </div>
-                <h3 className="text-xl font-extrabold text-white mb-2">Insufficient Balance!</h3>
-                <p className="text-sm text-red-100/80 mb-3">
-                  Your balance is{" "}
-                  <span className="font-extrabold text-white">{formatPrice(userBalance)}</span>, but{" "}
-                  <span className="font-bold text-red-400">{selectedGift.type}</span> costs{" "}
-                  <span className="font-extrabold text-red-400">{formatPrice(selectedGift.price)}</span>.
-                </p>
-
-                {suggestedGift ? (
-                  <>
-                    <div className="bg-gradient-to-r from-amber-600/20 to-yellow-600/10 border border-amber-500/30 rounded-lg p-3 mb-3 text-left">
-                      <p className="text-xs text-amber-200/90 mb-1">💡 Sweet idea:</p>
-                      <p className="text-sm text-white/90">
-                        Why not send a{" "}
-                        <span className="font-bold text-red-400">
-                          {suggestedGift.icon} {suggestedGift.type}
-                        </span>{" "}
-                        instead for just{" "}
-                        <span className="font-bold text-green-400">{formatPrice(suggestedGift.price)}</span>?
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleSuggestedGift}
-                      className="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-2.5 rounded-lg text-sm font-bold hover:from-green-500 hover:to-emerald-600 transition-all shadow-lg shadow-red-900/40 mb-2"
-                    >
-                      Send {suggestedGift.type} instead 💝
-                    </button>
-                  </>
-                ) : (
-                  <div className="bg-gradient-to-r from-blue-600/20 to-indigo-600/10 border border-blue-500/30 rounded-lg p-3 mb-3">
-                    <p className="text-xs text-blue-100/90 text-center">
-                      💡 Fund your wallet to send this amazing gift!
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  {!suggestedGift && (
-                    <button
-                      onClick={handleFundWallet}
-                      className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 rounded-lg text-sm font-bold hover:from-green-400 hover:to-emerald-500 transition-all shadow-lg shadow-green-900/40"
-                    >
-                      💰 Fund Wallet
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setShowInsufficientModal(false)}
-                    className={`${suggestedGift ? "w-full" : "flex-1"} bg-zinc-800 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-zinc-700 transition-all`}
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Confirm Gift Modal */}
-      <AnimatePresence>
-        {showConfirmModal && selectedGift && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowConfirmModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 10 }}
-              className="bg-zinc-900 border border-red-500/40 rounded-2xl p-5 max-w-sm w-full shadow-2xl shadow-red-900/40"
-              onClick={e => e.stopPropagation()}
-            >
-              <h3 className="text-lg font-extrabold text-white mb-3 text-center">
-                Send {selectedGift.type} to {candidate?.name}
-              </h3>
-
-              <div className="rounded-xl p-4 mb-4 text-center bg-gradient-to-br from-red-600/20 to-fuchsia-600/10 border border-red-500/30">
-                <motion.div
-                  animate={{ rotate: [0, -10, 10, 0], scale: [1, 1.15, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="text-5xl mb-2 drop-shadow-[0_0_12px_rgba(255,80,80,0.6)]"
+                  className="w-14 h-14 bg-gradient-to-br from-red-600/30 to-fuchsia-600/20 rounded-full flex items-center justify-center text-2xl border border-red-500/50"
                 >
                   {selectedGift.icon}
                 </motion.div>
-                <h4 className="font-extrabold text-white mb-1">{selectedGift.type}</h4>
-                <p className="text-xs text-red-100/70 mb-2">{selectedGift.description}</p>
-                <p className="text-lg font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-fuchsia-300">
-                  {formatPrice(selectedGift.price)}
-                </p>
               </div>
 
-              <p className="text-sm text-red-100/70 mb-4 text-center">
-                Balance: <span className="font-extrabold text-green-400">{formatPrice(userBalance)}</span>
+              <h3 className="text-lg font-extrabold text-white mb-1 text-center">
+                Choose Payment Method
+              </h3>
+              <p className="text-xs text-red-200/70 mb-4 text-center">
+                {selectedGift.type} •{" "}
+                <span className="font-bold text-red-400">{formatPrice(selectedGift.price)}</span>
               </p>
 
-              <div className="flex gap-2">
+              <div className="space-y-2 mb-4">
+                {/* Wallet – only for logged-in users */}
+                {user && (
+                  <button
+                    onClick={handleWalletGift}
+                    disabled={isProcessing || walletBalance < selectedGift.price}
+                    className="w-full bg-zinc-800/70 hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed p-3 rounded-xl border border-red-500/30 flex items-center gap-3 transition-all"
+                  >
+                    <span className="text-xl">💳</span>
+                    <div className="flex-1 text-left">
+                      <div className="text-sm font-semibold text-white">Pay with Wallet</div>
+                      <div className="text-xs text-red-200/60">
+                        Balance: {formatPrice(walletBalance)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-extrabold text-green-300">
+                        {formatPrice(selectedGift.price)}
+                      </div>
+                      {walletBalance < selectedGift.price && (
+                        <div className="text-[10px] text-red-400">Insufficient</div>
+                      )}
+                    </div>
+                  </button>
+                )}
+
+                {/* Paystack */}
                 <button
-                  onClick={handleGift}
+                  onClick={handlePaystackGift}
                   disabled={isProcessing}
-                  className="flex-1 bg-gradient-to-r from-red-500 to-rose-600 text-white py-2.5 rounded-lg text-sm font-bold hover:from-green-500 hover:to-emerald-600 transition-all disabled:opacity-50 shadow-lg shadow-red-900/40"
+                  className="w-full bg-zinc-800/70 hover:bg-zinc-800 disabled:opacity-50 p-3 rounded-xl border border-red-500/30 flex items-center gap-3 transition-all"
                 >
-                  {isProcessing ? (
-                    <span className="flex items-center justify-center gap-1">
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Sending...
-                    </span>
-                  ) : "Send Gift 💝"}
+                  <span className="text-xl">🇳🇬</span>
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-semibold text-white">Pay with Paystack</div>
+                    <div className="text-xs text-red-200/60">Visa, Mastercard, Bank Transfer</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-extrabold text-white">
+                      {formatPrice(selectedGift.price)}
+                    </div>
+                    <div className="text-[10px] text-red-200/50">NGN</div>
+                  </div>
                 </button>
+
+                {/* PayPal */}
                 <button
-                  onClick={() => setShowConfirmModal(false)}
+                  onClick={handlePayPalGift}
                   disabled={isProcessing}
-                  className="flex-1 bg-zinc-800 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-zinc-700 transition-all"
+                  className="w-full bg-zinc-800/70 hover:bg-zinc-800 disabled:opacity-50 p-3 rounded-xl border border-red-500/30 flex items-center gap-3 transition-all"
                 >
-                  Cancel
+                  <span className="text-xl">🇺🇸</span>
+                  <div className="flex-1 text-left">
+                    <div className="text-sm font-semibold text-white">Pay with PayPal</div>
+                    <div className="text-xs text-red-200/60">International cards, PayPal balance</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-extrabold text-white">
+                      ${Math.max(1, Math.round(selectedGift.price / 1500))}
+                    </div>
+                    <div className="text-[10px] text-red-200/50">USD</div>
+                  </div>
                 </button>
               </div>
+
+              {isProcessing && (
+                <div className="flex items-center justify-center gap-2 text-red-300 text-xs mb-3">
+                  <span className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                  Processing...
+                </div>
+              )}
+
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                disabled={isProcessing}
+                className="w-full bg-zinc-800 text-white py-2 rounded-xl text-sm font-semibold hover:bg-zinc-700 transition-all border border-red-500/20 mb-3 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <div id="paypal-button-container" className="mt-2 pt-2 border-t border-red-500/20"></div>
             </motion.div>
           </motion.div>
         )}

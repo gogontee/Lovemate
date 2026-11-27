@@ -18,21 +18,21 @@ export default function CandidateCard({
   id,
   name,
   country,
-  votes: initialVotes,
+  gifts: initialGifts, // Changed from votes to gifts
   imageUrl,
   secret, // new prop: 'hidevote', 'hideall', or null/undefined
 }) {
-  const [votes, setVotes] = useState(initialVotes);
+  const [gifts, setGifts] = useState(initialGifts);
   const [imgSrc, setImgSrc] = useState(() => getFullImageUrl(imageUrl));
   const router = useRouter();
 
-  // Decide whether to show vote count
-  const shouldShowVotes = secret !== 'hidevote' && secret !== 'hideall';
+  // Decide whether to show gift count (reusing the 'hidevote' / 'hideall' flags)
+  const shouldShowGifts = secret !== 'hidevote' && secret !== 'hideall';
 
-  // Real-time vote updates (still fetch even if hidden – the data stays current)
+  // Real-time gift updates (still fetch even if hidden – the data stays current)
   useEffect(() => {
     const channel = supabase
-      .channel("candidate-votes")
+      .channel(`candidate-gifts-${id}`)
       .on(
         "postgres_changes",
         {
@@ -42,7 +42,7 @@ export default function CandidateCard({
           filter: `id=eq.${id}`,
         },
         (payload) => {
-          setVotes(payload.new.votes);
+          setGifts(payload.new.gifts); // Listening to 'gifts' column now
         }
       )
       .subscribe();
@@ -89,11 +89,11 @@ export default function CandidateCard({
           <p className="text-sm text-gray-600">{country}</p>
         </div>
 
-        {/* Vote count – only shown when secret is NOT hidevote/hideall */}
-        {shouldShowVotes && (
+        {/* Gift count – only shown when secret is NOT hidevote/hideall */}
+        {shouldShowGifts && (
           <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-700">Vote</span>
-            <span className="text-sm font-bold text-rose-700">{votes}</span>
+            <span className="text-sm font-medium text-gray-700">Gifts</span>
+            <span className="text-sm font-bold text-rose-700">{gifts}</span>
           </div>
         )}
 

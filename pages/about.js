@@ -1,12 +1,37 @@
-// pages/about.js
 import Head from "next/head";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
-import { Heart, Clock, Home, Award, Sparkles, Users, Target, Eye, Zap, Gift, Star, Globe, FileText, Shield } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/router";
+import Image from "next/image";
+import { useState } from "react";
 import Link from "next/link";
+import {
+  Heart,
+  Clock,
+  Home,
+  Award,
+  Sparkles,
+  Users,
+  Target,
+  Eye,
+  Star,
+  Gift,
+  FileText,
+  Shield,
+  ArrowRight
+} from "lucide-react";
 
 export default function About() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("overview");
+
+  const tabs = [
+    { id: "overview", label: "The Experience", icon: <Sparkles className="w-4 h-4" /> },
+    { id: "mission", label: "Mission & Vision", icon: <Target className="w-4 h-4" /> },
+    { id: "why", label: "Why Lovemate", icon: <Star className="w-4 h-4" /> },
+  ];
+
   return (
     <>
       <Head>
@@ -19,297 +44,260 @@ export default function About() {
 
       <Header />
 
-      {/* Hero Section - 10:5 mobile, 1000x300 desktop */}
-      <section
-        className="relative w-full aspect-[10/5] md:w-full md:h-[300px] text-white"
-        style={{ backgroundImage: "url('https://pztuwangpzlzrihblnta.supabase.co/storage/v1/object/public/asset/hero/hero6.jpg')" }}
-      >
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent"></div>
-
-        <div className="relative z-10 max-w-7xl mx-auto h-full flex items-center px-4 md:px-6">
-          <div className="w-full md:w-1/2">
-            <h1 className="text-xl md:text-4xl font-extrabold mb-3 md:mb-6 leading-tight text-white drop-shadow w-3/4 md:w-full">
-              About Lovemate Show
-            </h1>
-            <div className="grid grid-cols-2 gap-1 md:gap-4">
-              <div className="bg-white/20 backdrop-blur text-white p-1.5 md:p-4 rounded-lg shadow-md">
-                <Heart className="mx-auto mb-0.5 md:mb-2" size={12} />
-                <p className="text-xs md:text-lg font-bold text-center">24 Mates</p>
-              </div>
-              <div className="bg-white/20 backdrop-blur text-white p-1.5 md:p-4 rounded-lg shadow-md">
-                <Clock className="mx-auto mb-0.5 md:mb-2" size={12} />
-                <p className="text-xs md:text-lg font-bold text-center">360 Hrs</p>
-                <p className="text-[8px] md:text-sm text-center">of Intrigues</p>
-              </div>
-              <div className="bg-white/20 backdrop-blur text-white p-1.5 md:p-4 rounded-lg shadow-md">
-                <Home className="mx-auto mb-0.5 md:mb-2" size={12} />
-                <p className="text-xs md:text-lg font-bold text-center">1 Mansion</p>
-              </div>
-              <div className="bg-white/20 backdrop-blur text-white p-1.5 md:p-4 rounded-lg shadow-md">
-                <Award className="mx-auto mb-0.5 md:mb-2" size={12} />
-                <p className="text-xs md:text-lg font-bold text-center">1 Winner</p>
-              </div>
-            </div>
+      <main className="bg-[#050505] text-gray-300 min-h-screen pb-20 md:pb-0 selection:bg-red-600 selection:text-white">
+        
+        {/* ===== MINIMALIST HERO ===== */}
+        <section className="relative w-full h-[45vh] md:h-[55vh] flex flex-col items-center justify-center overflow-hidden border-b border-white/5">
+          <div className="absolute inset-0 z-0">
+            <Image
+              src="/hero/hero6.jpg"
+              alt="About Lovemate Show"
+              fill
+              className="object-cover opacity-30"
+              priority
+              unoptimized
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-[#050505]" />
           </div>
-        </div>
-      </section>
 
-      {/* Stats Bar - Quick Facts - All in one line on mobile */}
-      <section className="bg-gradient-to-r from-rose-600 to-red-700 py-2 md:py-4">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-nowrap justify-between items-center gap-1 md:gap-4 overflow-x-auto scrollbar-hide">
-            <div className="flex items-center gap-1 md:gap-2 text-white flex-shrink-0">
-              <Users className="w-3 h-3 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm font-medium whitespace-nowrap">24 Strangers</span>
-            </div>
-            <div className="flex items-center gap-1 md:gap-2 text-white flex-shrink-0">
-              <Home className="w-3 h-3 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm font-medium whitespace-nowrap">1 Mansion</span>
-            </div>
-            <div className="flex items-center gap-1 md:gap-2 text-white flex-shrink-0">
-              <Target className="w-3 h-3 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm font-medium whitespace-nowrap">Diverse Mission</span>
-            </div>
-            <div className="flex items-center gap-1 md:gap-2 text-white flex-shrink-0">
-              <Clock className="w-3 h-3 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm font-medium whitespace-nowrap">360 Hours</span>
-            </div>
-            <div className="flex items-center gap-1 md:gap-2 text-white flex-shrink-0">
-              <Gift className="w-3 h-3 md:w-5 md:h-5" />
-              <span className="text-[10px] md:text-sm font-medium whitespace-nowrap">$10K Prizes</span>
-            </div>
+          <div className="relative z-10 text-center px-4 max-w-4xl mx-auto mt-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-600/10 border border-red-600/20 text-red-500 font-medium text-xs tracking-wider uppercase mb-4">
+                <Heart className="w-3 h-3" /> The Ultimate Reality Experience
+              </div>
+              <h1 className="text-2xl md:text-3xl font-black uppercase tracking-tight mb-4">
+                About <span className="text-red-600 italic">Lovemate</span> Show
+              </h1>
+              <p className="text-sm md:text-base text-gray-400 font-light max-w-2xl mx-auto">
+                More Than Just a Reality Show. An emotional battleground where passion, fame, and true connection collide.
+              </p>
+            </motion.div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Main Content Section with bottom padding for mobile */}
-      <section className="bg-gradient-to-b from-white via-rose-50 to-white py-12 md:py-20 px-4 pb-20 md:pb-20">
-        <div className="max-w-7xl mx-auto">
-          {/* About Lovemate - Featured - Reduced text size on mobile */}
-          <motion.div
+        {/* ===== FLOATING TABBED INTERFACE ===== */}
+        <section className="relative z-20 max-w-5xl mx-auto px-4 -mt-8 md:-mt-10">
+          <motion.div 
             initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12 md:mb-16"
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="bg-[#0f0f0f]/95 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px]"
           >
-            <div className="inline-flex items-center gap-2 bg-rose-100 px-3 md:px-4 py-1 md:py-2 rounded-full mb-3 md:mb-4">
-              <Sparkles className="w-3 h-3 md:w-4 md:h-4 text-red-600" />
-              <span className="text-[10px] md:text-sm font-semibold text-red-600">The Experience</span>
-            </div>
-            <h2 className="text-xl md:text-5xl font-bold mb-3 md:mb-6">
-              <span className="text-gray-900">More Than Just a</span>{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-rose-500">Reality Show</span>
-            </h2>
-            <p className="text-xs md:text-xl text-gray-700 max-w-4xl mx-auto leading-relaxed md:leading-relaxed px-2 md:px-0">
-              Lovemate is not just a show—it's an emotional battleground where passion, fame, and true connection collide. 
-              For 15 unforgettable days, 24 hearts chase love under the unrelenting spotlight. Each moment is raw, 
-              each decision crucial. This is where soulmates are unveiled and destinies are rewritten—welcome to Lovemate.
-            </p>
-          </motion.div>
-
-          {/* Mission, Vision, Objective Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 mb-12 md:mb-16">
-            {/* Mission */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="group bg-white rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all border border-rose-100 hover:border-rose-300"
-            >
-              <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-rose-100 to-rose-200 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform">
-                <Target className="w-5 h-5 md:w-7 md:h-7 text-red-600" />
-              </div>
-              <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Our Mission</h3>
-              <p className="text-xs md:text-base text-gray-600 leading-relaxed">
-                To redefine reality entertainment by creating a platform where singles find true love while showcasing their values and charisma.
-              </p>
-            </motion.div>
-
-            {/* Vision */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="group bg-white rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all border border-rose-100 hover:border-rose-300"
-            >
-              <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-rose-100 to-rose-200 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform">
-                <Eye className="w-5 h-5 md:w-7 md:h-7 text-red-600" />
-              </div>
-              <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Our Vision</h3>
-              <p className="text-xs md:text-base text-gray-600 leading-relaxed">
-                To become Africa's biggest love and lifestyle reality show, setting the standard for cultural sophistication and romantic discovery.
-              </p>
-            </motion.div>
-
-            {/* Objective */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-              className="group bg-white rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg hover:shadow-xl transition-all border border-rose-100 hover:border-rose-300"
-            >
-              <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-rose-100 to-rose-200 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform">
-                <Star className="w-5 h-5 md:w-7 md:h-7 text-red-600" />
-              </div>
-              <h3 className="text-lg md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Our Objective</h3>
-              <p className="text-xs md:text-base text-gray-600 leading-relaxed">
-                To discover the Universal Love Idol through thrilling challenges and heartwarming stories of connection.
-              </p>
-            </motion.div>
-          </div>
-
-          {/* Why Love Lovemate - Feature Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="bg-gradient-to-br from-rose-50 via-white to-rose-50 rounded-2xl md:rounded-3xl p-4 md:p-12 mb-12 md:mb-16 border border-rose-200"
-          >
-            <div className="text-center mb-6 md:mb-10">
-              <h2 className="text-xl md:text-4xl font-bold mb-2 md:mb-4">
-                <span className="text-gray-900">Why</span>{" "}
-                <span className="text-red-600">Love Lovemate?</span>
-              </h2>
-              <div className="w-12 md:w-20 h-1 bg-gradient-to-r from-rose-400 to-red-600 mx-auto rounded-full"></div>
-            </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-6">
-              {[
-                { icon: "🏰", title: "Luxury Living", desc: "Experience life in a magnificent villa" },
-                { icon: "🎮", title: "Interactive Drama", desc: "Real-time voting and decisions" },
-                { icon: "❤️", title: "Real Connections", desc: "Genuine relationships formed" },
-                { icon: "🎯", title: "Thrilling Challenges", desc: "Heart-pounding tasks" },
-                { icon: "🌟", title: "Star Moments", desc: "Unforgettable scenes" },
-                { icon: "💎", title: "Life-Changing Prize", desc: "$10K grand prize" }
-              ].map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-lg md:rounded-xl p-2 md:p-6 shadow-md hover:shadow-lg transition-all border border-rose-100 hover:border-rose-300"
+            {/* Sidebar / Top Navigation */}
+            <div className="w-full md:w-64 bg-[#0a0a0a]/50 border-b md:border-b-0 md:border-r border-white/5 p-4 md:p-6 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-visible scrollbar-hide shrink-0">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 whitespace-nowrap md:whitespace-normal text-left shrink-0 ${
+                    activeTab === tab.id
+                      ? "bg-red-600/10 text-red-500"
+                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  }`}
                 >
-                  <div className="text-xl md:text-3xl mb-1 md:mb-3">{feature.icon}</div>
-                  <h3 className="text-xs md:text-lg font-bold text-gray-900 mb-0.5 md:mb-2">{feature.title}</h3>
-                  <p className="text-[8px] md:text-sm text-gray-600">{feature.desc}</p>
-                </motion.div>
+                  {activeTab === tab.id && (
+                    <motion.div
+                      layoutId="activeMainTab"
+                      className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 rounded-l-xl"
+                    />
+                  )}
+                  {tab.icon}
+                  {tab.label}
+                </button>
               ))}
+
+              <div className="hidden md:block mt-auto pt-8">
+                <button
+                  onClick={() => router.push("/register")}
+                  className="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] flex items-center justify-center gap-2"
+                >
+                  Register Now <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+
+            {/* Content Area */}
+            <div className="flex-1 p-6 md:p-10 relative">
+              <AnimatePresence mode="wait">
+                
+                {/* 1. THE EXPERIENCE (OVERVIEW) TAB */}
+                {activeTab === "overview" && (
+                  <motion.div
+                    key="overview"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-6 text-sm md:text-base leading-relaxed text-gray-400"
+                  >
+                    <h2 className="text-xl md:text-2xl font-bold text-white mb-6">
+                      For 15 unforgettable days, <span className="text-red-500">24 hearts</span> chase love under the spotlight.
+                    </h2>
+
+                    {/* Quick Stats Grid */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                      <div className="bg-white/5 border border-white/5 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                        <Heart className="w-5 h-5 text-red-500 mb-2" />
+                        <span className="text-white font-bold text-sm">24 Mates</span>
+                      </div>
+                      <div className="bg-white/5 border border-white/5 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                        <Clock className="w-5 h-5 text-red-500 mb-2" />
+                        <span className="text-white font-bold text-sm">360 Hrs</span>
+                      </div>
+                      <div className="bg-white/5 border border-white/5 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                        <Home className="w-5 h-5 text-red-500 mb-2" />
+                        <span className="text-white font-bold text-sm">1 Mansion</span>
+                      </div>
+                      <div className="bg-white/5 border border-white/5 p-4 rounded-xl flex flex-col items-center justify-center text-center">
+                        <Award className="w-5 h-5 text-red-500 mb-2" />
+                        <span className="text-white font-bold text-sm">$10K Prize</span>
+                      </div>
+                    </div>
+                    
+                    <p>
+                      Lovemate is not just a show—it's an emotional battleground where passion, fame, and true connection collide. Each moment is raw, each decision crucial. This is where soulmates are unveiled and destinies are rewritten.
+                    </p>
+                    
+                    <p>
+                      Under the unrelenting emotional spotlight, strangers become lovers, promises become challenges, and attraction becomes a dangerous game. Every smile may conceal a secret. Every confession may change a relationship.
+                    </p>
+
+                    <div className="py-4 my-6 border-y border-white/10">
+                      <p className="text-white text-lg md:text-xl font-medium italic">
+                        "Where love meets destiny, and every heartbeat tells a story."
+                      </p>
+                    </div>
+
+                    <div className="mt-8 flex flex-wrap gap-3">
+                      <Link href="/register">
+                        <button className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+                          Be a Participant
+                        </button>
+                      </Link>
+                      <button
+                        onClick={() => alert("💘 Coming Soon: Find Love Near You!")}
+                        className="px-5 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-bold rounded-lg transition-all"
+                      >
+                        Find Love Near You
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 2. MISSION & VISION TAB */}
+                {activeTab === "mission" && (
+                  <motion.div
+                    key="mission"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <h2 className="text-xl md:text-2xl font-bold text-white mb-6">Mission & Vision</h2>
+                    <div className="space-y-4">
+                      {/* Mission */}
+                      <div className="bg-white/5 border border-white/5 p-5 rounded-2xl flex gap-4 items-start hover:bg-white/10 transition-colors">
+                        <div className="p-2.5 bg-red-600/20 text-red-500 rounded-lg shrink-0">
+                          <Target className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold mb-1">Our Mission</h3>
+                          <p className="text-sm text-gray-400 leading-relaxed">
+                            To redefine reality entertainment by creating a platform where singles find true love while showcasing their values and charisma.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Vision */}
+                      <div className="bg-white/5 border border-white/5 p-5 rounded-2xl flex gap-4 items-start hover:bg-white/10 transition-colors">
+                        <div className="p-2.5 bg-red-600/20 text-red-500 rounded-lg shrink-0">
+                          <Eye className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold mb-1">Our Vision</h3>
+                          <p className="text-sm text-gray-400 leading-relaxed">
+                            To become Africa's biggest love and lifestyle reality show, setting the standard for cultural sophistication and romantic discovery.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Objective */}
+                      <div className="bg-white/5 border border-white/5 p-5 rounded-2xl flex gap-4 items-start hover:bg-white/10 transition-colors">
+                        <div className="p-2.5 bg-red-600/20 text-red-500 rounded-lg shrink-0">
+                          <Star className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-white font-semibold mb-1">Our Objective</h3>
+                          <p className="text-sm text-gray-400 leading-relaxed">
+                            To discover the Universal Love Idol through thrilling challenges and heartwarming stories of connection.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* 3. WHY LOVEMATE TAB */}
+                {activeTab === "why" && (
+                  <motion.div
+                    key="why"
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <h2 className="text-xl md:text-2xl font-bold text-white mb-6">Why Love Lovemate?</h2>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {[
+                        { icon: "🏰", title: "Luxury Living", desc: "Experience life in a magnificent villa" },
+                        { icon: "🎮", title: "Interactive Drama", desc: "Real-time voting and decisions" },
+                        { icon: "❤️", title: "Real Connections", desc: "Genuine relationships formed" },
+                        { icon: "🎯", title: "Thrilling Challenges", desc: "Heart-pounding tasks" },
+                        { icon: "🌟", title: "Star Moments", desc: "Unforgettable scenes" },
+                        { icon: "💎", title: "Life-Changing Prize", desc: "$10K grand prize" }
+                      ].map((feature, index) => (
+                        <div key={index} className="bg-white/5 border border-white/5 p-4 rounded-xl flex items-start gap-3 hover:bg-white/10 transition-colors">
+                          <div className="text-2xl">{feature.icon}</div>
+                          <div>
+                            <h3 className="text-white font-semibold text-sm mb-0.5">{feature.title}</h3>
+                            <p className="text-xs text-gray-400">{feature.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Terms & Privacy Links */}
+                    <div className="mt-10 pt-6 border-t border-white/10">
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <Link href="/terms" className="flex-1">
+                          <button className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white px-4 py-3 rounded-xl text-sm font-semibold transition-all">
+                            <FileText className="w-4 h-4" /> Terms of Participation
+                          </button>
+                        </Link>
+                        <Link href="/policy" className="flex-1">
+                          <button className="w-full flex items-center justify-center gap-2 bg-red-600/10 hover:bg-red-600/20 text-red-500 border border-red-600/20 px-4 py-3 rounded-xl text-sm font-semibold transition-all">
+                            <Shield className="w-4 h-4" /> Privacy Policy
+                          </button>
+                        </Link>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+              </AnimatePresence>
+            </div>
+
           </motion.div>
+        </section>
 
-          {/* CTA Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6">
-            {/* Be a Participant */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="group relative overflow-hidden rounded-xl md:rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 p-4 md:p-8 text-white shadow-xl"
-            >
-              <div className="absolute top-0 right-0 w-20 md:w-32 h-20 md:h-32 bg-white/10 rounded-full -translate-y-10 md:-translate-y-16 translate-x-10 md:translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
-              <Heart className="w-6 h-6 md:w-12 md:h-12 mb-2 md:mb-4 text-white/90" />
-              <h3 className="text-base md:text-2xl font-bold mb-1 md:mb-3">Be a Participant</h3>
-              <p className="text-xs md:text-base text-white/90 mb-3 md:mb-6">
-                Think you have what it takes to find love on the big stage? Join the show and let your journey begin.
-              </p>
-              <Link href="/register">
-                <button className="bg-white text-red-600 px-4 md:px-6 py-1.5 md:py-3 rounded-full text-xs md:text-base font-semibold hover:bg-rose-50 transition-all w-full md:w-auto hover:scale-105 transform">
-                  Register Now
-                </button>
-              </Link>
-            </motion.div>
+      </main>
 
-            {/* Find True Love */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="group relative overflow-hidden rounded-xl md:rounded-2xl bg-gradient-to-br from-rose-400 to-rose-600 p-4 md:p-8 text-white shadow-xl"
-            >
-              <div className="absolute top-0 right-0 w-20 md:w-32 h-20 md:h-32 bg-white/10 rounded-full -translate-y-10 md:-translate-y-16 translate-x-10 md:translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
-              <Users className="w-6 h-6 md:w-12 md:h-12 mb-2 md:mb-4 text-white/90" />
-              <h3 className="text-base md:text-2xl font-bold mb-1 md:mb-3">Find True Love Near You</h3>
-              <p className="text-xs md:text-base text-white/90 mb-3 md:mb-6">
-                Whether you're miles away or just around the corner, love is waiting.
-              </p>
-              <button
-                onClick={() => alert("💘 Coming Soon: Find Love Near You!")}
-                className="bg-white text-rose-600 px-4 md:px-6 py-1.5 md:py-3 rounded-full text-xs md:text-base font-semibold hover:bg-rose-50 transition-all w-full md:w-auto hover:scale-105 transform"
-              >
-                Find Love
-              </button>
-            </motion.div>
-
-            {/* Become a Sponsor */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="group relative overflow-hidden rounded-xl md:rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 p-4 md:p-8 text-white shadow-xl"
-            >
-              <div className="absolute top-0 right-0 w-20 md:w-32 h-20 md:h-32 bg-white/10 rounded-full -translate-y-10 md:-translate-y-16 translate-x-10 md:translate-x-16 group-hover:scale-150 transition-transform duration-700"></div>
-              <Award className="w-6 h-6 md:w-12 md:h-12 mb-2 md:mb-4 text-white/90" />
-              <h3 className="text-base md:text-2xl font-bold mb-1 md:mb-3">Become a Sponsor</h3>
-              <p className="text-xs md:text-base text-white/90 mb-3 md:mb-6">
-                Partner with Lovemate and enjoy massive brand exposure across Africa.
-              </p>
-              <Link href="/contact">
-                <button className="bg-white text-red-700 px-4 md:px-6 py-1.5 md:py-3 rounded-full text-xs md:text-base font-semibold hover:bg-rose-50 transition-all w-full md:w-auto hover:scale-105 transform">
-                  Sponsor Us
-                </button>
-              </Link>
-            </motion.div>
-          </div>
-
-          {/* Bottom Quote */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="text-center mt-10 md:mt-16"
-          >
-            <p className="text-xs md:text-xl text-gray-600 italic">
-              "Where love meets destiny, and every heartbeat tells a story."
-            </p>
-            <div className="flex justify-center gap-1 mt-2 md:mt-4">
-              {[1,2,3].map((i) => (
-                <Heart key={i} className="w-2 h-2 md:w-4 md:h-4 text-rose-300 fill-rose-300" />
-              ))}
-            </div>
-          </motion.div>
-
-          {/* MOBILE ONLY: Terms & Privacy Policy Buttons */}
-          <div className="block md:hidden mt-8 pt-4 border-t border-rose-200">
-            <div className="flex flex-col gap-3">
-              <Link href="/terms" className="w-full">
-                <button className="w-full flex items-center justify-center gap-2 bg-gray-800 text-white px-4 py-3 rounded-xl font-semibold hover:bg-gray-700 transition-all shadow-md">
-                  <FileText className="w-5 h-5" />
-                  Terms of Participation
-                </button>
-              </Link>
-              <Link href="/policy" className="w-full">
-                <button className="w-full flex items-center justify-center gap-2 bg-rose-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-rose-700 transition-all shadow-md">
-                  <Shield className="w-5 h-5" />
-                  Privacy Policy
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer - Hidden on mobile, visible on desktop */}
       <div className="hidden md:block">
         <Footer />
       </div>
